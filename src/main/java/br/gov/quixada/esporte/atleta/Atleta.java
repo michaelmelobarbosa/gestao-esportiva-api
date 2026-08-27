@@ -1,11 +1,12 @@
 package br.gov.quixada.esporte.atleta;
 
+import br.gov.quixada.esporte.extras.Endereco;
+import br.gov.quixada.esporte.extras.Sexo;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "db_atletas")
 public class Atleta {
 
     @Id
@@ -21,10 +22,16 @@ public class Atleta {
     @Column(nullable = false)
     private LocalDateTime dataNascimento;
 
+    @Embedded
+    private Endereco endereco;
+
     private String telefone;
 
     @Column(nullable = false)
     private boolean ativo;
+
+    @Enumerated(EnumType.STRING)
+    private Sexo sexo;
 
     private LocalDateTime dataCadastro;
 
