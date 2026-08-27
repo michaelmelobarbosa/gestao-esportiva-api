@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: gestao-esportiva-api
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/gestao_esportiva
+    username: ${MYSQL_USER}
+    password: ${MYSQL_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+    properties:
+      hibernate:
+        format_sql: true
