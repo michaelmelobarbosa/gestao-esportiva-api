@@ -7,11 +7,12 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "db_atletas")
 public class Atleta {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private String id;
+    private Long id;
 
     @Column(unique = true, nullable = false)
     private String nomeCompleto;
@@ -25,6 +26,7 @@ public class Atleta {
     @Embedded
     private Endereco endereco;
 
+    @Column(nullable = false)
     private String telefone;
 
     @Column(nullable = false)
@@ -33,6 +35,7 @@ public class Atleta {
     @Enumerated(EnumType.STRING)
     private Sexo sexo;
 
+    @Column(nullable = false)
     private LocalDateTime dataCadastro;
 
 

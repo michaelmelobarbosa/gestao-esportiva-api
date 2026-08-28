@@ -3,7 +3,7 @@ spring:
     name: gestao-esportiva-api
 
   datasource:
-    url: jdbc:mysql://localhost:3306/gestao_esportiva
+    url: jdbc:mysql://localhost:3306/gestao_esportiva?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=America/Recife
     username: ${MYSQL_USER}
     password: ${MYSQL_PASSWORD}
 
