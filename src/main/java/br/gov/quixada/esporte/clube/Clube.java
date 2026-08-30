@@ -15,12 +15,12 @@ public class Clube {
     private String nome;
 
     @Column(nullable = false)
-    private String reponsavel;
+    private String responsavel;
 
     @Column(nullable = false)
     private String telefone;
 
-    @Column(nullable = false)
+    @Embedded
     private Endereco endereco;
 
     @Column(nullable = false)

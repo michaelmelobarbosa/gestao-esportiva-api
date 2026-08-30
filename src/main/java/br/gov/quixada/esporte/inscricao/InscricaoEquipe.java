@@ -27,5 +27,6 @@ public class InscricaoEquipe {
 
     private LocalDateTime dataInscricao;
 
+    @Enumerated(EnumType.STRING)
     private StatusInscricao status;
 }

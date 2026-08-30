@@ -3,6 +3,7 @@ package br.gov.quixada.esporte.atleta;
 import br.gov.quixada.esporte.extras.Endereco;
 import br.gov.quixada.esporte.extras.Sexo;
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -14,7 +15,7 @@ public class Atleta {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false)
     private String nomeCompleto;
 
     @Column(unique = true, nullable = false)
@@ -35,6 +36,7 @@ public class Atleta {
     @Enumerated(EnumType.STRING)
     private Sexo sexo;
 
+    @CreationTimestamp
     @Column(nullable = false)
     private LocalDateTime dataCadastro;
 

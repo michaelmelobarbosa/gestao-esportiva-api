@@ -3,6 +3,7 @@ package br.gov.quixada.esporte.competicao;
 import br.gov.quixada.esporte.extras.StatusCompeticao;
 import br.gov.quixada.esporte.modalidade.Modalidade;
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -23,8 +24,12 @@ public class Competicao {
     @ManyToOne(optional = false)
     private Modalidade modalidade;
 
+    @CreationTimestamp
+    @Column(nullable = false)
     private LocalDateTime dataInicio;
 
+    @CreationTimestamp
+    @Column(nullable = false)
     private LocalDateTime dataFim;
 
     @Enumerated(EnumType.STRING)

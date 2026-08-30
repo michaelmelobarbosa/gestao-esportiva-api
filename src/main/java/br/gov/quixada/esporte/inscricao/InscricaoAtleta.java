@@ -11,10 +11,10 @@ import java.time.LocalDateTime;
 public class InscricaoAtleta {
 
     @Id
-    @Column(nullable = false, unique = true)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private String id;
 
-    @ManyToOne()
+    @OneToOne(cascade = CascadeType.ALL)
     private Atleta atleta;
 
     @ManyToOne()
@@ -24,6 +24,7 @@ public class InscricaoAtleta {
 
     private LocalDateTime dataInscricao;
 
+    @Enumerated(EnumType.STRING)
     private StatusInscricao status;
 
 
