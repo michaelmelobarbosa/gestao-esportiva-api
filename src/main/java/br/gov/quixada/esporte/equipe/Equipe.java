@@ -16,7 +16,7 @@ public class Equipe {
     @Column(nullable = false)
     private String nome;
 
-    @ManyToOne()
+    @ManyToOne(optional = false)
     private Clube club;
 
     @ManyToOne(optional = false)

@@ -5,6 +5,7 @@ import br.gov.quixada.esporte.competicao.Competicao;
 import br.gov.quixada.esporte.equipe.Equipe;
 import br.gov.quixada.esporte.extras.StatusInscricao;
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -25,6 +26,7 @@ public class InscricaoEquipe {
     @ManyToOne(optional = false)
     private Equipe equipe;
 
+    @CreationTimestamp
     private LocalDateTime dataInscricao;
 
     @Enumerated(EnumType.STRING)

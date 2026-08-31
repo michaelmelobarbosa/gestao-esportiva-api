@@ -11,12 +11,16 @@ public class Categoria {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private String nome;
 
+    @Column(nullable = false)
     private Integer idadeMinima;
 
+    @Column(nullable = false)
     private Integer idadeMaxima;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "id_competicao")
     private Competicao competicao;
 }

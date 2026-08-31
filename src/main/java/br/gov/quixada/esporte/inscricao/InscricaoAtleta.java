@@ -3,6 +3,7 @@ package br.gov.quixada.esporte.inscricao;
 import br.gov.quixada.esporte.atleta.Atleta;
 import br.gov.quixada.esporte.extras.StatusInscricao;
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -14,14 +15,16 @@ public class InscricaoAtleta {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private String id;
 
-    @OneToOne(cascade = CascadeType.ALL)
+    @ManyToOne(optional = false)
     private Atleta atleta;
 
-    @ManyToOne()
+    @ManyToOne(optional = false)
     private InscricaoEquipe inscricaoEquipe;
 
+    @Column(nullable = false)
     private String numeroCamisa;
 
+    @CreationTimestamp
     private LocalDateTime dataInscricao;
 
     @Enumerated(EnumType.STRING)
