@@ -17,18 +17,23 @@ public class InscricaoEquipe {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_competicao")
     private Competicao competicao;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_categoria")
     private Categoria categoria;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_equipe")
     private Equipe equipe;
 
     @CreationTimestamp
+    @Column(nullable = false, updatable = false)
     private LocalDateTime dataInscricao;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private StatusInscricao status;
 }

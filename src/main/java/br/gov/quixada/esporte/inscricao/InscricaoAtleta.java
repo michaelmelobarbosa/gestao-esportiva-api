@@ -13,21 +13,25 @@ public class InscricaoAtleta {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private String id;
+    private Long id;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_atleta")
     private Atleta atleta;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_inscricao_equipe")
     private InscricaoEquipe inscricaoEquipe;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 3)
     private String numeroCamisa;
 
     @CreationTimestamp
+    @Column(nullable = false, updatable = false)
     private LocalDateTime dataInscricao;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private StatusInscricao status;
 
 

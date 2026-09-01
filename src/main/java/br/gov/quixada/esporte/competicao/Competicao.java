@@ -5,6 +5,7 @@ import br.gov.quixada.esporte.modalidade.Modalidade;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -15,23 +16,23 @@ public class Competicao {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 100)
     private String nome;
 
     @Column(nullable = false)
     private Integer ano;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_modalidade")
     private Modalidade modalidade;
 
-    @CreationTimestamp
     @Column(nullable = false)
-    private LocalDateTime dataInicio;
+    private LocalDate dataInicio;
 
-    @CreationTimestamp
     @Column(nullable = false)
-    private LocalDateTime dataFim;
+    private LocalDate dataFim;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private StatusCompeticao status;
 }

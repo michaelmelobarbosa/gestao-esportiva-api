@@ -11,19 +11,19 @@ public class Clube {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 100)
     private String nome;
 
-    @Column(nullable = false)
+    @Column(nullable = false,  length = 100)
     private String responsavel;
 
-    @Column(nullable = false)
+    @Column(nullable = false,   length = 20)
     private String telefone;
 
     @Embedded
     private Endereco endereco;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
     private boolean ativo;
 
 }
