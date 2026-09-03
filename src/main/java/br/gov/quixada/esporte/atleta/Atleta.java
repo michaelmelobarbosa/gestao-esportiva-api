@@ -5,28 +5,21 @@ import br.gov.quixada.esporte.extras.Sexo;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SourceType;
+import org.hibernate.validator.constraints.br.CPF;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter
 @Setter
+@AllArgsConstructor
 @NoArgsConstructor
+@Builder
 @Entity
 @Table(name = "db_atletas")
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Atleta {
-
-    @Builder
-    public Atleta(String nomeCompleto, String cpf,LocalDate dataNascimento, Endereco endereco, String telefone, boolean ativo, Sexo sexo) {
-        this.nomeCompleto = nomeCompleto;
-        this.cpf = cpf;
-        this.dataNascimento = dataNascimento;
-        this.endereco = endereco;
-        this.telefone = telefone;
-        this.ativo = ativo;
-        this.sexo = sexo;
-    }
-
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,12 +29,14 @@ public class Atleta {
     private String nomeCompleto;
 
     @Column(unique = true, nullable = false,  length = 14)
+    @CPF
     private String cpf;
 
     @Column(nullable = false)
     private LocalDate dataNascimento;
 
     @Embedded
+    @Column(nullable = false)
     private Endereco endereco;
 
     @Column(nullable = false, length = 20)
@@ -51,7 +46,7 @@ public class Atleta {
     private boolean ativo;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private Sexo sexo;
 
     @CreationTimestamp

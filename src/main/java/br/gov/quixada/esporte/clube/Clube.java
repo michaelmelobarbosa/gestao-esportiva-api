@@ -2,9 +2,17 @@ package br.gov.quixada.esporte.clube;
 
 import br.gov.quixada.esporte.extras.Endereco;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "db_clube")
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Clube {
 
     @Id

@@ -3,13 +3,19 @@ package br.gov.quixada.esporte.competicao;
 import br.gov.quixada.esporte.extras.StatusCompeticao;
 import br.gov.quixada.esporte.modalidade.Modalidade;
 import jakarta.persistence.*;
-import org.hibernate.annotations.CreationTimestamp;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "db_competicao")
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Competicao {
 
     @Id
@@ -23,7 +29,7 @@ public class Competicao {
     private Integer ano;
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_modalidade")
+    @JoinColumn(name = "id_modalidade", nullable = false)
     private Modalidade modalidade;
 
     @Column(nullable = false)
@@ -33,6 +39,6 @@ public class Competicao {
     private LocalDate dataFim;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private StatusCompeticao status;
 }

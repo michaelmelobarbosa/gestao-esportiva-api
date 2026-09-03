@@ -5,12 +5,20 @@ import br.gov.quixada.esporte.competicao.Competicao;
 import br.gov.quixada.esporte.equipe.Equipe;
 import br.gov.quixada.esporte.extras.StatusInscricao;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "db_inscricao_equipe")
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class InscricaoEquipe {
 
     @Id
@@ -18,15 +26,15 @@ public class InscricaoEquipe {
     private Long id;
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_competicao")
+    @JoinColumn(name = "id_competicao", nullable = false)
     private Competicao competicao;
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_categoria")
+    @JoinColumn(name = "id_categoria", nullable = false)
     private Categoria categoria;
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_equipe")
+    @JoinColumn(name = "id_equipe", nullable = false)
     private Equipe equipe;
 
     @CreationTimestamp
@@ -34,6 +42,6 @@ public class InscricaoEquipe {
     private LocalDateTime dataInscricao;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private StatusInscricao status;
 }
