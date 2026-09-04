@@ -3,9 +3,9 @@ package br.gov.quixada.esporte.atleta;
 import br.gov.quixada.esporte.extras.Endereco;
 import br.gov.quixada.esporte.extras.Sexo;
 import jakarta.persistence.*;
+import jakarta.validation.Valid;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.SourceType;
 import org.hibernate.validator.constraints.br.CPF;
 
 import java.time.LocalDate;
@@ -36,7 +36,7 @@ public class Atleta {
     private LocalDate dataNascimento;
 
     @Embedded
-    @Column(nullable = false)
+    @Valid
     private Endereco endereco;
 
     @Column(nullable = false, length = 20)

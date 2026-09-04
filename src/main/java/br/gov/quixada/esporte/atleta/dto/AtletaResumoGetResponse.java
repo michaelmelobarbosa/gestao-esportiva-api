@@ -1,0 +1,14 @@
+package br.gov.quixada.esporte.atleta.dto;
+
+import br.gov.quixada.esporte.extras.Sexo;
+
+public record AtletaResumoGetResponse(
+        Long id,
+        String nomeCompleto,
+        String cpf,
+        Integer idade,
+        String telefone,
+        Sexo sexo,
+        boolean ativo
+) {
+}

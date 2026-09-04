@@ -3,6 +3,7 @@ package br.gov.quixada.esporte.extras;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 @Embeddable
@@ -31,5 +32,6 @@ public class Endereco {
     @Column(nullable = false, length = 10)
     @NotBlank
     @Size(max = 10)
+    @Pattern(regexp="\\d{5}-\\d{3}")
     private String cep;
 }

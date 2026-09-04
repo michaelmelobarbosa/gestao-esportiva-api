@@ -1,6 +1,6 @@
 package br.gov.quixada.esporte.atleta.dto;
 
-import br.gov.quixada.esporte.extras.Endereco;
+import br.gov.quixada.esporte.extras.EnderecoRequest;
 import br.gov.quixada.esporte.extras.Sexo;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -13,18 +13,20 @@ import java.time.LocalDate;
 
 public record AtletaPostRequest(
         @NotBlank(message = "Nome completo é obrigatório")
+        @Size(max=150)
         String nomeCompleto,
         @NotBlank(message = "Cpf é obrigatório")
         @CPF(message = "Cpf inválido")
         @Size(max = 14)
         String cpf,
-        @NotBlank(message = "Data de nascimento é obrigatório")
+        @NotNull(message = "Data de nascimento é obrigatório")
         LocalDate dataNascimento,
-        @NotBlank(message = "Endereço é obrigatório")
+        @NotNull(message = "Endereço é obrigatório")
         @Valid
-        Endereco endereco,
+        EnderecoRequest endereco,
         @NotNull
         Sexo sexo,
         @NotBlank(message = "Telefone é obrigatório")
+        @Size(max=20)
         String telefone
 ) {}
