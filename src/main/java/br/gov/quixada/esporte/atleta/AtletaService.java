@@ -36,17 +36,15 @@ public class AtletaService {
     }
 
     @Transactional
-    public AtletaResponse save(AtletaCreateRequest request) {
-        if (repository.existsByCpf(request.cpf())) {
+    public void save(Atleta atleta) {
+        if (repository.existsByCpf(atleta.getCpf())) {
             throw new CpfJaCadastradoException("CPF já cadastrado");
         }
-        Atleta atleta = mapper.toEntity(request);
 
         atleta.setStatus(StatusAtleta.ATIVO);
 
-        Atleta salvo = repository.save(atleta);
+        repository.save(atleta);
 
-        return mapper.toGetResponse(salvo);
     }
 
     @Transactional
