@@ -2,7 +2,7 @@ package br.gov.quixada.esporte.atleta.dto;
 
 import br.gov.quixada.esporte.extras.Sexo;
 
-public record AtletaResumoGetResponse(
+public record AtletaResumoResponse(
         Long id,
         String nomeCompleto,
         String cpf,

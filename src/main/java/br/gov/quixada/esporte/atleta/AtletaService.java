@@ -1,7 +1,10 @@
 package br.gov.quixada.esporte.atleta;
 
+import br.gov.quixada.esporte.atleta.dto.AtletaCreateRequest;
+import br.gov.quixada.esporte.atleta.dto.AtletaResponse;
 import br.gov.quixada.esporte.exceptions.AtletaNotFoundException;
 import br.gov.quixada.esporte.exceptions.CpfJaCadastradoException;
+import br.gov.quixada.esporte.extras.StatusAtleta;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +16,7 @@ import java.util.List;
 public class AtletaService {
 
     private final AtletaRepository repository;
+    private final AtletaMapper mapper;
 
     @Transactional(readOnly = true)
     public List<Atleta> findAll() {
@@ -32,18 +36,30 @@ public class AtletaService {
     }
 
     @Transactional
-    public Atleta save(Atleta atleta) {
-        if (repository.existsByCpf(atleta.getCpf())) {
+    public AtletaResponse save(AtletaCreateRequest request) {
+        if (repository.existsByCpf(request.cpf())) {
             throw new CpfJaCadastradoException("CPF já cadastrado");
         }
-        atleta.setAtivo(true);
-        return repository.save(atleta);
+        Atleta atleta = mapper.toEntity(request);
+
+        atleta.setStatus(StatusAtleta.ATIVO);
+
+        Atleta salvo = repository.save(atleta);
+
+        return mapper.toGetResponse(salvo);
     }
 
     @Transactional
     public void delete(Long id) {
         Atleta atleta = findByIdOrThrowNotFound(id);
         repository.delete(atleta);
+    }
+
+    @Transactional
+    public void inativar(Long id) {
+        Atleta atleta = findByIdOrThrowNotFound(id);
+        atleta.setStatus(StatusAtleta.INATIVO);
+        repository.save(atleta);
     }
 
     @Transactional

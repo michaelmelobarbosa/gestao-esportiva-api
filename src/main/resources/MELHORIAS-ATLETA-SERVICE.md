@@ -1,6 +1,6 @@
 # Pontos de Melhoria — `AtletaService`
 
-Análise gerada a partir de `AtletaService.java`, `Atleta.java`, `AtletaRepository.java`, `AtletaMapper.java`, DTOs (`AtletaPostRequest`, `AtletaPutRequest`, `AtletaGetResponse`), `InscricaoAtleta.java`, `Endereco.java` e exceções (`AtletaNotFoundException`, `CpfJaCadastradoException`).
+Análise gerada a partir de `AtletaService.java`, `Atleta.java`, `AtletaRepository.java`, `AtletaMapper.java`, DTOs (`AtletaCreateRequest`, `AtletaUpdateRequest`, `AtletaResponse`), `InscricaoAtleta.java`, `Endereco.java` e exceções (`AtletaNotFoundException`, `CpfJaCadastradoException`).
 
 ---
 

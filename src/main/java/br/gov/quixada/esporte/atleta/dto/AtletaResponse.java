@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-public record AtletaGetResponse(
+public record AtletaResponse(
         Long id,
         String nomeCompleto,
         String cpf,
