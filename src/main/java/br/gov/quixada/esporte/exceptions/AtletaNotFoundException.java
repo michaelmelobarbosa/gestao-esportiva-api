@@ -4,7 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 public class AtletaNotFoundException extends ResponseStatusException {
-    public AtletaNotFoundException(String message) {
+    public AtletaNotFoundException(HttpStatus status,String message) {
         super(HttpStatus.NOT_FOUND, message);
     }
 }

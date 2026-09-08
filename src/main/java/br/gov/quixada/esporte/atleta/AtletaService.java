@@ -4,6 +4,8 @@ import br.gov.quixada.esporte.exceptions.AtletaNotFoundException;
 import br.gov.quixada.esporte.exceptions.CpfJaCadastradoException;
 import br.gov.quixada.esporte.extras.StatusAtleta;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,7 +16,6 @@ import java.util.List;
 public class AtletaService {
 
     private final AtletaRepository repository;
-    private final AtletaMapper mapper;
 
     @Transactional(readOnly = true)
     public List<Atleta> findAll() {
@@ -24,23 +25,23 @@ public class AtletaService {
     @Transactional(readOnly = true)
     public Atleta findByIdOrThrowNotFound(Long id) {
         return repository.findById(id)
-                .orElseThrow(() -> new AtletaNotFoundException("Atleta não encontrado"));
+                .orElseThrow(() -> new AtletaNotFoundException(HttpStatus.NOT_FOUND, "Atleta não encontrado"));
     }
 
     @Transactional(readOnly = true)
     public Atleta findByCpfOrThrowNotFound(String cpf) {
         return repository.findByCpf(cpf)
-                .orElseThrow(() -> new AtletaNotFoundException("Atleta não encontrado"));
+                .orElseThrow(() -> new AtletaNotFoundException(HttpStatus.NOT_FOUND, "Atleta não encontrado"));
     }
 
     @Transactional
-    public void save(Atleta atleta) {
+    public Atleta save(Atleta atleta) {
         if (repository.existsByCpf(atleta.getCpf())) {
-            throw new CpfJaCadastradoException("CPF já cadastrado");
+            throw new CpfJaCadastradoException(HttpStatus.CONFLICT, "CPF já cadastrado");
         }
 
         atleta.setStatus(StatusAtleta.ATIVO);
-        repository.save(atleta);
+        return repository.save(atleta);
 
     }
 
@@ -51,16 +52,26 @@ public class AtletaService {
     }
 
     @Transactional
+    public void ativar(Long id) {
+        Atleta atleta = findByIdOrThrowNotFound(id);
+        atleta.setStatus(StatusAtleta.ATIVO);
+    }
+
+    @Transactional
     public void inativar(Long id) {
         Atleta atleta = findByIdOrThrowNotFound(id);
         atleta.setStatus(StatusAtleta.INATIVO);
-        repository.save(atleta);
     }
 
     @Transactional
     public Atleta update(Long id, Atleta atletaParaAtualizar) {
         Atleta atletaExistente = findByIdOrThrowNotFound(id);
-        mapper.updateEntityFromEntity(atletaParaAtualizar, atletaExistente);
+
+        atletaExistente.setNomeCompleto(atletaParaAtualizar.getNomeCompleto());
+        atletaExistente.setTelefone(atletaParaAtualizar.getTelefone());
+        atletaExistente.setDataNascimento(atletaParaAtualizar.getDataNascimento());
+        atletaExistente.setEndereco(atletaParaAtualizar.getEndereco());
+        atletaExistente.setSexo(atletaParaAtualizar.getSexo());
 
         return repository.save(atletaExistente);
     }
