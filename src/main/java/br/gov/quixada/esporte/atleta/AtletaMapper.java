@@ -3,6 +3,7 @@ package br.gov.quixada.esporte.atleta;
 import java.time.LocalDate;
 import java.util.List;
 
+import jakarta.validation.Valid;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -18,14 +19,13 @@ import br.gov.quixada.esporte.extras.EnderecoResponse;
 public interface AtletaMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "dataCadastro", ignore = true)
-    @Mapping (target = "status", ignore = true)
-    Atleta toEntity(AtletaCreateRequest postRequest);
+    @Mapping(target = "status", ignore = true)
+    Atleta toEntity(@Valid AtletaCreateRequest postRequest);
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "cpf", ignore = true)
     @Mapping(target = "dataCadastro", ignore = true)
-    @Mapping (target = "status", ignore = true)
-    Atleta updateEntity(AtletaUpdateRequest putRequest);
+    @Mapping(target = "status", ignore = true)
+    Atleta toEntity(@Valid AtletaUpdateRequest request);
 
     @Mapping(target = "idade", expression = "java(calcularIdade(atleta.getDataNascimento()))")
     AtletaResponse toGetResponse(Atleta atleta);
@@ -35,11 +35,13 @@ public interface AtletaMapper {
 
     List<AtletaResumoResponse> toResumoList(List<Atleta> atletas);
 
-    Endereco toEndereco(EnderecoRequest request);
+    Endereco toEndereco(@Valid EnderecoRequest request);
 
-    EnderecoResponse toEnderecoResponse(Endereco endereco);
+    EnderecoResponse toEnderecoResponse(@Valid Endereco endereco);
 
     default Integer calcularIdade(LocalDate data) {
         return data == null ? null : java.time.Period.between(data, java.time.LocalDate.now()).getYears();
     }
+
+
 }

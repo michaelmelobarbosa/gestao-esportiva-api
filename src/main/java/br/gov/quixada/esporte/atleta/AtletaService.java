@@ -17,8 +17,8 @@ public class AtletaService {
     private final AtletaRepository repository;
 
     @Transactional(readOnly = true)
-    public List<Atleta> findAll() {
-        return repository.findAll();
+    public List<Atleta> findAll(String name) {
+        return name == null ? repository.findAll() : repository.findByNomeCompletoContaining(name);
     }
 
     @Transactional(readOnly = true)
@@ -51,15 +51,18 @@ public class AtletaService {
     //}
 
     @Transactional
-    public void ativar(Long id) {
+    public Atleta ativar(Long id) {
         Atleta atleta = findByIdOrThrowNotFound(id);
         atleta.setStatus(StatusAtleta.ATIVO);
+
+        return repository.save(atleta);
     }
 
     @Transactional
-    public void inativar(Long id) {
+    public Atleta inativar(Long id) {
         Atleta atleta = findByIdOrThrowNotFound(id);
         atleta.setStatus(StatusAtleta.INATIVO);
+        return repository.save(atleta);
     }
 
     @Transactional
