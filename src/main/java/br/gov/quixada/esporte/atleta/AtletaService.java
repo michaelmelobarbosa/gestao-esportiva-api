@@ -1,7 +1,5 @@
 package br.gov.quixada.esporte.atleta;
 
-import br.gov.quixada.esporte.atleta.dto.AtletaCreateRequest;
-import br.gov.quixada.esporte.atleta.dto.AtletaResponse;
 import br.gov.quixada.esporte.exceptions.AtletaNotFoundException;
 import br.gov.quixada.esporte.exceptions.CpfJaCadastradoException;
 import br.gov.quixada.esporte.extras.StatusAtleta;
@@ -42,7 +40,6 @@ public class AtletaService {
         }
 
         atleta.setStatus(StatusAtleta.ATIVO);
-
         repository.save(atleta);
 
     }
@@ -63,12 +60,7 @@ public class AtletaService {
     @Transactional
     public Atleta update(Long id, Atleta atletaParaAtualizar) {
         Atleta atletaExistente = findByIdOrThrowNotFound(id);
-
-        atletaExistente.setNomeCompleto(atletaParaAtualizar.getNomeCompleto());
-        atletaExistente.setTelefone(atletaParaAtualizar.getTelefone());
-        atletaExistente.setDataNascimento(atletaParaAtualizar.getDataNascimento());
-        atletaExistente.setEndereco(atletaParaAtualizar.getEndereco());
-        atletaExistente.setSexo(atletaParaAtualizar.getSexo());
+        mapper.updateEntityFromEntity(atletaParaAtualizar, atletaExistente);
 
         return repository.save(atletaExistente);
     }

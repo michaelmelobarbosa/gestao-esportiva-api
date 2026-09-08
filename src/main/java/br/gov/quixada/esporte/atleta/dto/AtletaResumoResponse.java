@@ -1,6 +1,7 @@
 package br.gov.quixada.esporte.atleta.dto;
 
 import br.gov.quixada.esporte.extras.Sexo;
+import br.gov.quixada.esporte.extras.StatusAtleta;
 
 public record AtletaResumoResponse(
         Long id,
@@ -9,6 +10,6 @@ public record AtletaResumoResponse(
         Integer idade,
         String telefone,
         Sexo sexo,
-        boolean ativo
+        StatusAtleta status
 ) {
 }
