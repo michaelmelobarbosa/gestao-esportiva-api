@@ -2,6 +2,7 @@ package br.gov.quixada.esporte.atleta;
 
 import br.gov.quixada.esporte.extras.Endereco;
 import br.gov.quixada.esporte.extras.Sexo;
+import br.gov.quixada.esporte.extras.StatusAtleta;
 import jakarta.persistence.*;
 import jakarta.validation.Valid;
 import lombok.*;
@@ -42,8 +43,9 @@ public class Atleta {
     @Column(nullable = false, length = 20)
     private String telefone;
 
-    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
-    private boolean ativo;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private StatusAtleta status;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

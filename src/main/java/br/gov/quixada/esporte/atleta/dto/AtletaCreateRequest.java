@@ -6,22 +6,27 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import org.hibernate.validator.constraints.br.CPF;
 
 import java.time.LocalDate;
 
-public record AtletaPutRequest(
+
+public record AtletaCreateRequest(
         @NotBlank(message = "Nome completo é obrigatório")
         @Size(max=150)
         String nomeCompleto,
+        @NotBlank(message = "Cpf é obrigatório")
+        @CPF(message = "Cpf inválido")
+        @Size(max = 14)
+        String cpf,
         @NotNull(message = "Data de nascimento é obrigatório")
         LocalDate dataNascimento,
-        @NotNull
+        @NotNull(message = "Endereço é obrigatório")
         @Valid
         EnderecoRequest endereco,
-        @NotNull(message = "Sexo é obrigatório")
+        @NotNull
         Sexo sexo,
         @NotBlank(message = "Telefone é obrigatório")
         @Size(max=20)
         String telefone
-) {
-}
+) {}

@@ -1,44 +1,47 @@
 package br.gov.quixada.esporte.atleta;
 
-import br.gov.quixada.esporte.atleta.dto.AtletaGetResponse;
-import br.gov.quixada.esporte.atleta.dto.AtletaPostRequest;
-import br.gov.quixada.esporte.atleta.dto.AtletaPutRequest;
-import br.gov.quixada.esporte.atleta.dto.AtletaResumoGetResponse;
-import br.gov.quixada.esporte.extras.Endereco;
-import br.gov.quixada.esporte.extras.EnderecoRequest;
-import br.gov.quixada.esporte.extras.EnderecoResponse;
+import java.time.LocalDate;
+import java.util.List;
+
+import jakarta.validation.Valid;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-import java.time.LocalDate;
-import java.util.List;
+import br.gov.quixada.esporte.atleta.dto.AtletaCreateRequest;
+import br.gov.quixada.esporte.atleta.dto.AtletaResponse;
+import br.gov.quixada.esporte.atleta.dto.AtletaResumoResponse;
+import br.gov.quixada.esporte.atleta.dto.AtletaUpdateRequest;
+import br.gov.quixada.esporte.extras.Endereco;
+import br.gov.quixada.esporte.extras.EnderecoRequest;
+import br.gov.quixada.esporte.extras.EnderecoResponse;
 
 @Mapper(componentModel = "spring")
 public interface AtletaMapper {
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "ativo", ignore = true)
     @Mapping(target = "dataCadastro", ignore = true)
-    Atleta toEntity(AtletaPostRequest postRequest);
+    @Mapping(target = "status", ignore = true)
+    Atleta toEntity(@Valid AtletaCreateRequest postRequest);
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "cpf", ignore = true)
-    @Mapping(target = "ativo", ignore = true)
     @Mapping(target = "dataCadastro", ignore = true)
-    Atleta updateEntity(AtletaPutRequest putRequest);
+    @Mapping(target = "status", ignore = true)
+    Atleta toEntity(@Valid AtletaUpdateRequest request);
 
     @Mapping(target = "idade", expression = "java(calcularIdade(atleta.getDataNascimento()))")
-    AtletaGetResponse toGetResponse(Atleta atleta);
+    AtletaResponse toGetResponse(Atleta atleta);
 
-    List<AtletaResumoGetResponse> toResumoList(List<Atleta> atletas);
+    @Mapping(target = "idade", expression = "java(calcularIdade(atleta.getDataNascimento()))")
+    AtletaResumoResponse toResumo(Atleta atleta);
 
-    Endereco toEndereco(EnderecoRequest request);
+    List<AtletaResumoResponse> toResumoList(List<Atleta> atletas);
 
-    EnderecoResponse toEnderecoResponse(Endereco endereco);
+    Endereco toEndereco(@Valid EnderecoRequest request);
+
+    EnderecoResponse toEnderecoResponse(@Valid Endereco endereco);
 
     default Integer calcularIdade(LocalDate data) {
-        return data == null ? null : java.time.Period.between(data, java
-                .time.LocalDate.now()).getYears();
+        return data == null ? null : java.time.Period.between(data, java.time.LocalDate.now()).getYears();
     }
+
+
 }
-
-

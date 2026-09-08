@@ -1,12 +1,14 @@
 package br.gov.quixada.esporte.atleta;
 
-import br.gov.quixada.esporte.exceptions.AtletaNotFoundException;
-import lombok.RequiredArgsConstructor;
-import org.hibernate.validator.internal.constraintvalidators.hv.br.CPFValidator;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
+import java.util.List;
 
-import javax.management.InstanceAlreadyExistsException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import br.gov.quixada.esporte.exceptions.AtletaNotFoundException;
+import br.gov.quixada.esporte.exceptions.CpfJaCadastradoException;
+import br.gov.quixada.esporte.extras.StatusAtleta;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -14,38 +16,65 @@ public class AtletaService {
 
     private final AtletaRepository repository;
 
-    public Atleta findByIdOrThrowNotFound(Long id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new AtletaNotFoundException(HttpStatus.NOT_FOUND, "Atleta não encontrado"));
+    @Transactional(readOnly = true)
+    public List<Atleta> findAll(String name) {
+        return name == null ? repository.findAll() : repository.findByNomeCompletoContaining(name);
     }
 
+    @Transactional(readOnly = true)
+    public Atleta findByIdOrThrowNotFound(Long id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new AtletaNotFoundException("Atleta não encontrado"));
+    }
+
+    @Transactional(readOnly = true)
+    public Atleta findByCpfOrThrowNotFound(String cpf) {
+        return repository.findByCpf(cpf)
+                .orElseThrow(() -> new AtletaNotFoundException("Atleta não encontrado"));
+    }
+
+    @Transactional
     public Atleta save(Atleta atleta) {
-        if(atleta.getCpf() == null || atleta.getCpf().isEmpty()){
-            throw new IllegalArgumentException("CPF é obrigatório");
+        if (repository.existsByCpf(atleta.getCpf())) {
+            throw new CpfJaCadastradoException("CPF já cadastrado");
         }
+
+        atleta.setStatus(StatusAtleta.ATIVO);
+        return repository.save(atleta);
+    }
+
+    // hard delete a ser implementado quando perfil admin for criado
+    //@Transactional
+    //public void hardDelete(Long id) {
+    //    Atleta atleta = findByIdOrThrowNotFound(id);
+    //   repository.delete(atleta);
+    //}
+
+    @Transactional
+    public Atleta ativar(Long id) {
+        Atleta atleta = findByIdOrThrowNotFound(id);
+        atleta.setStatus(StatusAtleta.ATIVO);
 
         return repository.save(atleta);
     }
 
-    public void delete(Long id) {
+    @Transactional
+    public Atleta inativar(Long id) {
         Atleta atleta = findByIdOrThrowNotFound(id);
-        repository.delete(atleta);
+        atleta.setStatus(StatusAtleta.INATIVO);
+        return repository.save(atleta);
     }
 
-    public void update(Long id, Atleta atletaParaAtualizar) {
+    @Transactional
+    public Atleta update(Long id, Atleta atletaParaAtualizar) {
         Atleta atletaExistente = findByIdOrThrowNotFound(id);
 
         atletaExistente.setNomeCompleto(atletaParaAtualizar.getNomeCompleto());
         atletaExistente.setTelefone(atletaParaAtualizar.getTelefone());
         atletaExistente.setDataNascimento(atletaParaAtualizar.getDataNascimento());
         atletaExistente.setEndereco(atletaParaAtualizar.getEndereco());
-        atletaExistente.setAtivo(atletaParaAtualizar.isAtivo());
         atletaExistente.setSexo(atletaParaAtualizar.getSexo());
 
-        repository.save(atletaExistente);
-    }
-
-    private void assertAtletaExist(Atleta atleta) {
-        findByIdOrThrowNotFound(atleta.getId());
+        return repository.save(atletaExistente);
     }
 }
