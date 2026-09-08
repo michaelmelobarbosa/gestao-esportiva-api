@@ -6,11 +6,15 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Embeddable
 @NoArgsConstructor 
 @AllArgsConstructor 
+@Getter 
+@Setter 
 public class Endereco {
 
     @Column(nullable = false, length = 150)

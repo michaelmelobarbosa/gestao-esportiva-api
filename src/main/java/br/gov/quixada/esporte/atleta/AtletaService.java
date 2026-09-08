@@ -1,15 +1,14 @@
 package br.gov.quixada.esporte.atleta;
 
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import br.gov.quixada.esporte.exceptions.AtletaNotFoundException;
 import br.gov.quixada.esporte.exceptions.CpfJaCadastradoException;
 import br.gov.quixada.esporte.extras.StatusAtleta;
 import lombok.RequiredArgsConstructor;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -25,31 +24,31 @@ public class AtletaService {
     @Transactional(readOnly = true)
     public Atleta findByIdOrThrowNotFound(Long id) {
         return repository.findById(id)
-                .orElseThrow(() -> new AtletaNotFoundException(HttpStatus.NOT_FOUND, "Atleta não encontrado"));
+                .orElseThrow(() -> new AtletaNotFoundException("Atleta não encontrado"));
     }
 
     @Transactional(readOnly = true)
     public Atleta findByCpfOrThrowNotFound(String cpf) {
         return repository.findByCpf(cpf)
-                .orElseThrow(() -> new AtletaNotFoundException(HttpStatus.NOT_FOUND, "Atleta não encontrado"));
+                .orElseThrow(() -> new AtletaNotFoundException("Atleta não encontrado"));
     }
 
     @Transactional
     public Atleta save(Atleta atleta) {
         if (repository.existsByCpf(atleta.getCpf())) {
-            throw new CpfJaCadastradoException(HttpStatus.CONFLICT, "CPF já cadastrado");
+            throw new CpfJaCadastradoException("CPF já cadastrado");
         }
 
         atleta.setStatus(StatusAtleta.ATIVO);
         return repository.save(atleta);
-
     }
 
-    @Transactional
-    public void delete(Long id) {
-        Atleta atleta = findByIdOrThrowNotFound(id);
-        repository.delete(atleta);
-    }
+    // hard delete a ser implementado quando perfil admin for criado
+    //@Transactional
+    //public void hardDelete(Long id) {
+    //    Atleta atleta = findByIdOrThrowNotFound(id);
+    //   repository.delete(atleta);
+    //}
 
     @Transactional
     public void ativar(Long id) {
