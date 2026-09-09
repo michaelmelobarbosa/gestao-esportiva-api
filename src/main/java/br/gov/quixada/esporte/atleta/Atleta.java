@@ -1,10 +1,12 @@
 package br.gov.quixada.esporte.atleta;
 
+import br.gov.quixada.esporte.extras.CpfUtils;
 import br.gov.quixada.esporte.extras.Endereco;
 import br.gov.quixada.esporte.extras.Sexo;
 import br.gov.quixada.esporte.extras.StatusAtleta;
 import jakarta.persistence.*;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Pattern;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.validator.constraints.br.CPF;
@@ -29,8 +31,9 @@ public class Atleta {
     @Column(nullable = false, length = 150)
     private String nomeCompleto;
 
-    @Column(unique = true, nullable = false,  length = 14)
-    @CPF
+    @Column(unique = true, nullable = false,  length = 11)
+    @CPF(message = "CPF inválido")
+    @Pattern (regexp = "\\d{11}", message = "CPF deve conter apenas números e ter 11 dígitos")
     private String cpf;
 
     @Column(nullable = false)
@@ -55,9 +58,15 @@ public class Atleta {
     @Column(nullable = false, updatable = false)
     private LocalDateTime dataCadastro;
 
+    @PrePersist 
+    @PreUpdate
+    public void setCpf(String cpf) {
+        this.cpf = CpfUtils.normalize(cpf);
+    }
 
 
 
+    
 
 
 }
