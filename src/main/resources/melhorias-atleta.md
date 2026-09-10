@@ -43,7 +43,7 @@ Oportunidades: validação duplicada/conflitante, falta de paginação, handler 
 
 ## 2. Bugs e Erros Reais — Críticos
 
-### 2.1 `Atleta.java:54-56` — Validação conflitante de CPF
+### 2.1 `Atleta.java:54-56` — Validação conflitante de CPF ✅ Corrigido
 ```java
 @CPF(message = "CPF inválido")
 @Pattern(regexp = "\\d{11}", message = "CPF deve conter apenas números e ter 11 dígitos")
@@ -307,10 +307,10 @@ Estude na ordem (do menor risco ao maior impacto):
 
 ## 11. Checklist Prático
 
-- [ ] Remover `@CPF/@Pattern` de `Atleta.java:54` ou ajustar regex
-- [ ] Tornar `normalizarCpf()` privado + null-safe
+- [x] Remover `@CPF/@Pattern` de `Atleta.java:54` ou ajustar regex (2.1 — feito: entidade só `@Pattern(\d{11})`, DTO aceita ambos os formatos)
+- [x] Tornar `normalizarCpf()` privado + null-safe (2.1/2.3 — feito: `private`, null-safe via `CpfUtils`)
 - [ ] Adicionar `@Past` em `AtletaCreateRequest.java:22` e `AtletaUpdateRequest.java:16`
-- [ ] Corrigir `@Size` do CPF para `min=11`
+- [x] Corrigir `@Size` do CPF para `min=11` (2.1 — feito: trocado por `@Pattern` explícito nos dois formatos)
 - [ ] Criar `Page<Atleta> findByNomeCompletoContainingIgnoreCase(...)` + paginar Controller
 - [ ] Tratar `nome.isBlank()` em `AtletaService.java:22`
 - [ ] Remover `repository.save()` redundante em `ativar/inativar`

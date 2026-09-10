@@ -4,7 +4,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.validator.constraints.br.CPF;
 
 import br.gov.quixada.esporte.extras.CpfUtils;
 import br.gov.quixada.esporte.extras.Endereco;
@@ -51,7 +50,6 @@ public class Atleta {
     private String nomeCompleto;
 
     @Column(unique = true, nullable = false, length = 11)
-    @CPF(message = "CPF inválido")
     @Pattern(regexp = "\\d{11}", message = "CPF deve conter apenas números e ter 11 dígitos")
     private String cpf;
 
@@ -81,7 +79,7 @@ public class Atleta {
 
     @PrePersist
     @PreUpdate
-    public void normalizarCpf() {
+    private void normalizarCpf() {
         this.cpf = CpfUtils.normalize(this.cpf);
     }
 
