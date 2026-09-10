@@ -60,7 +60,7 @@ private String cpf;
 - Ou trocar Pattern para aceitar ambos: `"(\\d{11}|\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2})"`.
 - Garantir `normalize()` no Service (`AtletaService.java:40`) *antes* de `existsByCpf()`.
 
-### 2.2 `Atleta.java:78` — `@CreationTimestamp` Hibernate-específico
+### 2.2 `Atleta.java:78` — `@CreationTimestamp` Hibernate-específico ✅ Corrigido
 ```java
 @CreationTimestamp
 @Column(nullable = false, updatable = false)

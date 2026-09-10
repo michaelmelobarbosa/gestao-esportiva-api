@@ -3,8 +3,6 @@ package br.gov.quixada.esporte.atleta;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-import org.hibernate.annotations.CreationTimestamp;
-
 import br.gov.quixada.esporte.extras.CpfUtils;
 import br.gov.quixada.esporte.extras.Endereco;
 import br.gov.quixada.esporte.extras.Sexo;
@@ -73,13 +71,17 @@ public class Atleta {
     @Column(nullable = false, length = 20)
     private Sexo sexo;
 
-    @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime dataCadastro;
 
     @PrePersist
+    private void prePersist() {
+        this.dataCadastro = LocalDateTime.now();
+        this.cpf = CpfUtils.normalize(this.cpf);
+    }
+
     @PreUpdate
-    private void normalizarCpf() {
+    private void preUpdate() {
         this.cpf = CpfUtils.normalize(this.cpf);
     }
 
