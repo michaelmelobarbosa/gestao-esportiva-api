@@ -56,7 +56,7 @@ public class Atleta {
     private String cpf;
 
     @Column(nullable = false)
-    @Past 
+    @Past(message = "A data de nascimento deve ser no passado")
     private LocalDate dataNascimento;
 
     @Embedded
