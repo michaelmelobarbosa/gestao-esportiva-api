@@ -20,7 +20,7 @@ public class AtletaService {
 
     @Transactional(readOnly = true)
     public List<Atleta> findAll(String name) {
-        return name == null ? repository.findAll() : repository.findByNomeCompletoContaining(name);
+        return name == null ? repository.findAll() : repository.findByNomeCompletoContainingIgnoreCase(name);
     }
 
     @Transactional(readOnly = true)

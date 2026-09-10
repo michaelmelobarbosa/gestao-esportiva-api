@@ -13,5 +13,5 @@ public interface AtletaRepository extends JpaRepository<Atleta, Long> {
 
     Optional<Atleta> findByCpf(String cpf);
 
-    List<Atleta> findByNomeCompletoContaining(String name);
+    List<Atleta> findByNomeCompletoContainingIgnoreCase(String name);
 }

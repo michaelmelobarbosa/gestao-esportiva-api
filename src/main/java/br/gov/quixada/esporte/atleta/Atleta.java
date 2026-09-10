@@ -57,7 +57,7 @@ public class Atleta {
 
     @Embedded
     @Valid
-    @NotNull 
+    @NotNull
     private Endereco endereco;
 
     @Column(nullable = false, length = 20)
