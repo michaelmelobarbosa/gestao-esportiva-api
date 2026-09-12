@@ -169,7 +169,7 @@ Bom que CPF não muda via `AtletaUpdateRequest` (DTO sem cpf), mas documente reg
 
 ## 4. Arquitetura e Design
 
-### 4.1 `Atleta.java:36` — `@Setter` na entidade
+### 4.1 `Atleta.java:36` — `@Setter` na entidade ✅ Corrigido
 Expõe `setId()`, `setDataCadastro()`, `setCpf()` para qualquer código. Entidade JPA deve ter mutação controlada.
 
 **Estudar:** DDD, anemic model vs rich model.
@@ -182,7 +182,7 @@ public class Atleta {
 }
 ```
 
-### 4.2 `AtletaMapper.java:42` — `LocalDate.now()` não testável
+### 4.2 `AtletaMapper.java:42` — `LocalDate.now()` não testável ✅ Corrigido
 ```java
 default Integer calcularIdade(LocalDate data) {
     return Period.between(data, LocalDate.now()).getYears();
@@ -201,7 +201,7 @@ public interface AtletaMapper {
 ```
 No Service/Controller: `mapper.toGetResponse(atleta, clock)`.
 
-### 4.3 `AtletaMapper.java:23` — `toEntity` ignora `cpf` implicitamente
+### 4.3 `AtletaMapper.java:23` — `toEntity` ignora `cpf` implicitamente ✅ Corrigido
 Para `AtletaUpdateRequest`, `cpf` nem existe no record, então MapStruct não mapeia — parece “ignorar”, mas é acidental. Seja explícito:
 ```java
 @Mapping(target="cpf", ignore=true)
@@ -209,19 +209,19 @@ Para `AtletaUpdateRequest`, `cpf` nem existe no record, então MapStruct não ma
 Atleta toEntity(AtletaUpdateRequest request);
 ```
 
-### 4.4 `AtletaService.java:33` — Código morto `findByCpfOrThrowNotFound`
+### 4.4 `AtletaService.java:33` — Código morto `findByCpfOrThrowNotFound` ✅ Corrigido
 Nunca usado no Controller. Ou exponha `GET /v1/atletas/cpf/{cpf}` ou remova para não poluir API.
 
 ---
 
-## 5. Performance e Persistência
+## 5. Performance e Persistência ✅ Corrigido (paginação pronta, pendências movidas p/ iterações futuras)
 
-| Problema | Impacto | Solução |
-|---|---|---|
-| `findAll(String)` sem `Pageable` (`AtletaService.java:22`) | OOM com 10k+ registros | `Page<Atleta> findAll(Pageable)` |
-| `findByNomeCompletoContaining` sem índice | Full table scan `LIKE %x%` | Adicionar `Pageable` + `IgnoreCase` + índice MySQL `FULLTEXT` se busca por nome for frequente |
-| `repository.findAll()` no Controller (`AtletaController.java:26`) | Serializa `List<AtletaResumoResponse>` inteira | Paginar e retornar `Page<AtletaResumoResponse>` |
-| `ddl-auto:update` (`application.yaml:12`) | Perigoso em prod, pode dropar coluna | `ddl-auto: validate` + Flyway/Liquibase |
+| Problema | Impacto | Solução | Status |
+|---|---|---|---|
+| `findAll(String)` sem `Pageable` (`AtletaService.java:22`) | OOM com 10k+ registros | `Page<Atleta> findAll(Pageable)` | ✅ Feito `AtletaService.java:22` + `AtletaRepository.java:18` |
+| `findByNomeCompletoContaining` sem índice | Full table scan `LIKE %x%` | Adicionar `Pageable` + `IgnoreCase` + índice MySQL `FULLTEXT` se busca por nome for frequente | ⚠️ Parcial: `Pageable+IgnoreCase` feito, `FULLTEXT` pendente → ver `iterations/futuras-iterações.md#3` |
+| `repository.findAll()` no Controller (`AtletaController.java:26`) | Serializa `List<AtletaResumoResponse>` inteira | Paginar e retornar `Page<AtletaResumoResponse>` | ✅ Feito `AtletaController.java:31` `Page<AtletaResumoResponse>` |
+| `ddl-auto:update` (`application.yaml:12`) | Perigoso em prod, pode dropar coluna | `ddl-auto: validate` + Flyway/Liquibase | ⏳ Pendente → ver `iterations/futuras-iterações.md#4` |
 
 **Estudar:** Paginação Spring Data, `PageRequest`, `Sort`, índices MySQL, `EXPLAIN`.
 
@@ -323,10 +323,10 @@ Estude na ordem (do menor risco ao maior impacto):
 - [x] Adicionar `Location` no `POST` (2.6 — feito: `ResponseEntity.created(location)` em `AtletaController.java:50` com `ServletUriComponentsBuilder`)
 - [ ] Implementar handlers para `MethodArgumentNotValidException` etc.
 - [ ] Evoluir `ApiError.java:5` para incluir `path` e `errors`
-- [ ] Injetar `Clock` no `AtletaMapper.java:42`
-- [ ] Adicionar `cpf` ignore explícito no `toEntity(UpdateRequest)`
-- [ ] Remover ou expor `findByCpfOrThrowNotFound`
-- [ ] Trocar `@Setter` da entidade por métodos de domínio
+- [x] Injetar `Clock` no `AtletaMapper.java:42` (4.2 — feito: `@Context Clock` + `ClockConfig.java` + `AtletaController.java` injeta `Clock` e `AtletaMapper.java:35-43` `calcularIdade` com `LocalDate.now(clock)`)
+- [x] Adicionar `cpf` ignore explícito no `toEntity(UpdateRequest)` (4.3 — feito: `AtletaMapper.java:26-30` com `cpf`/`id`/`dataCadastro`/`status` `ignore=true`)
+- [x] Remover ou expor `findByCpfOrThrowNotFound` (4.4 — feito: mantido comentado `AtletaService.java:32` + rastreado em `iterations/futuras-iiterações.md`)
+- [x] Trocar `@Setter` da entidade por métodos de domínio (4.1 — feito: `Atleta.java:28` `@Getter` + `@NoArgsConstructor(PROTECTED)`/`@AllArgsConstructor(PRIVATE)` + `@Setter(PRIVATE)` só em `id` + métodos `ativar()`/`inativar()`/`atualizarDados()` + helpers `definirCpfNormalizado()`/`definirStatus()`; `AtletaService.java:40` refatorado)
 - [ ] Adicionar testes (`AtletaServiceTest`, `AtletaControllerTest`)
 - [ ] `application.yaml:12` -> `validate` + Flyway
 - [ ] `open-in-view=false` + OpenAPI

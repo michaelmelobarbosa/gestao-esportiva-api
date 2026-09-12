@@ -1,0 +1,128 @@
+# Futuras Iterações — AtletaService
+
+> Pasta `src/main/java/br/gov/quixada/esporte/iterations` — lembretes para não esquecer de voltar e implementar métodos comentados em `src/main/java/br/gov/quixada/esporte/atleta/AtletaService.java:32` e `:50`.
+
+---
+
+## 1. `hardDelete(Long id)` — `AtletaService.java:50-55` comentado
+
+```java
+// hard delete a ser implementado quando perfil admin for criado
+// @Transactional
+// public void hardDelete(Long id) {
+//     Atleta atleta = findByIdOrThrowNotFound(id);
+//     repository.delete(atleta);
+// }
+```
+
+**Por que está comentado:** `AtletaService.java:50` indica que `hardDelete` só deve existir com perfil `admin`. Hoje o `inativar()` `AtletaService.java:64` é soft delete (status INATIVO). Hard delete físico é perigoso sem controle de permissão.
+
+**Para implementar no futuro:**
+- [ ] Criar role `ADMIN` + `@PreAuthorize("hasRole('ADMIN')")` em `AtletaController.java:19`
+- [ ] Adicionar endpoint `AtletaController.java:19`:
+  ```java
+  @DeleteMapping("/{id}")
+  @PreAuthorize("hasRole('ADMIN')")
+  public ResponseEntity<Void> hardDelete(@PathVariable Long id) {
+      service.hardDelete(id);
+      return ResponseEntity.noContent().build();
+  }
+  ```
+- [ ] Descomentar `AtletaService.java:50` e validar regra: bloquear `hardDelete` se `atleta.status == ATIVO` (?) ou permitir sempre?
+- [ ] Considerar `ON DELETE` em `db/migration` para tabelas relacionadas (`inscricao`, `equipe`) — `Atleta.java:37` `@Table(name="db_atletas")`
+- [ ] Teste: `AtletaServiceTest#hardDelete_deveRemoverQuandoAdmin`
+
+**Referência:** `melhorias-atleta.md:4.4` `AtletaService.java:33` código morto — ou expor `GET /cpf` ou remover.
+
+---
+
+## 2. `findByCpfOrThrowNotFound(String cpf)` — `AtletaService.java:32-36` comentado
+
+```java
+//    @Transactional(readOnly = true)
+//    public Atleta findByCpfOrThrowNotFound(String cpf) {
+//        return repository.findByCpf(CpfUtils.normalize(cpf))
+//                .orElseThrow(() -> new AtletaNotFoundException("Atleta não encontrado"));
+//    }
+```
+
+**Por que está comentado:** Método já correto (usa `CpfUtils.java:8` `normalize` + `AtletaRepository.java:18` `findByCpf`), mas `AtletaController.java:19` nunca expõe `GET /v1/atletas/cpf/{cpf}` — fica código morto como apontado em `melhorias-atleta.md:207`.
+
+**Para implementar no futuro:**
+- [ ] Descomentar `AtletaService.java:32`
+- [ ] Expor em `AtletaController.java:19` (decidir URL para não colidir com `GET /{id}`):
+  ```java
+  @GetMapping("/cpf/{cpf}")
+  public ResponseEntity<AtletaResponse> findByCpf(@PathVariable String cpf) {
+      Atleta atleta = service.findByCpfOrThrowNotFound(cpf);
+      return ResponseEntity.ok(mapper.toGetResponse(atleta, clock));
+  }
+  // ou @GetMapping(params="cpf") -> GET /v1/atletas?cpf=52998224725
+  ```
+  Atenção: `@GetMapping("/{id}")` `AtletaController.java:34` já captura `/{cpf}` se `cpf` for numérico — usar `/cpf/{cpf}` evita ambiguidade.
+- [ ] Validar `cpf` com `@CPF`/`@Pattern` no `@PathVariable` + `CpfUtils.normalize` já feito no service
+- [ ] Adicionar `@ExceptionHandler` em `GlobalExceptionHandler.java:11` já cobre `AtletaNotFoundException` -> `404`
+- [ ] Índice: `Atleta.java:45` `@Column(unique=true)` já garante busca por `cpf` eficiente; considerar `findByCpf` já usa índice único
+- [ ] Teste: `AtletaControllerTest#findByCpf_deveRetornar200QuandoExistirComMascara` (testar `529.982.247-25` e `52998224725`)
+
+---
+
+## 3. Índice MySQL `FULLTEXT` para `findByNomeCompletoContainingIgnoreCase` — `AtletaService.java:22` / `AtletaRepository.java:18` pendente
+
+> Ponto `5` `melhorias-atleta.md:222` `findByNomeCompletoContaining` sem índice → `FULL TABLE SCAN` com `LIKE %x%`.
+
+**Status atual:** `AtletaService.java:22` `Page<Atleta> findAll(nome, pageable)` + `AtletaRepository.java:18` `findByNomeCompletoContainingIgnoreCase(name, pageable)` já implementados com `Pageable` + `IgnoreCase` (ver `2.4`), mas `Atleta.java:33` `@Table(name="db_atletas")` sem `indexes`. Sem índice, `LIKE %joao%` faz scan em 10k+ registros.
+
+**Para implementar no futuro:**
+- [ ] Adicionar em `Atleta.java:33`:
+  ```java
+  @Table(name="db_atletas", indexes=@Index(name="idx_atleta_nome", columnList="nomeCompleto"))
+  // ou para busca textual: FULLTEXT se migrar para MyISAM/InnoDB 5.6+
+  ```
+- [ ] Ou criar migration `db/migration/V2__add_fulltext_nome_atleta.sql`:
+  ```sql
+  CREATE FULLTEXT INDEX idx_atleta_nome_fulltext ON db_atletas(nomeCompleto);
+  -- query passa a usar MATCH(nomeCompleto) AGAINST(:nome IN BOOLEAN MODE) via @Query
+  ```
+- [ ] Avaliar alternativa `@Query` com `MATCH` vs manter `ContainingIgnoreCase` + índice `BTREE` simples (suficiente se `AtletaService.java:22` já pagina)
+- [ ] Validar com `EXPLAIN SELECT ... WHERE nomeCompleto LIKE '%joao%'` antes/depois
+- [ ] Teste de performance: `AtletaRepositoryTest#findByNomeCompletoContainingIgnoreCase_comIndice_deveUsarIndex`
+
+**Referência:** `melhorias-atleta.md:5` `Performance e Persistência`.
+
+---
+
+## 4. `ddl-auto:update` → `validate` + Flyway/Liquibase — `application.yaml:12` pendente
+
+> Ponto `5` `melhorias-atleta.md:224` `ddl-auto:update` perigoso em prod (pode dropar coluna).
+
+**Status atual:** `src/main/resources/application.yaml:12` ainda `ddl-auto: update` + `show-sql:true` + `format_sql:true`. Sem `validate` + Flyway (`src/main/resources/db/migration/` vazio, `HELP.md` menciona Flyway mas `pom.xml:16` sem dependência).
+
+**Para implementar no futuro:**
+- [ ] Adicionar em `pom.xml:16`:
+  ```xml
+  <dependency><groupId>org.flywaydb</groupId><artifactId>flyway-mysql</artifactId></dependency>
+  ```
+- [ ] Criar `V1__create_db_atletas.sql` espelhando `Atleta.java:33` (`db_atletas`, `cpf unique`, `nomeCompleto 150`, `status`, etc) + `V2` do índice acima
+- [ ] Trocar `application.yaml:12`:
+  ```yaml
+  spring.jpa.hibernate.ddl-auto: validate
+  spring.flyway.enabled: true
+  spring.flyway.locations: classpath:db/migration
+  ```
+- [ ] Manter `show-sql:true` só em `application-dev.yaml`, desligar em `application-prod.yaml` (`logging.level.org.hibernate.SQL: DEBUG`)
+- [ ] Verificar compatibilidade `ddl-auto: validate` com `Atleta.java:28` `@Builder`/`@PrePersist` (não deve quebrar)
+- [ ] Teste: `./mvnw flyway:migrate` + `contextLoads` com `validate`
+
+**Referência:** `melhorias-atleta.md:9` `Infra e Configuração` + `HELP.md` Flyway boilerplate.
+
+---
+
+## Checklist Geral
+
+- [ ] `hardDelete` — aguardando definição de `SecurityConfig` + `ADMIN`
+- [ ] `findByCpfOrThrowNotFound` — aguardando decisão de exposição na API
+- [ ] `FULLTEXT` / índice `nomeCompleto` — `5` paginação pronta, índice pendente
+- [ ] `ddl-auto` → `validate + Flyway` — aguardando config `application.yaml:12` + `db/migration`
+
+> Quando implementar, descomentar em `AtletaService.java`, expor em `AtletaController.java:19` e atualizar `melhorias-atleta.md:207` `4.4` e `5`.

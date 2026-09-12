@@ -22,12 +22,12 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Pattern;
+import br.gov.quixada.esporte.exceptions.AtletaInativoException;
 import lombok.*;
 
 @Getter
-@Setter(AccessLevel.PACKAGE)
-@AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
 @Entity
 @Table(name = "db_atletas")
@@ -37,6 +37,7 @@ public class Atleta {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
+    @Setter(AccessLevel.PRIVATE)
     private Long id;
 
     @Column(nullable = false, length = 150)
@@ -69,16 +70,53 @@ public class Atleta {
     @Column(nullable = false, updatable = false)
     private LocalDateTime dataCadastro;
 
+
+    public void ativar() {
+        if (this.status == StatusAtleta.ATIVO) return;
+        this.status = StatusAtleta.ATIVO;
+    }
+
+    public void inativar() {
+        if (this.status == StatusAtleta.INATIVO) return;
+        this.status = StatusAtleta.INATIVO;
+    }
+
+    /**
+     * Atualiza dados mutáveis. CPF imutável após criação; bloqueia se INATIVO.
+     */
+    public void atualizarDados(String nomeCompleto, LocalDate dataNascimento, Endereco endereco, String telefone, Sexo sexo) {
+        if (this.status == StatusAtleta.INATIVO) {
+            throw new AtletaInativoException("Atleta está inativo, reative antes de editar");
+        }
+        this.nomeCompleto = nomeCompleto;
+        this.dataNascimento = dataNascimento;
+        this.endereco = endereco;
+        this.telefone = telefone;
+        this.sexo = sexo;
+    }
+
+    void definirCpfNormalizado(String cpf) {
+        this.cpf = CpfUtils.normalize(cpf);
+    }
+
+    void definirStatus(StatusAtleta status) {
+        this.status = status;
+    }
+
     @PrePersist
     private void prePersist() {
         this.dataCadastro = LocalDateTime.now();
-        if(this.cpf != null){
+        if (this.cpf != null) {
             this.cpf = CpfUtils.normalize(this.cpf);
         }
+        if (this.status == null) {
+            this.status = StatusAtleta.ATIVO;
+        }
     }
+
     @PreUpdate
     private void preUpdate() {
-        if(this.cpf != null){
+        if (this.cpf != null) {
             this.cpf = CpfUtils.normalize(this.cpf);
         }
     }

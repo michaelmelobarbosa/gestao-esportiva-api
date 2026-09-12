@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
+import java.time.Clock;
 
 @RestController
 @RequestMapping("/v1/atletas")
@@ -23,18 +24,19 @@ public class AtletaController {
 
     private final AtletaService service;
     private final AtletaMapper mapper;
+    private final Clock clock;
 
 
     @GetMapping()
     public ResponseEntity<Page<AtletaResumoResponse>> findAll(@RequestParam(required = false) String nome, Pageable pageable) {
 
-        return ResponseEntity.ok(service.findAll(nome, pageable).map(mapper::toResumo));
+        return ResponseEntity.ok(service.findAll(nome, pageable).map(atleta -> mapper.toResumo(atleta, clock)));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<AtletaResponse> findById(@PathVariable Long id) {
         Atleta atleta = service.findByIdOrThrowNotFound(id);
-        AtletaResponse response = mapper.toGetResponse(atleta);
+        AtletaResponse response = mapper.toGetResponse(atleta, clock);
 
         return ResponseEntity.ok(response);
     }
@@ -47,7 +49,7 @@ public class AtletaController {
         URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}")
                 .buildAndExpand(saved.getId()).toUri();
 
-        return ResponseEntity.created(location).body(mapper.toGetResponse(saved));
+        return ResponseEntity.created(location).body(mapper.toGetResponse(saved, clock));
     }
 
     @PatchMapping("/{id}/inativar")
@@ -55,7 +57,7 @@ public class AtletaController {
 
         Atleta inativo = service.inativar(id);
 
-        return ResponseEntity.ok(mapper.toGetResponse(inativo));
+        return ResponseEntity.ok(mapper.toGetResponse(inativo, clock));
     }
 
     @PatchMapping("/{id}/ativar")
@@ -63,7 +65,7 @@ public class AtletaController {
 
         Atleta ativo = service.ativar(id);
 
-        return ResponseEntity.ok(mapper.toGetResponse(ativo));
+        return ResponseEntity.ok(mapper.toGetResponse(ativo, clock));
     }
 
     @PutMapping("/{id}")
@@ -72,7 +74,7 @@ public class AtletaController {
 
         Atleta atleta = mapper.toEntity(request);
         Atleta updated = service.update(id, atleta);
-        AtletaResponse getResponse = mapper.toGetResponse(updated);
+        AtletaResponse getResponse = mapper.toGetResponse(updated, clock);
 
         return ResponseEntity.ok(getResponse);
     }

@@ -8,10 +8,13 @@ import br.gov.quixada.esporte.extras.Endereco;
 import br.gov.quixada.esporte.extras.EnderecoRequest;
 import br.gov.quixada.esporte.extras.EnderecoResponse;
 import jakarta.validation.Valid;
+import org.mapstruct.Context;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.Period;
 
 @Mapper(componentModel = "spring")
 public interface AtletaMapper {
@@ -26,18 +29,18 @@ public interface AtletaMapper {
     @Mapping(target = "cpf", ignore = true)
     Atleta toEntity(@Valid AtletaUpdateRequest request);
 
-    @Mapping(target = "idade", expression = "java(calcularIdade(atleta.getDataNascimento()))")
-    AtletaResponse toGetResponse(Atleta atleta);
+    @Mapping(target = "idade", expression = "java(calcularIdade(atleta.getDataNascimento(), clock))")
+    AtletaResponse toGetResponse(Atleta atleta, @Context Clock clock);
 
-    @Mapping(target = "idade", expression = "java(calcularIdade(atleta.getDataNascimento()))")
-    AtletaResumoResponse toResumo(Atleta atleta);
+    @Mapping(target = "idade", expression = "java(calcularIdade(atleta.getDataNascimento(), clock))")
+    AtletaResumoResponse toResumo(Atleta atleta, @Context Clock clock);
 
     Endereco toEndereco(@Valid EnderecoRequest request);
 
     EnderecoResponse toEnderecoResponse(@Valid Endereco endereco);
 
-    default Integer calcularIdade(LocalDate data) {
-        return data == null ? null : java.time.Period.between(data, java.time.LocalDate.now()).getYears();
+    default Integer calcularIdade(LocalDate data, Clock clock) {
+        return data == null ? null : Period.between(data, LocalDate.now(clock)).getYears();
     }
 
 
