@@ -118,11 +118,39 @@
 
 ---
 
+## 5. Documentação da API + estratégia de versionamento — `AtletaController.java:20` `/v1/atletas` pendente
+
+> Ponto `6` `melhorias-atleta.md:232` `Versionamento: /v1/atletas OK, mas documente estratégia (URL vs header)`.
+
+**Status atual:** `AtletaController.java:20` `@RequestMapping("/v1/atletas")` usa versionamento via URL, correto (você fará na doc da API posteriormente). Sem OpenAPI (`src/main/resources/melhorias-atleta.md:9` `open-in-view`/`springdoc` pendente) e sem doc da decisão URL vs header.
+
+**Para implementar futuramente (junto da doc da API):**
+- [ ] Adicionar `springdoc-openapi-starter-webmvc-ui` em `pom.xml:16` (ver `melhorias-atleta.md:9`)
+- [ ] Anotar `AtletaController.java:20`:
+  ```java
+  @Tag(name="Atletas", description="API v1 - versionamento via URL /v1")
+  // em cada método: @Operation(summary="...")
+  ```
+- [ ] Documentar decisão em `README.md` ou `docs/api-versioning.md`:
+  ```
+  # Versionamento
+  Estratégia atual: URL (/v1/atletas). Alternativa descartada: header Accept: application/vnd.gestao.v1+json. Motivo: simplicidade + compatibilidade com browser.
+  Evolução: /v2 mantém /v1 deprecated por 6 meses.
+  ```
+- [ ] Configurar `spring.jpa.open-in-view=false` (`application.yaml:12` pendente) junto do `springdoc` para evitar `LazyInitialization`
+- [ ] Expor `swagger-ui.html` e validar `GET /v1/atletas?nome=&page=0` + `POST` com `Location` `AtletaController.java:50`
+- [ ] Teste: `contextLoads` com `springdoc` + `ClockConfig`
+
+**Referência:** `melhorias-atleta.md:6` `API REST e Controller` + `melhorias-atleta.md:9` `Infra`.
+
+---
+
 ## Checklist Geral
 
 - [ ] `hardDelete` — aguardando definição de `SecurityConfig` + `ADMIN`
 - [ ] `findByCpfOrThrowNotFound` — aguardando decisão de exposição na API
 - [ ] `FULLTEXT` / índice `nomeCompleto` — `5` paginação pronta, índice pendente
 - [ ] `ddl-auto` → `validate + Flyway` — aguardando config `application.yaml:12` + `db/migration`
+- [ ] `doc API + versionamento` — `6` `AtletaController.java:20` `/v1` OK, doc pendente (OpenAPI + README)
 
 > Quando implementar, descomentar em `AtletaService.java`, expor em `AtletaController.java:19` e atualizar `melhorias-atleta.md:207` `4.4` e `5`.

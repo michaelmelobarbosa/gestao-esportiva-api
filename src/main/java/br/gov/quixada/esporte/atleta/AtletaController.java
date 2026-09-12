@@ -1,16 +1,15 @@
 package br.gov.quixada.esporte.atleta;
 
 
-import br.gov.quixada.esporte.atleta.dto.AtletaCreateRequest;
-import br.gov.quixada.esporte.atleta.dto.AtletaResponse;
-import br.gov.quixada.esporte.atleta.dto.AtletaResumoResponse;
-import br.gov.quixada.esporte.atleta.dto.AtletaUpdateRequest;
+import br.gov.quixada.esporte.atleta.dto.*;
+import br.gov.quixada.esporte.extras.StatusAtleta;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -20,6 +19,7 @@ import java.time.Clock;
 @RestController
 @RequestMapping("/v1/atletas")
 @RequiredArgsConstructor
+@Validated
 public class AtletaController {
 
     private final AtletaService service;
@@ -34,7 +34,7 @@ public class AtletaController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<AtletaResponse> findById(@PathVariable Long id) {
+    public ResponseEntity<AtletaResponse> findById(@PathVariable @Positive Long id) {
         Atleta atleta = service.findByIdOrThrowNotFound(id);
         AtletaResponse response = mapper.toGetResponse(atleta, clock);
 
@@ -52,24 +52,17 @@ public class AtletaController {
         return ResponseEntity.created(location).body(mapper.toGetResponse(saved, clock));
     }
 
-    @PatchMapping("/{id}/inativar")
-    public ResponseEntity<AtletaResponse> inativarById(@PathVariable Long id) {
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<AtletaResponse> alterarStatus(@PathVariable @Positive Long id,
+                                                        @RequestBody @Valid AtletaStatusRequest request) {
 
-        Atleta inativo = service.inativar(id);
+        Atleta atleta = request.status() == StatusAtleta.ATIVO ? service.ativar(id) : service.inativar(id);
 
-        return ResponseEntity.ok(mapper.toGetResponse(inativo, clock));
-    }
-
-    @PatchMapping("/{id}/ativar")
-    public ResponseEntity<AtletaResponse> ativarById(@PathVariable Long id) {
-
-        Atleta ativo = service.ativar(id);
-
-        return ResponseEntity.ok(mapper.toGetResponse(ativo, clock));
+        return ResponseEntity.ok(mapper.toGetResponse(atleta, clock));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<AtletaResponse> update(@PathVariable Long id,
+    public ResponseEntity<AtletaResponse> update(@PathVariable @Positive Long id,
                                                  @RequestBody @Valid AtletaUpdateRequest request) {
 
         Atleta atleta = mapper.toEntity(request);

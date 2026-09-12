@@ -2,7 +2,6 @@ package br.gov.quixada.esporte.atleta;
 
 import br.gov.quixada.esporte.exceptions.AtletaNotFoundException;
 import br.gov.quixada.esporte.exceptions.CpfJaCadastradoException;
-import br.gov.quixada.esporte.extras.CpfUtils;
 import br.gov.quixada.esporte.extras.StatusAtleta;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
