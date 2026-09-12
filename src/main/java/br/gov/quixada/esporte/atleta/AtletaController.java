@@ -7,11 +7,11 @@ import br.gov.quixada.esporte.atleta.dto.AtletaResumoResponse;
 import br.gov.quixada.esporte.atleta.dto.AtletaUpdateRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/v1/atletas")
@@ -21,12 +21,11 @@ public class AtletaController {
     private final AtletaService service;
     private final AtletaMapper mapper;
 
-    @GetMapping
-    public ResponseEntity<List<AtletaResumoResponse>> findAll(@RequestParam(required = false) String nome) {
-        List<Atleta> atletas = service.findAll(nome);
-        List<AtletaResumoResponse> resumoList = mapper.toResumoList(atletas);
 
-        return ResponseEntity.ok(resumoList);
+    @GetMapping()
+    public ResponseEntity<Page<AtletaResumoResponse>> findAll(@RequestParam(required = false) String nome, Pageable pageable) {
+
+        return ResponseEntity.ok(service.findAll(nome, pageable).map(mapper::toResumo));
     }
 
     @GetMapping("/{id}")

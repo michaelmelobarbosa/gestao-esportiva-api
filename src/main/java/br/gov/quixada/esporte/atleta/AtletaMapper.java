@@ -1,12 +1,5 @@
 package br.gov.quixada.esporte.atleta;
 
-import java.time.LocalDate;
-import java.util.List;
-
-import jakarta.validation.Valid;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-
 import br.gov.quixada.esporte.atleta.dto.AtletaCreateRequest;
 import br.gov.quixada.esporte.atleta.dto.AtletaResponse;
 import br.gov.quixada.esporte.atleta.dto.AtletaResumoResponse;
@@ -14,6 +7,11 @@ import br.gov.quixada.esporte.atleta.dto.AtletaUpdateRequest;
 import br.gov.quixada.esporte.extras.Endereco;
 import br.gov.quixada.esporte.extras.EnderecoRequest;
 import br.gov.quixada.esporte.extras.EnderecoResponse;
+import jakarta.validation.Valid;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+
+import java.time.LocalDate;
 
 @Mapper(componentModel = "spring")
 public interface AtletaMapper {
@@ -32,8 +30,6 @@ public interface AtletaMapper {
 
     @Mapping(target = "idade", expression = "java(calcularIdade(atleta.getDataNascimento()))")
     AtletaResumoResponse toResumo(Atleta atleta);
-
-    List<AtletaResumoResponse> toResumoList(List<Atleta> atletas);
 
     Endereco toEndereco(@Valid EnderecoRequest request);
 

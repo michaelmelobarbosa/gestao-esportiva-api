@@ -77,12 +77,14 @@ public class Atleta {
     @PrePersist
     private void prePersist() {
         this.dataCadastro = LocalDateTime.now();
-        this.cpf = CpfUtils.normalize(this.cpf);
+        if(this.cpf != null){
+            this.cpf = CpfUtils.normalize(this.cpf);
+        }
     }
-
     @PreUpdate
     private void preUpdate() {
-        this.cpf = CpfUtils.normalize(this.cpf);
+        if(this.cpf != null){
+            this.cpf = CpfUtils.normalize(this.cpf);
+        }
     }
-
 }

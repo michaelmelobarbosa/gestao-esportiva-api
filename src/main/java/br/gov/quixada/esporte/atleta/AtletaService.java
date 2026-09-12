@@ -1,8 +1,8 @@
 package br.gov.quixada.esporte.atleta;
 
-import java.util.List;
-
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,9 +18,10 @@ public class AtletaService {
 
     private final AtletaRepository repository;
 
+
     @Transactional(readOnly = true)
-    public List<Atleta> findAll(String name) {
-        return name == null ? repository.findAll() : repository.findByNomeCompletoContainingIgnoreCase(name);
+    public Page<Atleta> findAll(String nome, Pageable pageable) {
+        return nome == null || nome.isBlank() ? repository.findAll(pageable) : repository.findByNomeCompletoContainingIgnoreCase(nome, pageable);
     }
 
     @Transactional(readOnly = true)

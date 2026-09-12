@@ -81,7 +81,7 @@ void prePersist() {
 }
 ```
 
-### 2.3 `Atleta.java:82` — `public void normalizarCpf()`
+### 2.3 `Atleta.java:82` — `public void normalizarCpf()` ✅ Corrigido
 ```java
 @PrePersist @PreUpdate
 public void normalizarCpf() { this.cpf = CpfUtils.normalize(this.cpf); }
@@ -90,7 +90,7 @@ Deveria ser `private`/`protected`. `public` expõe método interno. E é chamado
 
 **Correção:** `private void normalizarCpf()` + `if (this.cpf != null)`.
 
-### 2.4 `AtletaRepository.java:16` — Busca case-sensitive e sem limite
+### 2.4 `AtletaRepository.java:16` — Busca case-sensitive e sem limite ✅ Corrigido
 ```java
 List<Atleta> findByNomeCompletoContaining(String name);
 ```
@@ -311,8 +311,8 @@ Estude na ordem (do menor risco ao maior impacto):
 - [x] Tornar `normalizarCpf()` privado + null-safe (2.1/2.3 — feito: `private`, null-safe via `CpfUtils`)
 - [ ] Adicionar `@Past` em `AtletaCreateRequest.java:22` e `AtletaUpdateRequest.java:16`
 - [x] Corrigir `@Size` do CPF para `min=11` (2.1 — feito: trocado por `@Pattern` explícito nos dois formatos)
-- [ ] Criar `Page<Atleta> findByNomeCompletoContainingIgnoreCase(...)` + paginar Controller
-- [ ] Tratar `nome.isBlank()` em `AtletaService.java:22`
+- [x] Criar `Page<Atleta> findByNomeCompletoContainingIgnoreCase(...)` + paginar Controller (2.4 — feito: `Page<Atleta> + Pageable + IgnoreCase` em `AtletaRepository.java:18`, `Page.map` em `AtletaController.java:37`)
+- [x] Tratar `nome.isBlank()` em `AtletaService.java:22` (2.4 — feito: `name==null || name.isBlank()` em `AtletaService.java:28`)
 - [ ] Remover `repository.save()` redundante em `ativar/inativar`
 - [ ] Padronizar `inativar` vs `desativar`
 - [ ] Adicionar `Location` no `POST`
