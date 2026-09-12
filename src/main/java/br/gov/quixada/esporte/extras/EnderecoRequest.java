@@ -18,8 +18,7 @@ public record EnderecoRequest(
         @Size(max=50)
         String cidade,
         @NotBlank(message = "Cep é obrigatório")
-        @Pattern(regexp="\\d{5}-\\d{3}")
-        @Size(max=10)
+        @Pattern(regexp="\\d{5}-\\d{3}", message = "O padrão do cep deve ser xxxxx-xxx")
         String cep
 ) {
 }

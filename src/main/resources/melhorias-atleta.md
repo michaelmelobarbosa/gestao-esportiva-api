@@ -115,7 +115,7 @@ return ResponseEntity.created(location).body(mapper.toGetResponse(saved));
 
 ## 3. Falhas de Validação e Regra de Negócio
 
-### 3.1 `dto/AtletaCreateRequest.java:22` e `dto/AtletaUpdateRequest.java:16` — Falta `@Past`
+### 3.1 `dto/AtletaCreateRequest.java:22` e `dto/AtletaUpdateRequest.java:16` — Falta `@Past` ✅ Corrigido
 Entidade tem `@Past` (`Atleta.java:59`), mas DTO não. Cliente envia `dataNascimento: 2090-01-01` e só falha na persistência (vira `500` se bypass).
 
 **Correção DTO:**
@@ -124,22 +124,22 @@ Entidade tem `@Past` (`Atleta.java:59`), mas DTO não. Cliente envia `dataNascim
 LocalDate dataNascimento,
 ```
 
-### 3.2 `dto/AtletaCreateRequest.java:20` — `@Size(max=14)` permissivo
+### 3.2 `dto/AtletaCreateRequest.java:20` — `@Size(max=14)` permissivo ✅ Corrigido
 ```java
 @CPF @Size(max=14) String cpf,
 ```
 Permite `"1"`. Se aceitar máscara, precisa `@Size(min=11, max=14)` ou melhor `@Pattern` explícito. Como `CpfUtils.normalize()` converte para 11, valide no Service após normalizar.
 
-### 3.3 `extras/EnderecoRequest.java:21` — Redundância
+### 3.3 `extras/EnderecoRequest.java:21` — Redundância ✅ Corrigido
 ```java
 @Pattern(regexp="\\d{5}-\\d{3}") @Size(max=10) String cep,
 ```
 `@Pattern` já garante 9 chars (`12345-678`), `@Size` é redundante. E `@NotBlank` já implica `!= null`.
 
-### 3.4 `AtletaService.java:39` — Corrida de CPF
+### 3.4 `AtletaService.java:39` — Corrida de CPF ✅ Corrigido
 `existsByCpf()` + `save()` tem race condition (TOCTOU). Você já trata com `catch (DataIntegrityViolationException)` — **ótimo**. Pode simplificar removendo `existsByCpf()` e confiando só na constraint `unique` (`Atleta.java:53`) + catch.
 
-### 3.5 `AtletaService.java:63-75` — `ativar()/inativar()` redundante
+### 3.5 `AtletaService.java:63-75` — `ativar()/inativar()` redundante ✅ Corrigido
 Dentro de `@Transactional`, `repository.save(atleta)` é desnecessário — JPA dirty checking já persiste. E não verifica idempotência (ativar já ativo).
 
 **Melhoria:**
@@ -309,11 +309,11 @@ Estude na ordem (do menor risco ao maior impacto):
 
 - [x] Remover `@CPF/@Pattern` de `Atleta.java:54` ou ajustar regex (2.1 — feito: entidade só `@Pattern(\d{11})`, DTO aceita ambos os formatos)
 - [x] Tornar `normalizarCpf()` privado + null-safe (2.1/2.3 — feito: `private`, null-safe via `CpfUtils`)
-- [ ] Adicionar `@Past` em `AtletaCreateRequest.java:22` e `AtletaUpdateRequest.java:16`
-- [x] Corrigir `@Size` do CPF para `min=11` (2.1 — feito: trocado por `@Pattern` explícito nos dois formatos)
+- [x] Adicionar `@Past` em `AtletaCreateRequest.java:22` e `AtletaUpdateRequest.java:16` (3.1 — feito: `@Past + @NotNull` em `AtletaCreateRequest.java:24` e `AtletaUpdateRequest.java:17`)
+- [x] Corrigir `@Size` do CPF para `min=11` (3.2 — feito: `@Pattern` + `@Size(min=11,max=14)` em `AtletaCreateRequest.java:21-22`, DTO aceita `000.000.000-00` ou `00000000000`)
 - [x] Criar `Page<Atleta> findByNomeCompletoContainingIgnoreCase(...)` + paginar Controller (2.4 — feito: `Page<Atleta> + Pageable + IgnoreCase` em `AtletaRepository.java:18`, `Page.map` em `AtletaController.java:37`)
 - [x] Tratar `nome.isBlank()` em `AtletaService.java:22` (2.4 — feito: `name==null || name.isBlank()` em `AtletaService.java:28`)
-- [ ] Remover `repository.save()` redundante em `ativar/inativar`
+- [x] Remover `repository.save()` redundante em `ativar/inativar` (3.5 — feito: `ativar`/`inativar`/`update` sem `save()` via dirty checking + idempotência em `AtletaService.java:58-93`)
 - [x] Padronizar `inativar` vs `desativar` (2.5 — feito: `inativarById`/`ativarById` em `AtletaController.java:53,61` padronizado com `service.inativar/ativar`)
 - [x] Adicionar `Location` no `POST` (2.6 — feito: `ResponseEntity.created(location)` em `AtletaController.java:50` com `ServletUriComponentsBuilder`)
 - [ ] Implementar handlers para `MethodArgumentNotValidException` etc.

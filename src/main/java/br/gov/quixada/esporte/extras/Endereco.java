@@ -39,7 +39,6 @@ public class Endereco {
 
     @Column(nullable = false, length = 10)
     @NotBlank
-    @Size(max = 10)
-    @Pattern(regexp="\\d{5}-\\d{3}")
+    @Pattern(regexp="\\d{5}-\\d{3}", message = "O padrão do cep deve ser xxxxx-xxx")
     private String cep;
 }

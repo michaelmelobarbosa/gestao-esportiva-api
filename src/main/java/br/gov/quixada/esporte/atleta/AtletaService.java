@@ -1,5 +1,7 @@
 package br.gov.quixada.esporte.atleta;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AtletaService {
 
+    private static final Logger log = LoggerFactory.getLogger(AtletaService.class);
     private final AtletaRepository repository;
 
 
@@ -39,11 +42,6 @@ public class AtletaService {
     @Transactional
     public Atleta save(Atleta atleta) {
         atleta.setCpf(CpfUtils.normalize(atleta.getCpf()));
-
-        if (repository.existsByCpf(atleta.getCpf())) {
-            throw new CpfJaCadastradoException("CPF já cadastrado");
-        }
-
         atleta.setStatus(StatusAtleta.ATIVO);
 
         try {
@@ -63,16 +61,26 @@ public class AtletaService {
     @Transactional
     public Atleta ativar(Long id) {
         Atleta atleta = findByIdOrThrowNotFound(id);
+        if (atleta.getStatus() == StatusAtleta.ATIVO) {
+            return atleta;
+        }
+
         atleta.setStatus(StatusAtleta.ATIVO);
 
-        return repository.save(atleta);
+        return atleta;
     }
 
     @Transactional
     public Atleta inativar(Long id) {
         Atleta atleta = findByIdOrThrowNotFound(id);
+
+        if (atleta.getStatus() == StatusAtleta.INATIVO) {
+            return atleta;
+        }
+
         atleta.setStatus(StatusAtleta.INATIVO);
-        return repository.save(atleta);
+
+        return atleta;
     }
 
     @Transactional
@@ -85,6 +93,6 @@ public class AtletaService {
         atletaExistente.setEndereco(atletaParaAtualizar.getEndereco());
         atletaExistente.setSexo(atletaParaAtualizar.getSexo());
 
-        return repository.save(atletaExistente);
+        return atletaExistente;
     }
 }
