@@ -99,10 +99,10 @@ List<Atleta> findByNomeCompletoContaining(String name);
 
 **Correção:** `Page<Atleta> findByNomeCompletoContainingIgnoreCase(String name, Pageable pageable);`
 
-### 2.5 `AtletaController.java:50` vs `57` — Nomenclatura inconsistente
+### 2.5 `AtletaController.java:50` vs `57` — Nomenclatura inconsistente ✅ Corrigido
 `@PatchMapping("/{id}/inativar")` com método `desativarById()` chamando `service.inativar()`. Escolha um verbo e mantenha (`inativar`/`desativar`).
 
-### 2.6 `AtletaController.java:40` — Falta `Location` header
+### 2.6 `AtletaController.java:40` — Falta `Location` header ✅ Corrigido
 REST padrão: `POST` deve retornar `201` + `Location: /v1/atletas/{id}`.
 
 **Correção:**
@@ -314,8 +314,8 @@ Estude na ordem (do menor risco ao maior impacto):
 - [x] Criar `Page<Atleta> findByNomeCompletoContainingIgnoreCase(...)` + paginar Controller (2.4 — feito: `Page<Atleta> + Pageable + IgnoreCase` em `AtletaRepository.java:18`, `Page.map` em `AtletaController.java:37`)
 - [x] Tratar `nome.isBlank()` em `AtletaService.java:22` (2.4 — feito: `name==null || name.isBlank()` em `AtletaService.java:28`)
 - [ ] Remover `repository.save()` redundante em `ativar/inativar`
-- [ ] Padronizar `inativar` vs `desativar`
-- [ ] Adicionar `Location` no `POST`
+- [x] Padronizar `inativar` vs `desativar` (2.5 — feito: `inativarById`/`ativarById` em `AtletaController.java:53,61` padronizado com `service.inativar/ativar`)
+- [x] Adicionar `Location` no `POST` (2.6 — feito: `ResponseEntity.created(location)` em `AtletaController.java:50` com `ServletUriComponentsBuilder`)
 - [ ] Implementar handlers para `MethodArgumentNotValidException` etc.
 - [ ] Evoluir `ApiError.java:5` para incluir `path` e `errors`
 - [ ] Injetar `Clock` no `AtletaMapper.java:42`

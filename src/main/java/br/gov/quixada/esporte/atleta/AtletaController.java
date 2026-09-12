@@ -12,6 +12,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.net.URI;
 
 @RestController
 @RequestMapping("/v1/atletas")
@@ -40,13 +43,15 @@ public class AtletaController {
     public ResponseEntity<AtletaResponse> save(@RequestBody @Valid AtletaCreateRequest request) {
         Atleta atleta = mapper.toEntity(request);
         Atleta saved = service.save(atleta);
-        AtletaResponse getResponse = mapper.toGetResponse(saved);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(getResponse);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}")
+                .buildAndExpand(saved.getId()).toUri();
+
+        return ResponseEntity.created(location).body(mapper.toGetResponse(saved));
     }
 
     @PatchMapping("/{id}/inativar")
-    public ResponseEntity<AtletaResponse> desativarById(@PathVariable Long id) {
+    public ResponseEntity<AtletaResponse> inativarById(@PathVariable Long id) {
 
         Atleta inativo = service.inativar(id);
 
