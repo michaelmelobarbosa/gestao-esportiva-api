@@ -21,4 +21,10 @@ public class GlobalExceptionHandler {
                 .body(new ApiError(HttpStatus.CONFLICT.value(), ex.getMessage(), LocalDateTime.now()));
     }
 
+    @ExceptionHandler(AtletaInativoException.class)
+    public ResponseEntity<ApiError> handleInativo(AtletaInativoException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ApiError(HttpStatus.CONFLICT.value(), ex.getMessage(), LocalDateTime.now()));
+    }
+
 }

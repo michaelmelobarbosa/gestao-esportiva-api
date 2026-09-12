@@ -153,12 +153,17 @@ public Atleta inativar(Long id) {
 }
 ```
 
-### 3.6 `AtletaService.java:78` — `update()` silencioso sobre CPF
+### 3.6 `AtletaService.java:78` — `update()` silencioso sobre CPF ✅ Corrigido
 ```java
 atletaExistente.setNomeCompleto(...); // 5 campos
 // cpf não copiado -> imutável (correto, mas não documentado)
 ```
 Bom que CPF não muda via `AtletaUpdateRequest` (DTO sem cpf), mas documente regra: “CPF imutável após criação”. E considere bloquear update se `status == INATIVO`.
+
+**Correção aplicada (3.6):**
+- `AtletaService.java:90` `if (status == INATIVO) throw new AtletaInativoException(...)` + `GlobalExceptionHandler.java:24` `409 CONFLICT`
+- `AtletaUpdateRequest.java:13` sem campo `cpf` + `AtletaService.java:94-100` sem `setCpf()` => regra `CPF imutável após criação` documentada via `update()` + `return atletaExistente` sem `save()` (dirty checking `3.5`)
+- Limpeza `Logger` não usado `AtletaService.java:4-5` removido + javadoc `/** CPF imutável após criação; bloqueia edição se INATIVO */` em `update()`
 
 ---
 

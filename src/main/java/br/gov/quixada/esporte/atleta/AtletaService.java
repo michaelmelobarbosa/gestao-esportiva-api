@@ -1,24 +1,21 @@
 package br.gov.quixada.esporte.atleta;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import br.gov.quixada.esporte.exceptions.AtletaInativoException;
+import br.gov.quixada.esporte.exceptions.AtletaNotFoundException;
+import br.gov.quixada.esporte.exceptions.CpfJaCadastradoException;
+import br.gov.quixada.esporte.extras.CpfUtils;
+import br.gov.quixada.esporte.extras.StatusAtleta;
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import br.gov.quixada.esporte.exceptions.AtletaNotFoundException;
-import br.gov.quixada.esporte.exceptions.CpfJaCadastradoException;
-import br.gov.quixada.esporte.extras.CpfUtils;
-import br.gov.quixada.esporte.extras.StatusAtleta;
-import lombok.RequiredArgsConstructor;
-
 @Service
 @RequiredArgsConstructor
 public class AtletaService {
 
-    private static final Logger log = LoggerFactory.getLogger(AtletaService.class);
     private final AtletaRepository repository;
 
 
@@ -83,9 +80,16 @@ public class AtletaService {
         return atleta;
     }
 
+    /**
+     * CPF imutável após criação; bloqueia edição se INATIVO.
+     */
     @Transactional
     public Atleta update(Long id, Atleta atletaParaAtualizar) {
         Atleta atletaExistente = findByIdOrThrowNotFound(id);
+
+        if (atletaExistente.getStatus() == StatusAtleta.INATIVO) {
+            throw new AtletaInativoException("Atleta está inativo, reative antes de editar");
+        }
 
         atletaExistente.setNomeCompleto(atletaParaAtualizar.getNomeCompleto());
         atletaExistente.setTelefone(atletaParaAtualizar.getTelefone());
