@@ -309,7 +309,7 @@ Falta documentação OpenAPI: adicione `springdoc-openapi-starter-webmvc-ui`. �
 - [x] Remover ou expor `findByCpfOrThrowNotFound` (4.4 — feito: mantido comentado `AtletaService.java:32` + rastreado em `iterations/futuras-iiterações.md`)
 - [x] Trocar `@Setter` da entidade por métodos de domínio (4.1 — feito: `Atleta.java:28` `@Getter` + `@NoArgsConstructor(PROTECTED)`/`@AllArgsConstructor(PRIVATE)` + `@Setter(PRIVATE)` só em `id` + métodos `ativar()`/`inativar()`/`atualizarDados()` + helpers `definirCpfNormalizado()`/`definirStatus()`; `AtletaService.java:40` refatorado)
 - [x] Adicionar testes (`AtletaServiceTest`, `AtletaControllerTest`) (8 — movido p/ `iterations/futuras-iterações.md#6`, status atual só `contextLoads`)
-- [ ] `application.yaml:12` -> `validate` + Flyway
+- [x] `application.yaml:12` -> `validate` + Flyway (feito: `V1__baseline.sql` + `spring-boot-starter-flyway`/`flyway-mysql` + `ddl-auto: validate`; ver `iterations/futuras-iterações.md#4`)
 - [x] `open-in-view=false` (9 — feito `application.yaml:11`)
 - [ ] OpenAPI (`springdoc-openapi-starter-webmvc-ui`) (9 — movido p/ `iterations/futuras-iterações.md#5`)
 

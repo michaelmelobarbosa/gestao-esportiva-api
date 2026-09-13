@@ -88,3 +88,11 @@
 - **Decisão:** `Clock.system(ZoneId.of("America/Fortaleza"))` (Quixadá-CE; Ceará usa `America/Fortaleza`, UTC-3 sem horário de verão), em vez de `systemDefaultZone()` (que depende da JVM e pode divergir do `serverTimezone=America/Recife` do datasource em `application.yaml:6`).
 - **O que estudar:** `java.time.Clock`, `ZoneId`, `LocalDate.now(clock)`, como injetar `Clock` fixo em testes (`Clock.fixed(...)`), por que `LocalDate.now()` sem `Clock` é não-determinístico.
 
+### Flyway e migrações de schema
+- **Onde apareceu:** `src/main/resources/db/migration/V1__baseline.sql`, `application.yaml` (`ddl-auto: validate` + `spring.flyway`), `pom.xml`.
+- **Contexto (por que adotamos):** o `ddl-auto: update` havia deixado o schema divergente das entidades — coluna órfã `ativo` em `db_atletas`, coluna `status` faltando, `cpf varchar(14)` em vez de `varchar(11)`, `unique` fantasma em `nome_completo`, colunas de FK duplicadas (`club_id` + `id_clube`). Flyway passa a ser a fonte da verdade do schema.
+- **Como foi feito:** geramos o DDL limpo pelo próprio Hibernate (`jakarta.persistence.schema-generation.scripts.action=create`) e o usamos como `V1__baseline.sql`; depois ligamos `ddl-auto: validate` e recriamos o banco de dev.
+- **Pegadinha do Spring Boot 4:** `flyway-mysql` sozinho **não** ativa o Flyway (a auto-config foi separada); é preciso `spring-boot-starter-flyway`.
+- **O que estudar:** versionamento `V<n>__`, checksum e imutabilidade das migrations aplicadas, `flyway_schema_history`, `baseline-on-migrate` (adoção sobre banco existente), `validate-on-migrate`, comandos `flyway:info`/`validate`/`repair` e por que `flyway:clean` fica desabilitado, `ddl-auto: validate` vs `none`. Temas futuros: `application-dev/prod.yaml` e Testcontainers.
+
+

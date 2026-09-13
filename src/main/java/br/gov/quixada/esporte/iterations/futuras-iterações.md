@@ -92,29 +92,24 @@
 
 ---
 
-## 4. `ddl-auto:update` → `validate` + Flyway/Liquibase — `application.yaml:12` pendente
+## 4. `ddl-auto:update` → `validate` + Flyway/Liquibase — `application.yaml` ✅ Feito
 
 > Ponto `5` `melhorias-atleta.md:224` `ddl-auto:update` perigoso em prod (pode dropar coluna).
 
-**Status atual:** `src/main/resources/application.yaml:12` ainda `ddl-auto: update` + `show-sql:true` + `format_sql:true`. Sem `validate` + Flyway (`src/main/resources/db/migration/` vazio, `HELP.md` menciona Flyway mas `pom.xml:16` sem dependência).
+**Status:** ✅ Adotado o Flyway. Baseline criado a partir do DDL gerado pelo Hibernate e banco de dev recriado limpo. `contextLoads` aplica `V1` e valida o schema.
 
-**Para implementar no futuro:**
-- [ ] Adicionar em `pom.xml:16`:
-  ```xml
-  <dependency><groupId>org.flywaydb</groupId><artifactId>flyway-mysql</artifactId></dependency>
-  ```
-- [ ] Criar `V1__create_db_atletas.sql` espelhando `Atleta.java:33` (`db_atletas`, `cpf unique`, `nomeCompleto 150`, `status`, etc) + `V2` do índice acima
-- [ ] Trocar `application.yaml:12`:
-  ```yaml
-  spring.jpa.hibernate.ddl-auto: validate
-  spring.flyway.enabled: true
-  spring.flyway.locations: classpath:db/migration
-  ```
-- [ ] Manter `show-sql:true` só em `application-dev.yaml`, desligar em `application-prod.yaml` (`logging.level.org.hibernate.SQL: DEBUG`)
-- [ ] Verificar compatibilidade `ddl-auto: validate` com `Atleta.java:28` `@Builder`/`@PrePersist` (não deve quebrar)
-- [ ] Teste: `./mvnw flyway:migrate` + `contextLoads` com `validate`
+**O que foi feito:**
+- [x] Dependências no `pom.xml`: `spring-boot-starter-flyway` (auto-config — no Spring Boot 4 o `flyway-mysql` sozinho **não** ativa o Flyway) + `flyway-mysql`
+- [x] `V1__baseline.sql` em `src/main/resources/db/migration/` gerado via `jakarta.persistence.schema-generation.scripts.action=create` (DDL idêntico ao esperado pelo Hibernate)
+- [x] `application.yaml`: `ddl-auto: validate` + bloco `spring.flyway` (`enabled`, `locations`, `validate-on-migrate`, `baseline-on-migrate: false`)
+- [x] Banco de dev recriado (`docker compose down -v && up -d`) — exatamente pelo drift que o `ddl-auto: update` causou (coluna `ativo` órfã, `status` faltando, `cpf varchar(14)`, `unique` fantasma em `nome_completo`, colunas FK duplicadas)
+- [x] `contextLoads` com `validate`: `Successfully applied 1 migration ... now at version v1`
+- [ ] (Futuro) Separar `application-dev.yaml`/`application-prod.yaml` — `show-sql` desligado em prod; ver item `7`
+- [ ] (Futuro) Testcontainers para testes que sobem o banco sem depender do MySQL local
 
-**Referência:** `melhorias-atleta.md:9` `Infra e Configuração` + `HELP.md` Flyway boilerplate.
+**Fluxo daqui em diante:** toda mudança de schema vira nova migration `V2__`, `V3__`...; nunca editar migration aplicada (checksum); usar `./mvnw flyway:info` / `flyway:repair` em dev.
+
+**Referência:** `melhorias-atleta.md:9` `Infra e Configuração`.
 
 ---
 
@@ -198,7 +193,7 @@
 - [ ] `hardDelete` — aguardando definição de `SecurityConfig` + `ADMIN`
 - [ ] `findByCpfOrThrowNotFound` — aguardando decisão de exposição na API
 - [ ] `FULLTEXT` / índice `nomeCompleto` — `5` paginação pronta, índice pendente
-- [ ] `ddl-auto` → `validate + Flyway` — aguardando config `application.yaml:12` + `db/migration`
+- [x] `ddl-auto` → `validate + Flyway` — ✅ feito: `V1__baseline.sql` + `spring-boot-starter-flyway`/`flyway-mysql` + `ddl-auto: validate` (item `4`)
 - [ ] `doc API + versionamento` — `6` `AtletaController.java:20` `/v1` OK, doc pendente (OpenAPI + README)
 - [ ] `Testes automatizados` — `8` `AtletaServiceTest` + `AtletaControllerTest` + `AtletaMapperTest` pendentes (`src/test/**/*Atleta*` vazio)
 - [x] `open-in-view=false` — `9` feito em `application.yaml:11`
