@@ -6,7 +6,6 @@ import java.time.LocalDateTime;
 import br.gov.quixada.esporte.extras.CpfUtils;
 import br.gov.quixada.esporte.extras.Endereco;
 import br.gov.quixada.esporte.extras.Sexo;
-import br.gov.quixada.esporte.extras.StatusAtleta;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;

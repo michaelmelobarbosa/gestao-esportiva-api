@@ -6,10 +6,17 @@ import java.util.List;
 import br.gov.quixada.esporte.atleta.exception.AtletaInativoException;
 import br.gov.quixada.esporte.atleta.exception.AtletaNotFoundException;
 import br.gov.quixada.esporte.atleta.exception.CpfJaCadastradoException;
+import br.gov.quixada.esporte.categoria.exception.CategoriaInativaException;
 import br.gov.quixada.esporte.categoria.exception.CategoriaNotFoundException;
 import br.gov.quixada.esporte.categoria.exception.IdadeInvalidaException;
+import br.gov.quixada.esporte.clube.exception.ClubeInativoException;
 import br.gov.quixada.esporte.clube.exception.ClubeNotFoundException;
+import br.gov.quixada.esporte.competicao.exception.CompeticaoNaoEditavelException;
 import br.gov.quixada.esporte.competicao.exception.CompeticaoNotFoundException;
+import br.gov.quixada.esporte.competicao.exception.PeriodoInvalidoException;
+import br.gov.quixada.esporte.equipe.exception.EquipeInativaException;
+import br.gov.quixada.esporte.equipe.exception.EquipeNotFoundException;
+import br.gov.quixada.esporte.modalidade.exception.ModalidadeNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -60,6 +67,41 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IdadeInvalidaException.class)
     public ResponseEntity<ApiError> handleIdadeInvalida(IdadeInvalidaException ex, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(CategoriaInativaException.class)
+    public ResponseEntity<ApiError> handleCategoriaInativa(CategoriaInativaException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(ClubeInativoException.class)
+    public ResponseEntity<ApiError> handleClubeInativo(ClubeInativoException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(EquipeNotFoundException.class)
+    public ResponseEntity<ApiError> handleEquipeNotFound(EquipeNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(ModalidadeNotFoundException.class)
+    public ResponseEntity<ApiError> handleModalidadeNotFound(ModalidadeNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(EquipeInativaException.class)
+    public ResponseEntity<ApiError> handleEquipeInativa(EquipeInativaException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(PeriodoInvalidoException.class)
+    public ResponseEntity<ApiError> handlePeriodoInvalido(PeriodoInvalidoException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(CompeticaoNaoEditavelException.class)
+    public ResponseEntity<ApiError> handleCompeticaoNaoEditavel(CompeticaoNaoEditavelException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(ConstraintViolationException.class)

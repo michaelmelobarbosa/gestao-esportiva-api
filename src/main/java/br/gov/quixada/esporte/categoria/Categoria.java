@@ -1,7 +1,8 @@
 package br.gov.quixada.esporte.categoria;
 
-import br.gov.quixada.esporte.competicao.Competicao;
 import br.gov.quixada.esporte.categoria.exception.IdadeInvalidaException;
+import br.gov.quixada.esporte.categoria.exception.CategoriaInativaException;
+import br.gov.quixada.esporte.competicao.Competicao;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -39,8 +40,25 @@ public class Categoria {
     @JoinColumn(name = "id_competicao", nullable = false)
     private Competicao competicao;
 
-    /** Atualiza dados mutáveis. Competição é imutável após a criação. */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private StatusCategoria status;
+
+    public void ativar() {
+        if (this.status == StatusCategoria.ATIVO) return;
+        this.status = StatusCategoria.ATIVO;
+    }
+
+    public void inativar() {
+        if (this.status == StatusCategoria.INATIVO) return;
+        this.status = StatusCategoria.INATIVO;
+    }
+
+    /** Atualiza dados mutáveis. Competição é imutável após a criação; bloqueia se INATIVO. */
     public void atualizarDados(String nome, Integer idadeMinima, Integer idadeMaxima) {
+        if (this.status == StatusCategoria.INATIVO) {
+            throw new CategoriaInativaException("Categoria está inativa, reative antes de editar");
+        }
         validarIdades(idadeMinima, idadeMaxima);
         this.nome = nome;
         this.idadeMinima = idadeMinima;
@@ -53,6 +71,13 @@ public class Categoria {
 
     void definirCompeticao(Competicao competicao) {
         this.competicao = competicao;
+    }
+
+    @PrePersist
+    private void prePersist() {
+        if (this.status == null) {
+            this.status = StatusCategoria.ATIVO;
+        }
     }
 
     private void validarIdades(Integer idadeMinima, Integer idadeMaxima) {

@@ -1,7 +1,7 @@
 package br.gov.quixada.esporte.clube;
 
+import br.gov.quixada.esporte.clube.exception.ClubeInativoException;
 import br.gov.quixada.esporte.extras.Endereco;
-import br.gov.quixada.esporte.extras.StatusClube;
 import jakarta.persistence.*;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -46,8 +46,11 @@ public class Clube {
     @Column(nullable = false, length = 20)
     private StatusClube status;
 
-    /** Atualiza dados mutáveis. */
+    /** Atualiza dados mutáveis; bloqueia se INATIVO. */
     public void atualizarDados(String nome, String responsavel, String telefone, Endereco endereco) {
+        if (this.status == StatusClube.INATIVO) {
+            throw new ClubeInativoException("Clube está inativo, reative antes de editar");
+        }
         this.nome = nome;
         this.responsavel = responsavel;
         this.telefone = telefone;
@@ -62,5 +65,12 @@ public class Clube {
     public void inativar() {
         if (this.status == StatusClube.INATIVO) return;
         this.status = StatusClube.INATIVO;
+    }
+
+    @PrePersist
+    private void prePersist() {
+        if (this.status == null) {
+            this.status = StatusClube.ATIVO;
+        }
     }
 }

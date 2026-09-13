@@ -15,10 +15,12 @@ public interface CategoriaMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "competicao", ignore = true)
+    @Mapping(target = "status", ignore = true)
     Categoria toEntity(@Valid CategoriaCreateRequest request);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "competicao", ignore = true)
+    @Mapping(target = "status", ignore = true)
     Categoria toEntity(@Valid CategoriaUpdateRequest request);
 
     @Mapping(target = "competicaoId", source = "competicao.id")

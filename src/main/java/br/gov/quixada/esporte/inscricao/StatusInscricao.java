@@ -1,4 +1,4 @@
-package br.gov.quixada.esporte.extras;
+package br.gov.quixada.esporte.inscricao;
 
 public enum StatusInscricao {
     PENDENTE,

@@ -33,8 +33,23 @@ public class CategoriaService {
     @Transactional
     public Categoria save(Categoria categoria, Long competicaoId) {
         categoria.validar();
+        categoria.ativar();
         categoria.definirCompeticao(buscarCompeticao(competicaoId));
         return repository.save(categoria);
+    }
+
+    @Transactional
+    public Categoria ativar(Long id) {
+        Categoria categoria = findByIdOrThrowNotFound(id);
+        categoria.ativar();
+        return categoria;
+    }
+
+    @Transactional
+    public Categoria inativar(Long id) {
+        Categoria categoria = findByIdOrThrowNotFound(id);
+        categoria.inativar();
+        return categoria;
     }
 
     /**

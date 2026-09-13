@@ -2,7 +2,6 @@ package br.gov.quixada.esporte.atleta;
 
 
 import br.gov.quixada.esporte.atleta.dto.*;
-import br.gov.quixada.esporte.extras.StatusAtleta;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;

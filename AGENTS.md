@@ -32,5 +32,5 @@ docker compose up -d  # starts gestao-esportiva-mysql on 3306 (healthcheck 30s s
 - **MapStruct + Lombok coupling**: Generated mappers go to `target/generated-sources/annotations/`. If you edit `AtletaMapper.java:42` `calcularIdade()` (`LocalDate.now()` not testable) run `./mvnw clean compile` to regenerate.
 - **`@CreationTimestamp` Hibernate-specific** (`Atleta.java:78`) — tied to Hibernate, not Spring Data auditing. Tests need full context.
 - **`GlobalExceptionHandler.java:11` only handles `AtletaNotFoundException` and `CpfJaCadastradoException`** — `MethodArgumentNotValidException` (failed `@Valid`) returns Spring default, not `ApiError`.
-- **Active work notes**: `src/main/resources/melhorias-atleta.md` is the authoritative bug/roadmap checklist (12-section analysis). Check git branch `dev` is active development branch (`main` is stale) — current uncommitted changes on `dev` per `git status`.
+- **Active work notes**: `src/main/java/br/gov/quixada/esporte/iterations/melhorias-atleta.md` is the authoritative bug/roadmap checklist (12-section analysis). Check git branch `dev` is active development branch (`main` is stale) — current uncommitted changes on `dev` per `git status`.
 - **No CI / lint / formatter config** in repo. No `opencode.json`. No `.github/` workflows. `HELP.md` is vanilla Spring Initializr boilerplate — ignore Flyway references there.

@@ -1,8 +1,10 @@
 package br.gov.quixada.esporte.categoria;
 
+import br.gov.quixada.esporte.categoria.StatusCategoria;
 import br.gov.quixada.esporte.categoria.dto.CategoriaCreateRequest;
 import br.gov.quixada.esporte.categoria.dto.CategoriaResponse;
 import br.gov.quixada.esporte.categoria.dto.CategoriaResumoResponse;
+import br.gov.quixada.esporte.categoria.dto.CategoriaStatusRequest;
 import br.gov.quixada.esporte.categoria.dto.CategoriaUpdateRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
@@ -45,6 +47,13 @@ public class CategoriaController {
                 .buildAndExpand(saved.getId()).toUri();
 
         return ResponseEntity.created(location).body(mapper.toResponse(saved));
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<CategoriaResponse> alterarStatus(@PathVariable @Positive Long id,
+                                                           @RequestBody @Valid CategoriaStatusRequest request) {
+        Categoria categoria = request.status() == StatusCategoria.ATIVO ? service.ativar(id) : service.inativar(id);
+        return ResponseEntity.ok(mapper.toResponse(categoria));
     }
 
     @PutMapping("/{id}")
