@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagrama de Classes - Gestão Esportiva API</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f4f6f8;
+    color: #2c3e50;
+  }
+  header {
+    background: #1f2d3d;
+    color: #fff;
+    padding: 18px 28px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.2);
+  }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 4px 0 0; font-size: 13px; color: #aeb9c4; }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 18px;
+    padding: 12px 28px; background: #fff; border-bottom: 1px solid #e1e6ea;
+    font-size: 12px;
+  }
+  .legend .item { display: flex; align-items: center; gap: 6px; }
+  .swatch { width: 16px; height: 16px; border-radius: 3px; display: inline-block; }
+  .sw-entity { background: #2c3e50; }
+  .sw-embed { background: #16a085; }
+  .sw-enum { background: #8e44ad; }
+  .canvas-wrap { overflow: auto; padding: 24px; }
+  .canvas {
+    position: relative;
+    width: 1420px;
+    height: 940px;
+    margin: 0 auto;
+    background:
+      linear-gradient(#eef2f5 1px, transparent 1px) 0 0 / 100% 26px,
+      #fbfcfd;
+    border: 1px solid #e1e6ea;
+    border-radius: 8px;
+  }
+  svg.links { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+  .class-box {
+    position: absolute;
+    width: 264px;
+    background: #fff;
+    border: 2px solid #2c3e50;
+    border-radius: 6px;
+    z-index: 2;
+    box-shadow: 0 3px 8px rgba(0,0,0,.12);
+    font-family: "Consolas", "Monaco", monospace;
+    font-size: 13px;
+  }
+  .class-header {
+    background: #2c3e50;
+    color: #fff;
+    padding: 7px 8px;
+    text-align: center;
+    font-weight: 700;
+    border-radius: 4px 4px 0 0;
+  }
+  .class-header .stereo { display: block; font-size: 10px; font-weight: 400; color: #b9c6d3; margin-bottom: 2px; }
+  .class-attrs { padding: 6px 10px; }
+  .attr-row { display: flex; align-items: center; gap: 6px; padding: 2px 0; line-height: 1.4; }
+  .attr-row .type { color: #c0392b; margin-left: auto; font-size: 11px; }
+  .key { color: #f1c40f; font-weight: 700; }
+  .badge {
+    font-size: 9px; font-weight: 700; color: #fff;
+    padding: 1px 5px; border-radius: 8px; letter-spacing: .3px;
+  }
+  .b-nn { background: #e67e22; }
+  .b-uq { background: #2980b9; }
+  .b-em { background: #16a085; }
+  .class-box.embeddable { border-color: #16a085; }
+  .class-box.embeddable .class-header { background: #16a085; }
+  .class-box.enumeration { border-color: #8e44ad; }
+  .class-box.enumeration .class-header { background: #8e44ad; }
+  .class-box.enumeration .attr-row .type { color: #8e44ad; }
+  .footnote { padding: 10px 28px 30px; font-size: 12px; color: #566; }
+  .footnote code { background: #eef2f5; padding: 1px 5px; border-radius: 4px; }
+  .rel-list { columns: 2; column-gap: 40px; margin-top: 6px; }
+  .rel-list li { margin-bottom: 4px; break-inside: avoid; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Diagrama de Classes &mdash; Gestão Esportiva API</h1>
+  <p>Spring Boot + JPA &middot; classes de domínio, atributos e relacionamentos (UML)</p>
+</header>
+
+<div class="legend">
+  <div class="item"><span class="swatch sw-entity"></span> Entidade (<code>@Entity</code>)</div>
+  <div class="item"><span class="swatch sw-embed"></span> Objeto embutível (<code>@Embeddable</code>)</div>
+  <div class="item"><span class="swatch sw-enum"></span> Enumeração</div>
+  <div class="item"><span class="key">&#9733;</span> Chave primária (PK)</div>
+  <div class="item"><span class="badge b-nn">NN</span> not null</div>
+  <div class="item"><span class="badge b-uq">UQ</span> unique</div>
+  <div class="item"><span class="badge b-em">EM</span> embedded</div>
+  <div class="item"><span class="line" style="display:inline-block;width:24px;height:0;border-top:2px solid #2c3e50;"></span> associação / composição</div>
+  <div class="item"><span class="line" style="display:inline-block;width:24px;height:0;border-top:2px dashed #7f8c8d;"></span> dependência (tipo enum)</div>
+</div>
+
+<div class="canvas-wrap">
+  <div class="canvas">
+    <svg class="links" viewBox="0 0 1420 940" preserveAspectRatio="none">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="none" stroke="#2c3e50" stroke-width="1.4"/>
+        </marker>
+        <marker id="comp" viewBox="0 0 12 12" refX="6" refY="6" markerWidth="12" markerHeight="12" orient="auto-start-reverse">
+          <path d="M6,0 L12,6 L6,12 L0,6 Z" fill="#2c3e50"/>
+        </marker>
+        <marker id="dep" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="none" stroke="#7f8c8d" stroke-width="1.4"/>
+        </marker>
+      </defs>
+
+      <!-- 1) Competicao -> Modalidade (ManyToOne) -->
+      <line x1="760" y1="150" x2="662" y2="98" stroke="#2c3e50" stroke-width="1.8" marker-end="url(#arrow)"/>
+      <text x="700" y="92" font-size="12" fill="#2c3e50">1</text>
+      <text x="752" y="148" font-size="12" fill="#2c3e50">*</text>
+
+      <!-- 2) Competicao -> StatusCompeticao (enum, dependência) -->
+      <line x1="1022" y1="150" x2="1078" y2="128" stroke="#7f8c8d" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#dep)"/>
+
+      <!-- 3) Equipe -> Modalidade (ManyToOne) -->
+      <line x1="532" y1="382" x2="532" y2="156" stroke="#2c3e50" stroke-width="1.8" marker-end="url(#arrow)"/>
+      <text x="538" y="152" font-size="12" fill="#2c3e50">1</text>
+      <text x="538" y="380" font-size="12" fill="#2c3e50">*</text>
+
+      <!-- 4) Equipe -> Clube (ManyToOne) -->
+      <line x1="400" y1="470" x2="302" y2="470" stroke="#2c3e50" stroke-width="1.8" marker-end="url(#arrow)"/>
+      <text x="306" y="464" font-size="12" fill="#2c3e50">1</text>
+      <text x="394" y="464" font-size="12" fill="#2c3e50">*</text>
+
+      <!-- 5) Atleta -> Sexo (enum, dependência) -->
+      <line x1="1022" y1="505" x2="1078" y2="772" stroke="#7f8c8d" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#dep)"/>
+
+      <!-- 6) Atleta -> Endereco (composição @Embedded) -->
+      <line x1="892" y1="624" x2="892" y2="728" stroke="#2c3e50" stroke-width="1.8" marker-start="url(#comp)"/>
+      <text x="898" y="724" font-size="12" fill="#2c3e50">1</text>
+
+      <!-- 7) Clube -> Endereco (composição @Embedded) -->
+      <line x1="172" y1="558" x2="758" y2="806" stroke="#2c3e50" stroke-width="1.8" marker-start="url(#comp)"/>
+    </svg>
+
+    <!-- Modalidade -->
+    <div class="class-box" style="left:400px; top:40px;">
+      <div class="class-header"><span class="stereo">&lt;&lt;entity&gt;&gt;</span>Modalidade<br><small>db_modalidade</small></div>
+      <div class="class-attrs">
+        <div class="attr-row"><span class="key">&#9733;</span> id : Long <span class="type">PK</span></div>
+        <div class="attr-row">nome : String <span class="badge b-nn">NN</span> <span class="type"></span></div>
+        <div class="attr-row">ativo : boolean <span class="badge b-nn">NN</span> <span class="type"></span></div>
+      </div>
+    </div>
+
+    <!-- Competicao -->
+    <div class="class-box" style="left:760px; top:40px;">
+      <div class="class-header"><span class="stereo">&lt;&lt;entity&gt;&gt;</span>Competicao<br><small>db_competicao</small></div>
+      <div class="class-attrs">
+        <div class="attr-row"><span class="key">&#9733;</span> id : Long <span class="type">PK</span></div>
+        <div class="attr-row">nome : String <span class="badge b-nn">NN</span> <span class="type"></span></div>
+        <div class="attr-row">ano : Integer <span class="badge b-nn">NN</span> <span class="type"></span></div>
+        <div class="attr-row">modalidade : Modalidade <span class="badge b-nn">NN</span> <span class="type">@ManyToOne</span></div>
+        <div class="attr-row">dataInicio : LocalDateTime <span class="type"></span></div>
+        <div class="attr-row">dataFim : LocalDateTime <span class="type"></span></div>
+        <div class="attr-row">status : StatusCompeticao <span class="type">@Enumerated</span></div>
+      </div>
+    </div>
+
+    <!-- Clube -->
+    <div class="class-box" style="left:40px; top:380px;">
+      <div class="class-header"><span class="stereo">&lt;&lt;entity&gt;&gt;</span>Clube<br><small>db_clube</small></div>
+      <div class="class-attrs">
+        <div class="attr-row"><span class="key">&#9733;</span> id : Long <span class="type">PK</span></div>
+        <div class="attr-row">nome : String <span class="badge b-nn">NN</span> <span class="type"></span></div>
+        <div class="attr-row">reponsavel : String <span class="badge b-nn">NN</span> <span class="type"></span></div>
+        <div class="attr-row">telefone : String <span class="badge b-nn">NN</span> <span class="type"></span></div>
+        <div class="attr-row">endereco : Endereco <span class="badge b-nn">NN</span> <span class="badge b-em">EM</span> <span class="type"></span></div>
+        <div class="attr-row">ativo : boolean <span class="badge b-nn">NN</span> <span class="type"></span></div>
+      </div>
+    </div>
+
+    <!-- Equipe -->
+    <div class="class-box" style="left:400px; top:380px;">
+      <div class="class-header"><span class="stereo">&lt;&lt;entity&gt;&gt;</span>Equipe<br><small>db_equipe</small></div>
+      <div class="class-attrs">
+        <div class="attr-row"><span class="key">&#9733;</span> id : Integer <span class="type">PK</span></div>
+        <div class="attr-row">nome : String <span class="badge b-nn">NN</span> <span class="type"></span></div>
+        <div class="attr-row">club : Clube <span class="type">@ManyToOne</span></div>
+        <div class="attr-row">modalidade : Modalidade <span class="badge b-nn">NN</span> <span class="type">@ManyToOne</span></div>
+        <div class="attr-row">responsavel : String <span class="badge b-nn">NN</span> <span class="type"></span></div>
+        <div class="attr-row">ativo : boolean <span class="badge b-nn">NN</span> <span class="type"></span></div>
+      </div>
+    </div>
+
+    <!-- Atleta -->
+    <div class="class-box" style="left:760px; top:380px;">
+      <div class="class-header"><span class="stereo">&lt;&lt;entity&gt;&gt;</span>Atleta<br><small>db_atletas</small></div>
+      <div class="class-attrs">
+        <div class="attr-row"><span class="key">&#9733;</span> id : Long <span class="type">PK</span></div>
+        <div class="attr-row">nomeCompleto : String <span class="badge b-nn">NN</span> <span class="badge b-uq">UQ</span> <span class="type"></span></div>
+        <div class="attr-row">cpf : String <span class="badge b-nn">NN</span> <span class="badge b-uq">UQ</span> <span class="type"></span></div>
+        <div class="attr-row">dataNascimento : LocalDateTime <span class="badge b-nn">NN</span> <span class="type"></span></div>
+        <div class="attr-row">endereco : Endereco <span class="badge b-em">EM</span> <span class="type">@Embedded</span></div>
+        <div class="attr-row">telefone : String <span class="badge b-nn">NN</span> <span class="type"></span></div>
+        <div class="attr-row">ativo : boolean <span class="badge b-nn">NN</span> <span class="type"></span></div>
+        <div class="attr-row">sexo : Sexo <span class="type">@Enumerated</span></div>
+        <div class="attr-row">dataCadastro : LocalDateTime <span class="badge b-nn">NN</span> <span class="type"></span></div>
+      </div>
+    </div>
+
+    <!-- Endereco -->
+    <div class="class-box embeddable" style="left:760px; top:730px;">
+      <div class="class-header"><span class="stereo">&lt;&lt;embeddable&gt;&gt;</span>Endereco</div>
+      <div class="class-attrs">
+        <div class="attr-row">logradouro : String <span class="type"></span></div>
+        <div class="attr-row">numero : String <span class="type"></span></div>
+        <div class="attr-row">bairro : String <span class="type"></span></div>
+        <div class="attr-row">cidade : String <span class="type"></span></div>
+        <div class="attr-row">cep : String <span class="type"></span></div>
+      </div>
+    </div>
+
+    <!-- Sexo -->
+    <div class="class-box enumeration" style="left:1080px; top:730px;">
+      <div class="class-header"><span class="stereo">&lt;&lt;enumeration&gt;&gt;</span>Sexo</div>
+      <div class="class-attrs">
+        <div class="attr-row">MASCULINO <span class="type"></span></div>
+        <div class="attr-row">FEMININO <span class="type"></span></div>
+      </div>
+    </div>
+
+    <!-- StatusCompeticao -->
+    <div class="class-box enumeration" style="left:1080px; top:40px;">
+      <div class="class-header"><span class="stereo">&lt;&lt;enumeration&gt;&gt;</span>StatusCompeticao</div>
+      <div class="class-attrs">
+        <div class="attr-row">PLANEJAMENTO <span class="type"></span></div>
+        <div class="attr-row">INSCRICOES_ABERTAS <span class="type"></span></div>
+        <div class="attr-row">INSCRICOES_ENCERRADAS <span class="type"></span></div>
+        <div class="attr-row">EM_ANDAMENTO <span class="type"></span></div>
+        <div class="attr-row">FINALIZADA <span class="type"></span></div>
+        <div class="attr-row">CANCELADA <span class="type"></span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="footnote">
+  <strong>Relacionamentos mapeados (JPA):</strong>
+  <ul class="rel-list">
+    <li><code>Competicao</code> &rarr; <code>Modalidade</code> &mdash; <code>@ManyToOne</code> (muitas competições para 1 modalidade)</li>
+    <li><code>Equipe</code> &rarr; <code>Modalidade</code> &mdash; <code>@ManyToOne</code> (optional=false)</li>
+    <li><code>Equipe</code> &rarr; <code>Clube</code> &mdash; <code>@ManyToOne</code></li>
+    <li><code>Atleta</code> &rarr; <code>Endereco</code> &mdash; <code>@Embedded</code> (composição)</li>
+    <li><code>Clube</code> &rarr; <code>Endereco</code> &mdash; objeto embutível (composição)</li>
+    <li><code>Atleta.sexo</code> &rarr; <code>Sexo</code> &mdash; <code>@Enumerated(STRING)</code></li>
+    <li><code>Competicao.status</code> &rarr; <code>StatusCompeticao</code> &mdash; <code>@Enumerated(STRING)</code></li>
+  </ul>
+  <p><em>Observações:</em> não há relacionamentos bidirecionais (sem <code>@OneToMany</code> com <code>mappedBy</code>); <code>Equipe.id</code> é do tipo <code>Integer</code> (demais PKs são <code>Long</code>); <code>Atleta.nomeCompleto</code> e <code>Atleta.cpf</code> são únicos.</p>
+</div>
+</body>
+</html>
