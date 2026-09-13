@@ -1,5 +1,7 @@
 package br.gov.quixada.esporte.atleta;
 
+import java.sql.SQLIntegrityConstraintViolationException;
+
 import br.gov.quixada.esporte.exceptions.AtletaNotFoundException;
 import br.gov.quixada.esporte.exceptions.CpfJaCadastradoException;
 import br.gov.quixada.esporte.extras.StatusAtleta;
@@ -42,7 +44,12 @@ public class AtletaService {
         try {
             return repository.save(atleta);
         } catch (DataIntegrityViolationException e) {
-            throw new CpfJaCadastradoException("CPF já cadastrado");
+            // MySQL error 1062 = duplicate entry (constraint unique do cpf)
+            Throwable causa = e.getMostSpecificCause();
+            if (causa instanceof SQLIntegrityConstraintViolationException sql && sql.getErrorCode() == 1062) {
+                throw new CpfJaCadastradoException("CPF já cadastrado");
+            }
+            throw e;
         }
     }
 

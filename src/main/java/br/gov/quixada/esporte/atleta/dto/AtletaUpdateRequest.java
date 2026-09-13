@@ -9,12 +9,12 @@ import java.time.LocalDate;
 
 public record AtletaUpdateRequest(
         @NotBlank(message = "Nome completo é obrigatório")
-        @Size(max=150)
+        @Size(max=150, message = "Nome completo deve ter no máximo 150 caracteres")
         String nomeCompleto,
         @NotNull(message = "Data de nascimento é obrigatório")
         @Past(message = "A data de nascimento deve ser no passado")
         LocalDate dataNascimento,
-        @NotNull
+        @NotNull(message = "Endereço é obrigatório")
         @Valid
         EnderecoRequest endereco,
         @NotNull(message = "Sexo é obrigatório")

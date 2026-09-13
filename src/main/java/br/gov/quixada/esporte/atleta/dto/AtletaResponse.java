@@ -13,7 +13,7 @@ public record AtletaResponse(
         String nomeCompleto,
         String cpf,
         LocalDate dataNascimento,
-        Integer idade, //CALCULAR NO MAPPER
+        Integer idade,
         EnderecoResponse endereco,
         String telefone,
         Sexo sexo,

@@ -27,7 +27,7 @@ public class AtletaController {
     private final Clock clock;
 
 
-    @GetMapping()
+    @GetMapping
     public ResponseEntity<Page<AtletaResumoResponse>> findAll(@RequestParam(required = false) String nome, Pageable pageable) {
 
         return ResponseEntity.ok(service.findAll(nome, pageable).map(atleta -> mapper.toResumo(atleta, clock)));

@@ -76,3 +76,15 @@
 ### Estratégias de versionamento de API
 - **Onde apareceu:** `AtletaController.java` `/v1/atletas` (ponto `6`).
 - **O que estudar:** versionamento por URL vs header (`Accept: application/vnd...+json`) vs media type; deprecação; compatibilidade.
+
+### `DataIntegrityViolationException` + corrida de CPF (TOCTOU)
+- **Onde apareceu:** `AtletaService.java:44-53` (`save`).
+- **Contexto:** no `3.4` removeu-se o `existsByCpf()` (que era uma checagem TOCTOU: "check-then-act" sujeita a corrida). Passou-se a confiar na constraint `unique` do banco (`Atleta.java:46`).
+- **Decisão:** no `catch`, checar o erro **específico** de duplicidade do MySQL (`getMostSpecificCause()` + `SQLIntegrityConstraintViolationException` + `errorCode == 1062`) e só então traduzir para `CpfJaCadastradoException`; caso contrário `rethrow` → tratado pelo `GlobalExceptionHandler` como `409 "Conflito de dados"`.
+- **O que estudar:** por que não capturar `DataIntegrityViolationException` de forma genérica (mascaramento de NOT NULL / data too long / FK); hierarquia de causas (`getMostSpecificCause()`); códigos MySQL (`1062` duplicate, `1048` not-null, `1452` FK); alternativa frágil de inspecionar nome da constraint por causa do `ddl-auto: update` (`UK_<hash>`).
+
+### Fuso horário (`Clock`) e cálculo de idade
+- **Onde apareceu:** `ClockConfig.java:13`.
+- **Decisão:** `Clock.system(ZoneId.of("America/Fortaleza"))` (Quixadá-CE; Ceará usa `America/Fortaleza`, UTC-3 sem horário de verão), em vez de `systemDefaultZone()` (que depende da JVM e pode divergir do `serverTimezone=America/Recife` do datasource em `application.yaml:6`).
+- **O que estudar:** `java.time.Clock`, `ZoneId`, `LocalDate.now(clock)`, como injetar `Clock` fixo em testes (`Clock.fixed(...)`), por que `LocalDate.now()` sem `Clock` é não-determinístico.
+

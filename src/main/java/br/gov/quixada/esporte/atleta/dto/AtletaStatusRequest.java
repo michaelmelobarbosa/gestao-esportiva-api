@@ -4,7 +4,7 @@ import br.gov.quixada.esporte.extras.StatusAtleta;
 import jakarta.validation.constraints.NotNull;
 
 public record AtletaStatusRequest(
-        @NotNull
+        @NotNull(message = "Status é obrigatório")
         StatusAtleta status
 ) {
 }
