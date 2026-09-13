@@ -12,6 +12,9 @@ import br.gov.quixada.esporte.categoria.exception.IdadeInvalidaException;
 import br.gov.quixada.esporte.clube.exception.ClubeInativoException;
 import br.gov.quixada.esporte.clube.exception.ClubeNotFoundException;
 import br.gov.quixada.esporte.competicao.exception.CompeticaoNotFoundException;
+import br.gov.quixada.esporte.equipe.exception.EquipeInativaException;
+import br.gov.quixada.esporte.equipe.exception.EquipeNotFoundException;
+import br.gov.quixada.esporte.modalidade.exception.ModalidadeNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -71,6 +74,21 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ClubeInativoException.class)
     public ResponseEntity<ApiError> handleClubeInativo(ClubeInativoException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(EquipeNotFoundException.class)
+    public ResponseEntity<ApiError> handleEquipeNotFound(EquipeNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(ModalidadeNotFoundException.class)
+    public ResponseEntity<ApiError> handleModalidadeNotFound(ModalidadeNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(EquipeInativaException.class)
+    public ResponseEntity<ApiError> handleEquipeInativa(EquipeInativaException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 
