@@ -1,6 +1,6 @@
 package br.gov.quixada.esporte.clube.dto;
 
-import br.gov.quixada.esporte.extras.StatusClube;
+import br.gov.quixada.esporte.clube.StatusClube;
 import jakarta.validation.constraints.NotNull;
 
 public record ClubeStatusRequest(

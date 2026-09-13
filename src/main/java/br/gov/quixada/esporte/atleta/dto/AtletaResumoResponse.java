@@ -1,7 +1,7 @@
 package br.gov.quixada.esporte.atleta.dto;
 
 import br.gov.quixada.esporte.extras.Sexo;
-import br.gov.quixada.esporte.extras.StatusAtleta;
+import br.gov.quixada.esporte.atleta.StatusAtleta;
 
 public record AtletaResumoResponse(
         Long id,

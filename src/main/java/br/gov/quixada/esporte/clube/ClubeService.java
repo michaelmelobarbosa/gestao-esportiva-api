@@ -1,7 +1,6 @@
 package br.gov.quixada.esporte.clube;
 
 import br.gov.quixada.esporte.clube.exception.ClubeNotFoundException;
-import br.gov.quixada.esporte.extras.StatusClube;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

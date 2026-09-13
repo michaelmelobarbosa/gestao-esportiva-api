@@ -1,6 +1,5 @@
 package br.gov.quixada.esporte.competicao;
 
-import br.gov.quixada.esporte.extras.StatusCompeticao;
 import br.gov.quixada.esporte.modalidade.Modalidade;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

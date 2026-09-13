@@ -4,7 +4,6 @@ import java.sql.SQLIntegrityConstraintViolationException;
 
 import br.gov.quixada.esporte.atleta.exception.AtletaNotFoundException;
 import br.gov.quixada.esporte.atleta.exception.CpfJaCadastradoException;
-import br.gov.quixada.esporte.extras.StatusAtleta;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;

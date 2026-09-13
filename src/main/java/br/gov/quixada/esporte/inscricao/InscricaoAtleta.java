@@ -1,7 +1,6 @@
 package br.gov.quixada.esporte.inscricao;
 
 import br.gov.quixada.esporte.atleta.Atleta;
-import br.gov.quixada.esporte.extras.StatusInscricao;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

@@ -1,4 +1,4 @@
-package br.gov.quixada.esporte.extras;
+package br.gov.quixada.esporte.competicao;
 
 public enum StatusCompeticao {
     PLANEJAMENTO,

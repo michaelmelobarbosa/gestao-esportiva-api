@@ -5,7 +5,6 @@ import br.gov.quixada.esporte.clube.dto.ClubeResponse;
 import br.gov.quixada.esporte.clube.dto.ClubeResumoResponse;
 import br.gov.quixada.esporte.clube.dto.ClubeStatusRequest;
 import br.gov.quixada.esporte.clube.dto.ClubeUpdateRequest;
-import br.gov.quixada.esporte.extras.StatusClube;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;

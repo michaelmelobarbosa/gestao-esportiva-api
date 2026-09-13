@@ -1,4 +1,4 @@
-package br.gov.quixada.esporte.extras;
+package br.gov.quixada.esporte.atleta;
 
 public enum StatusAtleta {
     ATIVO,
