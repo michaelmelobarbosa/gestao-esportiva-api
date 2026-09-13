@@ -1,8 +1,15 @@
-package br.gov.quixada.esporte.exceptions;
+package br.gov.quixada.esporte.common.error;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+import br.gov.quixada.esporte.atleta.exception.AtletaInativoException;
+import br.gov.quixada.esporte.atleta.exception.AtletaNotFoundException;
+import br.gov.quixada.esporte.atleta.exception.CpfJaCadastradoException;
+import br.gov.quixada.esporte.categoria.exception.CategoriaNotFoundException;
+import br.gov.quixada.esporte.categoria.exception.IdadeInvalidaException;
+import br.gov.quixada.esporte.clube.exception.ClubeNotFoundException;
+import br.gov.quixada.esporte.competicao.exception.CompeticaoNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -33,6 +40,26 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AtletaInativoException.class)
     public ResponseEntity<ApiError> handleInativo(AtletaInativoException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(CategoriaNotFoundException.class)
+    public ResponseEntity<ApiError> handleCategoriaNotFound(CategoriaNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(CompeticaoNotFoundException.class)
+    public ResponseEntity<ApiError> handleCompeticaoNotFound(CompeticaoNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(ClubeNotFoundException.class)
+    public ResponseEntity<ApiError> handleClubeNotFound(ClubeNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(IdadeInvalidaException.class)
+    public ResponseEntity<ApiError> handleIdadeInvalida(IdadeInvalidaException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
