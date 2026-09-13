@@ -4,9 +4,7 @@ import br.gov.quixada.esporte.atleta.dto.AtletaCreateRequest;
 import br.gov.quixada.esporte.atleta.dto.AtletaResponse;
 import br.gov.quixada.esporte.atleta.dto.AtletaResumoResponse;
 import br.gov.quixada.esporte.atleta.dto.AtletaUpdateRequest;
-import br.gov.quixada.esporte.extras.Endereco;
-import br.gov.quixada.esporte.extras.EnderecoRequest;
-import br.gov.quixada.esporte.extras.EnderecoResponse;
+import br.gov.quixada.esporte.extras.EnderecoMapper;
 import jakarta.validation.Valid;
 import org.mapstruct.Context;
 import org.mapstruct.Mapper;
@@ -16,7 +14,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.Period;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = EnderecoMapper.class)
 public interface AtletaMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "dataCadastro", ignore = true)
@@ -35,13 +33,7 @@ public interface AtletaMapper {
     @Mapping(target = "idade", expression = "java(calcularIdade(atleta.getDataNascimento(), clock))")
     AtletaResumoResponse toResumo(Atleta atleta, @Context Clock clock);
 
-    Endereco toEndereco(@Valid EnderecoRequest request);
-
-    EnderecoResponse toEnderecoResponse(@Valid Endereco endereco);
-
     default Integer calcularIdade(LocalDate data, Clock clock) {
         return data == null ? null : Period.between(data, LocalDate.now(clock)).getYears();
     }
-
-
 }

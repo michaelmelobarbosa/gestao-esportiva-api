@@ -8,6 +8,7 @@ import br.gov.quixada.esporte.atleta.exception.AtletaNotFoundException;
 import br.gov.quixada.esporte.atleta.exception.CpfJaCadastradoException;
 import br.gov.quixada.esporte.categoria.exception.CategoriaNotFoundException;
 import br.gov.quixada.esporte.categoria.exception.IdadeInvalidaException;
+import br.gov.quixada.esporte.clube.exception.ClubeNotFoundException;
 import br.gov.quixada.esporte.competicao.exception.CompeticaoNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
@@ -48,6 +49,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(CompeticaoNotFoundException.class)
     public ResponseEntity<ApiError> handleCompeticaoNotFound(CompeticaoNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(ClubeNotFoundException.class)
+    public ResponseEntity<ApiError> handleClubeNotFound(ClubeNotFoundException ex, HttpServletRequest request) {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of());
     }
 
