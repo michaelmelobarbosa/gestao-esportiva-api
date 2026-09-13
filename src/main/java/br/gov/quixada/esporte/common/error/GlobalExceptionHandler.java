@@ -11,7 +11,9 @@ import br.gov.quixada.esporte.categoria.exception.CategoriaNotFoundException;
 import br.gov.quixada.esporte.categoria.exception.IdadeInvalidaException;
 import br.gov.quixada.esporte.clube.exception.ClubeInativoException;
 import br.gov.quixada.esporte.clube.exception.ClubeNotFoundException;
+import br.gov.quixada.esporte.competicao.exception.CompeticaoNaoEditavelException;
 import br.gov.quixada.esporte.competicao.exception.CompeticaoNotFoundException;
+import br.gov.quixada.esporte.competicao.exception.PeriodoInvalidoException;
 import br.gov.quixada.esporte.equipe.exception.EquipeInativaException;
 import br.gov.quixada.esporte.equipe.exception.EquipeNotFoundException;
 import br.gov.quixada.esporte.modalidade.exception.ModalidadeNotFoundException;
@@ -89,6 +91,16 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(EquipeInativaException.class)
     public ResponseEntity<ApiError> handleEquipeInativa(EquipeInativaException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(PeriodoInvalidoException.class)
+    public ResponseEntity<ApiError> handlePeriodoInvalido(PeriodoInvalidoException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(CompeticaoNaoEditavelException.class)
+    public ResponseEntity<ApiError> handleCompeticaoNaoEditavel(CompeticaoNaoEditavelException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 

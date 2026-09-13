@@ -287,7 +287,7 @@ Falta documentação OpenAPI: adicione `springdoc-openapi-starter-webmvc-ui`. �
 
 ## 10. Plano de Estudo Sugerido
 
-> ⏩ Movido para `src/main/java/br/gov/quixada/esporte/iterations/estudos.md` (seção *Plano de Estudo Sugerido*). Mantido o número desta seção para preservar referências cruzadas.
+> ⏩ Movido para `estudos.md` (seção *Plano de Estudo Sugerido*). Mantido o número desta seção para preservar referências cruzadas.
 
 ---
 
@@ -317,5 +317,5 @@ Falta documentação OpenAPI: adicione `springdoc-openapi-starter-webmvc-ui`. �
 
 ## 12. Referências
 
-> ⏩ Movido para `src/main/java/br/gov/quixada/esporte/iterations/estudos.md` (seção *Referências*). Mantido o número desta seção para preservar referências cruzadas.
+> ⏩ Movido para `estudos.md` (seção *Referências*). Mantido o número desta seção para preservar referências cruzadas.
 

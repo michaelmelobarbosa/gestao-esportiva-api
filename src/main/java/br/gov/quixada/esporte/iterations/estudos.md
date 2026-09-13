@@ -1,7 +1,7 @@
 # Estudos — Módulo Atleta / Gestão Esportiva
 
 > Pasta `src/main/java/br/gov/quixada/esporte/iterations` — caderno de estudo do projeto.
-> Origem: tópicos `10` (Plano de Estudo) e `12` (Referências) movidos de `src/main/resources/melhorias-atleta.md`.
+> Origem: tópicos `10` (Plano de Estudo) e `12` (Referências) movidos de `melhorias-atleta.md`.
 > Uso: documentar tópicos ao longo do desenvolvimento para estudar/revisar depois.
 
 ---
