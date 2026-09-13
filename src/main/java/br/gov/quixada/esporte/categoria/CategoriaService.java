@@ -2,8 +2,8 @@ package br.gov.quixada.esporte.categoria;
 
 import br.gov.quixada.esporte.competicao.Competicao;
 import br.gov.quixada.esporte.competicao.CompeticaoRepository;
-import br.gov.quixada.esporte.exceptions.CategoriaNotFoundException;
-import br.gov.quixada.esporte.exceptions.CompeticaoNotFoundException;
+import br.gov.quixada.esporte.categoria.exception.CategoriaNotFoundException;
+import br.gov.quixada.esporte.competicao.exception.CompeticaoNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

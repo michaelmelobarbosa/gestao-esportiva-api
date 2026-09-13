@@ -1,4 +1,4 @@
-package br.gov.quixada.esporte.exceptions;
+package br.gov.quixada.esporte.atleta.exception;
 
 public class CpfJaCadastradoException extends RuntimeException {
     public CpfJaCadastradoException(String message){

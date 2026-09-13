@@ -1,6 +1,6 @@
 # Decisões de Projeto — `GlobalExceptionHandler`
 
-> Pasta `src/main/java/br/gov/quixada/esporte/iterations` — documento de estudo das decisões tomadas em `src/main/java/br/gov/quixada/esporte/exceptions/GlobalExceptionHandler.java` e `ApiError.java`.
+> Pasta `src/main/java/br/gov/quixada/esporte/iterations` — documento de estudo das decisões tomadas em `src/main/java/br/gov/quixada/esporte/common/error/GlobalExceptionHandler.java` e `ApiError.java`.
 > Referência: ponto `7` `melhorias-atleta.md` `Tratamento de Erros`.
 
 ---

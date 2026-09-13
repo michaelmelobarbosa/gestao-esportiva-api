@@ -1,4 +1,4 @@
-package br.gov.quixada.esporte.exceptions;
+package br.gov.quixada.esporte.common.error;
 
 import java.time.LocalDateTime;
 import java.util.List;

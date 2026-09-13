@@ -1,7 +1,7 @@
 package br.gov.quixada.esporte.categoria;
 
 import br.gov.quixada.esporte.competicao.Competicao;
-import br.gov.quixada.esporte.exceptions.IdadeInvalidaException;
+import br.gov.quixada.esporte.categoria.exception.IdadeInvalidaException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;

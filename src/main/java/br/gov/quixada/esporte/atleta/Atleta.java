@@ -22,7 +22,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Pattern;
-import br.gov.quixada.esporte.exceptions.AtletaInativoException;
+import br.gov.quixada.esporte.atleta.exception.AtletaInativoException;
 import lombok.*;
 
 @Getter
