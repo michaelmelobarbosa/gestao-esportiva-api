@@ -145,6 +145,41 @@
 
 ---
 
+## 6. Testes automatizados (`AtletaServiceTest`, `AtletaControllerTest`, `AtletaMapperTest`) — `src/test/**/*Atleta*` vazio
+
+> Ponto `8` `melhorias-atleta.md:266` `Sem testes: src/test/**/*Atleta* vazio`.
+
+**Status atual:** só existe `src/test/java/br/gov/quixada/esporte/GestaoEsportivaApiApplicationTests.java` (`contextLoads()`). Nenhum teste de `Atleta`. Módulo já refatorado (rich model `4.1`, `Clock` `4.2`, paginação `2.4`, handlers `7`), então é o próximo passo natural para travar as regras.
+
+**Cenários mínimos a cobrir:**
+- [ ] `AtletaServiceTest` (mock `AtletaRepository` com Mockito):
+  - `save` normaliza `cpf` e força `status=ATIVO` (`AtletaService.java:38`)
+  - `save` com CPF duplicado -> `CpfJaCadastradoException` (constraint `unique` `Atleta.java:50` + `AtletaService.java:44`)
+  - `ativar`/`inativar` idempotentes via rich model (`AtletaService.java:56-68`)
+  - `update` bloqueia `INATIVO` -> `AtletaInativoException` (`Atleta.java:90`) e não copia `cpf`
+  - `findAll` com `nome` null/blank chama `findAll(pageable)`, com texto chama `findByNomeCompletoContainingIgnoreCase`
+  - `findByIdOrThrowNotFound` -> `AtletaNotFoundException`
+- [ ] `AtletaControllerTest` com `@WebMvcTest(AtletaController.class)` + `MockMvc`:
+  - `POST /v1/atletas` válido -> `201` + header `Location` (`AtletaController.java:49`)
+  - `POST` inválido -> `400` com `errors[].field` (`GlobalExceptionHandler.java:47`)
+  - `PATCH /{id}/status` body `{ "status":"INATIVO" }` -> `200` (`AtletaController.java:55`)
+  - `GET /v1/atletas/-1` -> `400` (`@Positive` + `ConstraintViolationException`)
+  - `PUT /{id}` em atleta inativo -> `409`
+- [ ] `AtletaMapperTest` (sem Spring):
+  - `calcularIdade` com `Clock.fixed(Instant.parse("2026-09-13T00:00:00Z"), ZoneId.of("America/Recife"))` (`AtletaMapper.java:42`)
+  - `toEntity(AtletaUpdateRequest)` não mapeia `cpf` (`AtletaMapper.java:29`)
+  - `toGetResponse`/`toResumo` com `dataNascimento == null` -> `idade == null`
+- [ ] Configurar `MockMvc` + `Clock` fixo (usar `@Import(ClockConfig.class)` com `@TestConfiguration` sobrescrevendo o bean — ver `config/ClockConfig.java`)
+
+**Ferramentas/observações:**
+- [ ] `src/test` já tem `spring-boot-starter-test` no `pom.xml` (JUnit 5 + Mockito + AssertJ)
+- [ ] Testes de `@WebMvcTest` precisam mockar `AtletaService`/`AtletaMapper` (não sobem JPA nem MySQL)
+- [ ] `AtletaServiceTest` é unitário puro (não precisa Docker/MySQL); teste de integração só se usar `@DataJpaTest` (aí precisa do banco `docker compose up -d`)
+
+**Referência:** `melhorias-atleta.md:8` `Testabilidade e Qualidade` + `melhorias-atleta.md:10` Semana 4.
+
+---
+
 ## Checklist Geral
 
 - [ ] `hardDelete` — aguardando definição de `SecurityConfig` + `ADMIN`
@@ -152,5 +187,6 @@
 - [ ] `FULLTEXT` / índice `nomeCompleto` — `5` paginação pronta, índice pendente
 - [ ] `ddl-auto` → `validate + Flyway` — aguardando config `application.yaml:12` + `db/migration`
 - [ ] `doc API + versionamento` — `6` `AtletaController.java:20` `/v1` OK, doc pendente (OpenAPI + README)
+- [ ] `Testes automatizados` — `8` `AtletaServiceTest` + `AtletaControllerTest` + `AtletaMapperTest` pendentes (`src/test/**/*Atleta*` vazio)
 
 > Quando implementar, descomentar em `AtletaService.java`, expor em `AtletaController.java:19` e atualizar `melhorias-atleta.md:207` `4.4` e `5`.

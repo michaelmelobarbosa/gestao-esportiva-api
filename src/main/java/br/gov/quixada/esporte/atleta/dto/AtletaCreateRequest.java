@@ -26,6 +26,6 @@ public record AtletaCreateRequest(
         @NotNull(message = "Sexo é obrigatório")
         Sexo sexo,
         @NotBlank(message = "Telefone é obrigatório")
-        @Size(max=20)
+        @Pattern(regexp = "\\d{10,12}", message = "Telefone deve conter apenas números e ter entre 10 e 12 dígitos")
         String telefone
 ) {}

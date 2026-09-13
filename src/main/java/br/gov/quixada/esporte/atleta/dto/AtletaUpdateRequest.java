@@ -3,10 +3,7 @@ package br.gov.quixada.esporte.atleta.dto;
 import br.gov.quixada.esporte.extras.EnderecoRequest;
 import br.gov.quixada.esporte.extras.Sexo;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Past;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 
 import java.time.LocalDate;
 
@@ -23,7 +20,7 @@ public record AtletaUpdateRequest(
         @NotNull(message = "Sexo é obrigatório")
         Sexo sexo,
         @NotBlank(message = "Telefone é obrigatório")
-        @Size(max=20)
+        @Pattern(regexp = "\\d{10,12}", message = "Telefone deve conter apenas números e ter entre 10 e 12 dígitos")
         String telefone
 ) {
 }

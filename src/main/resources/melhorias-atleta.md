@@ -227,25 +227,25 @@ Nunca usado no Controller. Ou exponha `GET /v1/atletas/cpf/{cpf}` ou remova para
 
 ---
 
-## 6. API REST e Controller
+## 6. API REST e Controller ✅ Corrigido (implementado + pendências movidas p/ iterações futuras)
 
-- **Versionamento:** `/v1/atletas` OK, mas documente estratégia (URL vs header).
-- **Verbos:** `PUT /{id}` para `update` (`AtletaController.java:65`) exige payload completo (correto). `PATCH /{id}/ativar` e `/inativar` poderiam ser `PATCH /{id}/status` com body `{ "status":"INATIVO" }` — mais RESTful.
-- **Validação `id`:** Falta `@Positive` ou `@NotNull` em `@PathVariable Long id`. Enviar `id=-1` cai em `404` genérico.
-- **Filtro:** `GET /v1/atletas?nome=joao` aceita `nome=null` vs `nome=""` — trate `isBlank()` no Service.
-- **Segurança:** Sem `@PreAuthorize`. Comentário em `AtletaService.java:55` indica `hardDelete` para admin — planeje roles.
+- **Versionamento:** `/v1/atletas` OK, mas documente estratégia (URL vs header). — ⏳ Movido p/ `iterations/futuras-iterações.md#5` (doc OpenAPI + `AtletaController.java:20` `/v1` mantido).
+- **Verbos:** `PUT /{id}` para `update` (`AtletaController.java:65`) exige payload completo (correto). `PATCH /{id}/ativar` e `/inativar` poderiam ser `PATCH /{id}/status` com body `{ "status":"INATIVO" }` — mais RESTful. — ✅ Feito `AtletaController.java:55` `PATCH /{id}/status` único `alterarStatus` + `dto/AtletaStatusRequest.java:6` + `PUT /{id}` `AtletaController.java:64` mantido.
+- **Validação `id`:** Falta `@Positive` ou `@NotNull` em `@PathVariable Long id`. Enviar `id=-1` cai em `404` genérico. — ✅ Feito `AtletaController.java:22` `@Validated` + `@Positive` em `AtletaController.java:37,56,65` + `GlobalExceptionHandler.java:31` `ConstraintViolationException -> 400`.
+- **Filtro:** `GET /v1/atletas?nome=joao` aceita `nome=null` vs `nome=""` — trate `isBlank()` no Service. — ✅ Feito `AtletaService.java:22` `nome == null || nome.isBlank() ? findAll : findByNome...`.
+- **Segurança:** Sem `@PreAuthorize`. Comentário em `AtletaService.java:55` indica `hardDelete` para admin — planeje roles. — ⏳ Movido p/ `iterations/futuras-iterações.md#1` (`hardDelete` + `ADMIN` + `@PreAuthorize`).
 
 ---
 
-## 7. Tratamento de Erros
+## 7. Tratamento de Erros ✅ Corrigido
 
 `GlobalExceptionHandler.java:11` só trata 2 exceções.
 
 **Faltam:**
-- `MethodArgumentNotValidException` (falha `@Valid` nos DTOs) -> `400` com lista `fieldErrors`.
-- `ConstraintViolationException`
-- `HttpMessageNotReadableException` (JSON malformado)
-- `DataIntegrityViolationException` genérico
+- `MethodArgumentNotValidException` (falha `@Valid` nos DTOs) -> `400` com lista `fieldErrors`. — ✅ Feito `GlobalExceptionHandler.java:47` extrai `field` + `defaultMessage`
+- `ConstraintViolationException` — ✅ Feito `GlobalExceptionHandler.java:38` (`@Positive` em `@PathVariable`)
+- `HttpMessageNotReadableException` (JSON malformado) — ✅ Feito `GlobalExceptionHandler.java:56` -> `400 "JSON inválido"`
+- `DataIntegrityViolationException` genérico — ✅ Feito `GlobalExceptionHandler.java:61` -> `409 "Conflito de dados"`
 
 **Modelo atual `ApiError.java:5`:**
 ```java
@@ -255,6 +255,7 @@ Sugestão evoluir para RFC 7807 (`ProblemDetail` do Spring 6):
 ```java
 public record ApiError(int status, String message, LocalDateTime timestamp, String path, List<FieldError> errors){}
 ```
+→ ✅ Feito `ApiError.java:6` `record(status, message, timestamp, path, List<FieldErrors>)` + helper `build()` `GlobalExceptionHandler.java:66` (path via `HttpServletRequest`). RFC 7807 `ProblemDetail` **não adotado** (decisão de simplicidade) — documentado em `iterations/decisoes.md`.
 
 **Estudar:** `@RestControllerAdvice`, `ResponseEntityExceptionHandler`, `ProblemDetail`.
 
@@ -321,8 +322,8 @@ Estude na ordem (do menor risco ao maior impacto):
 - [x] Remover `repository.save()` redundante em `ativar/inativar` (3.5 — feito: `ativar`/`inativar`/`update` sem `save()` via dirty checking + idempotência em `AtletaService.java:58-93`)
 - [x] Padronizar `inativar` vs `desativar` (2.5 — feito: `inativarById`/`ativarById` em `AtletaController.java:53,61` padronizado com `service.inativar/ativar`)
 - [x] Adicionar `Location` no `POST` (2.6 — feito: `ResponseEntity.created(location)` em `AtletaController.java:50` com `ServletUriComponentsBuilder`)
-- [ ] Implementar handlers para `MethodArgumentNotValidException` etc.
-- [ ] Evoluir `ApiError.java:5` para incluir `path` e `errors`
+- [x] Implementar handlers para `MethodArgumentNotValidException` etc. (7 — feito: `GlobalExceptionHandler.java:38,47,56,61` + helper `build()` `:66`; decisões em `iterations/decisoes.md`)
+- [x] Evoluir `ApiError.java:5` para incluir `path` e `errors` (7 — feito: `ApiError.java:6` `record(status, message, timestamp, path, List<FieldErrors>)`)
 - [x] Injetar `Clock` no `AtletaMapper.java:42` (4.2 — feito: `@Context Clock` + `ClockConfig.java` + `AtletaController.java` injeta `Clock` e `AtletaMapper.java:35-43` `calcularIdade` com `LocalDate.now(clock)`)
 - [x] Adicionar `cpf` ignore explícito no `toEntity(UpdateRequest)` (4.3 — feito: `AtletaMapper.java:26-30` com `cpf`/`id`/`dataCadastro`/`status` `ignore=true`)
 - [x] Remover ou expor `findByCpfOrThrowNotFound` (4.4 — feito: mantido comentado `AtletaService.java:32` + rastreado em `iterations/futuras-iiterações.md`)
