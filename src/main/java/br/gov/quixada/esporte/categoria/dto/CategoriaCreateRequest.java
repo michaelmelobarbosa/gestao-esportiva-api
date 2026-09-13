@@ -1,0 +1,21 @@
+package br.gov.quixada.esporte.categoria.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
+
+public record CategoriaCreateRequest(
+        @NotBlank(message = "Nome é obrigatório")
+        @Size(max = 100, message = "Nome deve ter no máximo 100 caracteres")
+        String nome,
+        @NotNull(message = "Idade mínima é obrigatória")
+        @PositiveOrZero(message = "Idade mínima deve ser zero ou positiva")
+        Integer idadeMinima,
+        @NotNull(message = "Idade máxima é obrigatória")
+        @PositiveOrZero(message = "Idade máxima deve ser zero ou positiva")
+        Integer idadeMaxima,
+        @NotNull(message = "Competição é obrigatória")
+        Long competicaoId
+) {
+}

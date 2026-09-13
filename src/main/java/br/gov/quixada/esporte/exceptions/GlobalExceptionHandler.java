@@ -35,6 +35,21 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 
+    @ExceptionHandler(CategoriaNotFoundException.class)
+    public ResponseEntity<ApiError> handleCategoriaNotFound(CategoriaNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(CompeticaoNotFoundException.class)
+    public ResponseEntity<ApiError> handleCompeticaoNotFound(CompeticaoNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(IdadeInvalidaException.class)
+    public ResponseEntity<ApiError> handleIdadeInvalida(IdadeInvalidaException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
+    }
+
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiError> handleConstraintViolation(ConstraintViolationException ex, HttpServletRequest request) {
         List<ApiError.FieldErrors> fieldErrors = ex.getConstraintViolations().stream()
