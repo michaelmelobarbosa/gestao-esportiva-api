@@ -15,9 +15,9 @@
 7. [Tratamento de Erros](#7-tratamento-de-erros)
 8. [Testabilidade e Qualidade](#8-testabilidade-e-qualidade)
 9. [Infra e Configuração](#9-infra-e-configuração)
-10. [Plano de Estudo Sugerido](#10-plano-de-estudo-sugerido)
+10. [Plano de Estudo Sugerido](#10-plano-de-estudo-sugerido) → movido p/ `iterations/estudos.md`
 11. [Checklist Prático](#11-checklist-prático)
-12. [Referências](#12-referências)
+12. [Referências](#12-referências) → movido p/ `iterations/estudos.md`
 
 ---
 
@@ -261,53 +261,33 @@ public record ApiError(int status, String message, LocalDateTime timestamp, Stri
 
 ---
 
-## 8. Testabilidade e Qualidade
+## 8. Testabilidade e Qualidade ✅ Corrigido (testes movidos p/ iterações futuras)
 
 - **Sem testes:** `src/test/**/*Atleta*` vazio. Crie:
   - `AtletaServiceTest` (mock `AtletaRepository`, testa `save` com CPF duplicado, `ativar/inativar`)
   - `AtletaControllerTest` com `@WebMvcTest` + `MockMvc`
   - `AtletaMapperTest` com `Clock` fixo (`Clock.fixed(...)`)
-- **Lombok + JPA:** `@EqualsAndHashCode(onlyExplicitlyIncluded=true)` com `id` é OK, mas dois objetos `transient` (`id==null`) nunca são iguais — documente e evite usar em `Set` antes de persistir.
-- **Telefone:** `Atleta.java:68` `String telefone` sem `@Pattern`. Valide formato `(88) 9xxxx-xxxx` ou normalize como CPF.
+  - ⏳ Movido p/ `iterations/futuras-iterações.md#6` (tracker de testes: cenários + ferramentas).
+- **Lombok + JPA:** `@EqualsAndHashCode(onlyExplicitlyIncluded=true)` com `id` é OK, mas dois objetos `transient` (`id==null`) nunca são iguais — documente e evite usar em `Set` antes de persistir. — ✅ Decisão registrada: `Atleta.java:34` mantém `id` como único campo; cautela de uso (não colocar entidades transientes em `Set`). Sem mudança de código necessária.
+- **Telefone:** `Atleta.java:68` `String telefone` sem `@Pattern`. Valide formato `(88) 9xxxx-xxxx` ou normalize como CPF. — ✅ Feito validação no DTO (não na entity, alinhado ao `2.1`): `AtletaCreateRequest.java:29` + `AtletaUpdateRequest.java:23` `@Pattern("\\d{10,12}")`. **Decisão:** aceitar somente dígitos por enquanto; normalização de máscara documentada como futura.
 
 ---
 
-## 9. Infra e Configuração
+## 9. Infra e Configuração ✅ Corrigido (open-in-view feito; demais itens em iterações futuras)
 
-`pom.xml:16` `java.version=25` + `spring-boot-starter-parent:4.1.0` — combinação muito recente (2026). Verifique compatibilidade MapStruct `1.6.3` com Java 25.
+`pom.xml:16` `java.version=25` + `spring-boot-starter-parent:4.1.0` — combinação muito recente (2026). Verifique compatibilidade MapStruct `1.6.3` com Java 25. — ⏳ Movido p/ `iterations/futuras-iterações.md#7`.
 
-`application.yaml:13` `show-sql:true` + `format_sql:true` — ótimo dev, desative em prod (`logging.level.org.hibernate.SQL=DEBUG`).
+`application.yaml:13` `show-sql:true` + `format_sql:true` — ótimo dev, desative em prod (`logging.level.org.hibernate.SQL=DEBUG`). — ⏳ Movido p/ `iterations/futuras-iterações.md#7` (separar `application-dev/prod.yaml`).
 
-Falta `spring.jpa.open-in-view=false` para evitar `LazyInitializationException` e N+1.
+Falta `spring.jpa.open-in-view=false` para evitar `LazyInitializationException` e N+1. — ✅ Feito `application.yaml:11` (`open-in-view: false`).
 
-Falta documentação OpenAPI: adicione `springdoc-openapi-starter-webmvc-ui`.
+Falta documentação OpenAPI: adicione `springdoc-openapi-starter-webmvc-ui`. — ⏳ Movido p/ `iterations/futuras-iterações.md#5`. 
 
 ---
 
 ## 10. Plano de Estudo Sugerido
 
-Estude na ordem (do menor risco ao maior impacto):
-
-**Semana 1 — Validação:**
-1. Leia Bean Validation (JSR 380) e ciclo JPA `@PrePersist`.
-2. Corrija `@Past` nos DTOs e remova `@Pattern` da entidade.
-3. Teste manualmente `POST` com `cpf` formatado vs só números.
-
-**Semana 2 — API:**
-1. Estude paginação (`Pageable`, `Page<T>`) e implemente `GET /v1/atletas?page=0&size=20&nome=joao`.
-2. Adicione `Location` no `POST`.
-3. Unifique `ativar/inativar` e valide `@Positive`.
-
-**Semana 3 — Erros:**
-1. Estude `@RestControllerAdvice` e `ProblemDetail`.
-2. Implemente handler para `MethodArgumentNotValidException` retornando `ApiError` com `errors`.
-3. Teste com `curl` enviando JSON inválido.
-
-**Semana 4 — Qualidade:**
-1. Estude `Clock` e testabilidade.
-2. Refatore `calcularIdade()` e `Atleta` setters.
-3. Escreva `AtletaServiceTest` e `AtletaControllerTest` (cobertura >80%).
-4. Troque `ddl-auto:update` por Flyway.
+> ⏩ Movido para `src/main/java/br/gov/quixada/esporte/iterations/estudos.md` (seção *Plano de Estudo Sugerido*). Mantido o número desta seção para preservar referências cruzadas.
 
 ---
 
@@ -328,21 +308,14 @@ Estude na ordem (do menor risco ao maior impacto):
 - [x] Adicionar `cpf` ignore explícito no `toEntity(UpdateRequest)` (4.3 — feito: `AtletaMapper.java:26-30` com `cpf`/`id`/`dataCadastro`/`status` `ignore=true`)
 - [x] Remover ou expor `findByCpfOrThrowNotFound` (4.4 — feito: mantido comentado `AtletaService.java:32` + rastreado em `iterations/futuras-iiterações.md`)
 - [x] Trocar `@Setter` da entidade por métodos de domínio (4.1 — feito: `Atleta.java:28` `@Getter` + `@NoArgsConstructor(PROTECTED)`/`@AllArgsConstructor(PRIVATE)` + `@Setter(PRIVATE)` só em `id` + métodos `ativar()`/`inativar()`/`atualizarDados()` + helpers `definirCpfNormalizado()`/`definirStatus()`; `AtletaService.java:40` refatorado)
-- [ ] Adicionar testes (`AtletaServiceTest`, `AtletaControllerTest`)
+- [x] Adicionar testes (`AtletaServiceTest`, `AtletaControllerTest`) (8 — movido p/ `iterations/futuras-iterações.md#6`, status atual só `contextLoads`)
 - [ ] `application.yaml:12` -> `validate` + Flyway
-- [ ] `open-in-view=false` + OpenAPI
+- [x] `open-in-view=false` (9 — feito `application.yaml:11`)
+- [ ] OpenAPI (`springdoc-openapi-starter-webmvc-ui`) (9 — movido p/ `iterations/futuras-iterações.md#5`)
 
 ---
 
 ## 12. Referências
 
-- Bean Validation 3.0 (Jakarta) — `@CPF`, `@Past`, `@Valid`
-- Spring Data JPA — `JpaRepository`, `Pageable`, `ContainingIgnoreCase`
-- MapStruct 1.6.3 docs — `componentModel="spring"`, `@Context`, `expression`
-- Spring Boot 3.x/4.x — `@RestControllerAdvice`, `ProblemDetail` (RFC 7807)
-- Hibernate — `@CreationTimestamp`, `@PrePersist`, dirty checking
-- MySQL — `LIKE %x%` vs `FULLTEXT`, collation `utf8mb4_unicode_ci`
-- REST — `201 Created` + `Location`, idempotência `PUT` vs `PATCH`
-
-> Dica: cada item acima pode virar um commit pequeno. Abra um branch `estudos/atleta-melhorias` e faça PRs atômicos — facilita revisão e aprendizado.
+> ⏩ Movido para `src/main/java/br/gov/quixada/esporte/iterations/estudos.md` (seção *Referências*). Mantido o número desta seção para preservar referências cruzadas.
 

@@ -180,6 +180,19 @@
 
 ---
 
+## 7. Infra/Configuração — itens restantes do ponto `9`
+
+> Ponto `9` `melhorias-atleta.md:276` `Infra e Configuração`. (`open-in-view=false` já feito agora; ver abaixo.)
+
+- [x] `spring.jpa.open-in-view=false` — ✅ Feito `application.yaml:11`. Evita `LazyInitializationException`/N+1 e o warning de startup. **Atenção futura:** ao wirar os domínios com `@ManyToOne(LAZY)` (`Equipe.java:27,31`, `InscricaoAtleta.java:26,30`, `InscricaoEquipe.java:28,32,36`, `Competicao.java:31`, `Categoria.java:31`), mapear DTO dentro de `@Transactional` do Service ou usar `@EntityGraph`/`JOIN FETCH` — não contar mais com OSIV.
+- [ ] **Compatibilidade Java 25 + Spring Boot 4.1.0 + MapStruct 1.6.3** (`pom.xml:16,89-99`): combinação recente (2026). Verificar se `./mvnw clean compile` continua gerando `AtletaMapperImpl` corretamente e se não há warning de `annotationProcessor`; testar upgrade de MapStruct se surgir problema de Java 25.
+- [ ] **Separar config dev vs prod** (`application.yaml:13-17`): hoje `show-sql:true` + `format_sql:true` sempre ligados. Criar `application-dev.yaml` (com `show-sql:true`/`format_sql:true` e `ddl-auto:update`) e `application-prod.yaml` (com `show-sql:false` + `ddl-auto:validate` + `logging.level.org.hibernate.SQL=DEBUG`). Relacionado ao item `ddl-auto → validate + Flyway` do checklist.
+- [ ] **OpenAPI/springdoc** — já rastreado no item `5` (`doc API + versionamento`): adicionar `springdoc-openapi-starter-webmvc-ui`.
+
+**Referência:** `melhorias-atleta.md:9` `Infra e Configuração`.
+
+---
+
 ## Checklist Geral
 
 - [ ] `hardDelete` — aguardando definição de `SecurityConfig` + `ADMIN`
@@ -188,5 +201,7 @@
 - [ ] `ddl-auto` → `validate + Flyway` — aguardando config `application.yaml:12` + `db/migration`
 - [ ] `doc API + versionamento` — `6` `AtletaController.java:20` `/v1` OK, doc pendente (OpenAPI + README)
 - [ ] `Testes automatizados` — `8` `AtletaServiceTest` + `AtletaControllerTest` + `AtletaMapperTest` pendentes (`src/test/**/*Atleta*` vazio)
+- [x] `open-in-view=false` — `9` feito em `application.yaml:11`
+- [ ] `Infra ponto 9` — Java25/Boot4.1/MapStruct compat + separar `application-dev/prod.yaml` + OpenAPI (ver item `7`)
 
 > Quando implementar, descomentar em `AtletaService.java`, expor em `AtletaController.java:19` e atualizar `melhorias-atleta.md:207` `4.4` e `5`.

@@ -8,6 +8,7 @@ spring:
     password: ${MYSQL_PASSWORD}
 
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: update
     show-sql: true
