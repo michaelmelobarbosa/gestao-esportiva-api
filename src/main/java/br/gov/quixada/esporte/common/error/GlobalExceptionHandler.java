@@ -16,6 +16,14 @@ import br.gov.quixada.esporte.competicao.exception.CompeticaoNotFoundException;
 import br.gov.quixada.esporte.competicao.exception.PeriodoInvalidoException;
 import br.gov.quixada.esporte.equipe.exception.EquipeInativaException;
 import br.gov.quixada.esporte.equipe.exception.EquipeNotFoundException;
+import br.gov.quixada.esporte.inscricao.exception.AtletaForaDaCategoriaException;
+import br.gov.quixada.esporte.inscricao.exception.AtletaJaInscritoException;
+import br.gov.quixada.esporte.inscricao.exception.InscricaoAtletaNotFoundException;
+import br.gov.quixada.esporte.inscricao.exception.InscricaoEquipeNotFoundException;
+import br.gov.quixada.esporte.inscricao.exception.InscricaoInvalidaException;
+import br.gov.quixada.esporte.inscricao.exception.InscricoesEncerradasException;
+import br.gov.quixada.esporte.inscricao.exception.NumeroCamisaJaUtilizadoException;
+import br.gov.quixada.esporte.modalidade.exception.ModalidadeInativaException;
 import br.gov.quixada.esporte.modalidade.exception.ModalidadeNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
@@ -91,6 +99,46 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(EquipeInativaException.class)
     public ResponseEntity<ApiError> handleEquipeInativa(EquipeInativaException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(ModalidadeInativaException.class)
+    public ResponseEntity<ApiError> handleModalidadeInativa(ModalidadeInativaException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(InscricaoEquipeNotFoundException.class)
+    public ResponseEntity<ApiError> handleInscricaoEquipeNotFound(InscricaoEquipeNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(InscricaoAtletaNotFoundException.class)
+    public ResponseEntity<ApiError> handleInscricaoAtletaNotFound(InscricaoAtletaNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(InscricaoInvalidaException.class)
+    public ResponseEntity<ApiError> handleInscricaoInvalida(InscricaoInvalidaException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(AtletaForaDaCategoriaException.class)
+    public ResponseEntity<ApiError> handleAtletaForaDaCategoria(AtletaForaDaCategoriaException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(AtletaJaInscritoException.class)
+    public ResponseEntity<ApiError> handleAtletaJaInscrito(AtletaJaInscritoException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(NumeroCamisaJaUtilizadoException.class)
+    public ResponseEntity<ApiError> handleNumeroCamisaJaUtilizado(NumeroCamisaJaUtilizadoException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(InscricoesEncerradasException.class)
+    public ResponseEntity<ApiError> handleInscricoesEncerradas(InscricoesEncerradasException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 
