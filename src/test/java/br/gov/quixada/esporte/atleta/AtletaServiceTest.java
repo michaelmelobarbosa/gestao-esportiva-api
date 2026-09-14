@@ -53,7 +53,7 @@ class AtletaServiceTest {
 
     private Atleta umAtleta(StatusAtleta status) {
         return Atleta.builder()
-                .nomeCompleto("Fulano de Tal")
+                .nomeCompleto("Francisco")
                 .cpf("52998224725")
                 .dataNascimento(LocalDate.of(2000, 1, 1))
                 .endereco(new Endereco("Rua A", "10", "Centro", "Quixadá", "63900-000"))
