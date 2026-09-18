@@ -20,7 +20,8 @@ public class AtletaService {
 
     @Transactional(readOnly = true)
     public Page<Atleta> findAll(String nome, Pageable pageable) {
-        return nome == null || nome.isBlank() ? repository.findAll(pageable) : repository.findByNomeCompletoContainingIgnoreCase(nome, pageable);
+        return nome == null || nome.isBlank() ? repository.findAll(pageable) :
+                repository.findByNomeCompletoContainingIgnoreCase(nome, pageable);
     }
 
     @Transactional(readOnly = true)
