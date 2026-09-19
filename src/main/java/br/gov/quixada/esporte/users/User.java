@@ -23,13 +23,20 @@ public class User implements UserDetails {
     private Long id;
     @Column(nullable = false, length = 20)
     private String username;
-    @Column(nullable = false, length = 20)
+    @Column(length = 20)
     private String email;
     @Column(nullable = false, length = 255)
     private String password;
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private UserRoles role;
 
+
+    public User(String username, String password, UserRoles role) {
+        this.username = username;
+        this.password = password;
+        this.role = role;
+    }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

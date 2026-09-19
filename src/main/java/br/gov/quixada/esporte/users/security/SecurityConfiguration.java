@@ -1,7 +1,7 @@
 package br.gov.quixada.esporte.users.security;
 
-import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -12,7 +12,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
-@Configurable
+@Configuration
 @EnableWebSecurity
 public class SecurityConfiguration {
 
@@ -24,8 +24,9 @@ public class SecurityConfiguration {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(HttpMethod.GET).hasRole("USER")
-                        .anyRequest().hasRole("ADMIN"))
+                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/v1/atletas").hasRole("ADMIN")
+                        .anyRequest().hasRole("USER"))
                 .build();
     }
 
