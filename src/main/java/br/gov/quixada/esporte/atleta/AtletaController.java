@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.config.annotation.authentication.configuration.EnableGlobalAuthentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -24,7 +25,6 @@ public class AtletaController {
     private final AtletaService service;
     private final AtletaMapper mapper;
     private final Clock clock;
-
 
     @GetMapping
     public ResponseEntity<Page<AtletaResumoResponse>> findAll(@RequestParam(required = false) String nome, Pageable pageable) {
