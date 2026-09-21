@@ -2,7 +2,9 @@ package br.gov.quixada.esporte.users.auth;
 
 import br.gov.quixada.esporte.users.User;
 import br.gov.quixada.esporte.users.dto.AuthenticationRequest;
+import br.gov.quixada.esporte.users.dto.LoginResponse;
 import br.gov.quixada.esporte.users.dto.RegisterRequest;
+import br.gov.quixada.esporte.users.security.TokenService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Objects;
+
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -21,13 +25,15 @@ public class AuthenticationController {
     private final AuthenticationManager authenticationManager;
     private final AuthenticationRepository authenticationRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TokenService tokenService;
 
     @PostMapping("/login")
-    public ResponseEntity<Void> login(@RequestBody @Valid AuthenticationRequest request) {
+    public ResponseEntity<LoginResponse> login(@RequestBody @Valid AuthenticationRequest request) {
         var usernamePassword = new UsernamePasswordAuthenticationToken(request.userName(), request.password());
-        authenticationManager.authenticate(usernamePassword);
+        var auth = authenticationManager.authenticate(usernamePassword);
 
-        return ResponseEntity.ok().build();
+        var token = tokenService.generateToken((User) Objects.requireNonNull(auth.getPrincipal()));
+        return ResponseEntity.ok(new LoginResponse(token));
     }
 
     @PostMapping("/register")

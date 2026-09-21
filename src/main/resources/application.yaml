@@ -5,6 +5,7 @@ spring:
   application:
     name: gestao-esportiva-api
 
+
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
@@ -21,3 +22,8 @@ spring:
     locations: classpath:db/migration
     validate-on-migrate: true
     baseline-on-migrate: false
+
+api:
+  security:
+    token:
+      secret: ${API_SECURITY_TOKEN_SECRET:my_secret_key}
