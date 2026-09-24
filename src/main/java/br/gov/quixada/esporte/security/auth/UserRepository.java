@@ -1,10 +1,10 @@
-package br.gov.quixada.esporte.users.auth;
+package br.gov.quixada.esporte.security.auth;
 
-import br.gov.quixada.esporte.users.User;
+import br.gov.quixada.esporte.security.users.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.security.core.userdetails.UserDetails;
 
-public interface AuthenticationRepository extends JpaRepository<User, Long> {
+public interface UserRepository extends JpaRepository<User, Long> {
 
     UserDetails findByUsername(String username);
 }

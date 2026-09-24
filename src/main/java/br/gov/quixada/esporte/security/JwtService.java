@@ -1,6 +1,6 @@
-package br.gov.quixada.esporte.users.security;
+package br.gov.quixada.esporte.security;
 
-import br.gov.quixada.esporte.users.User;
+import br.gov.quixada.esporte.security.users.User;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTCreationException;
@@ -13,29 +13,34 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 
 @Service
-public class TokenService {
+public class JwtService {
 
     @Value("${api.security.token.secret}")
     private String secret;
 
     public String generateToken(User user) {
+
         try {
-            Algorithm algorithm = Algorithm.HMAC256(secret);
-            String token = JWT.create().withIssuer("gestao-esportiva-apip")
+
+            var algorithm = Algorithm.HMAC256(secret);
+
+            return JWT.create().withIssuer("gestao-esportiva-api")
                     .withSubject(user.getUsername())
                     .withExpiresAt(expirationDate())
                     .sign(algorithm);
-            return token;
-        } catch (JWTCreationException exception) {
+                    } catch (JWTCreationException exception) {
             throw new RuntimeException("Error while generating token", exception);
         }
     }
 
-    public String validateToken(String token) {
+    public String extractUsername(String token) {
+
         try {
-            Algorithm algorithm = Algorithm.HMAC256(secret);
+
+            var algorithm = Algorithm.HMAC256(secret);
+
             return JWT.require(algorithm)
-                    .withIssuer("gestao-esportiva-apip")
+                    .withIssuer("gestao-esportiva-api")
                     .build()
                     .verify(token)
                     .getSubject();

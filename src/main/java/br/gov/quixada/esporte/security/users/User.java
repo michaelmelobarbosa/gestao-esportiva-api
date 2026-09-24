@@ -1,4 +1,4 @@
-package br.gov.quixada.esporte.users;
+package br.gov.quixada.esporte.security.users;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -23,16 +23,16 @@ public class User implements UserDetails {
     private Long id;
     @Column(nullable = false, length = 20)
     private String username;
-    @Column(length = 20)
+    @Column(length = 254)
     private String email;
     @Column(nullable = false, length = 255)
     private String password;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private UserRoles role;
+    private UserRole role;
 
 
-    public User(String username, String password, UserRoles role) {
+    public User(String username, String password, UserRole role) {
         this.username = username;
         this.password = password;
         this.role = role;
@@ -40,7 +40,7 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        if (role == UserRoles.ADMIN) {
+        if (role == UserRole.ADMIN) {
             return List.of(new SimpleGrantedAuthority("ROLE_ADMIN"),
                     new SimpleGrantedAuthority("ROLE_USER"));
         };

@@ -1,10 +1,10 @@
-package br.gov.quixada.esporte.users.auth;
+package br.gov.quixada.esporte.security.auth;
 
-import br.gov.quixada.esporte.users.User;
-import br.gov.quixada.esporte.users.dto.AuthenticationRequest;
-import br.gov.quixada.esporte.users.dto.LoginResponse;
-import br.gov.quixada.esporte.users.dto.RegisterRequest;
-import br.gov.quixada.esporte.users.security.TokenService;
+import br.gov.quixada.esporte.security.JwtService;
+import br.gov.quixada.esporte.security.auth.dto.LoginRequest;
+import br.gov.quixada.esporte.security.auth.dto.LoginResponse;
+import br.gov.quixada.esporte.security.auth.dto.RegisterRequest;
+import br.gov.quixada.esporte.security.users.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,32 +21,32 @@ import java.util.Objects;
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
-public class AuthenticationController {
+public class AuthController {
     private final AuthenticationManager authenticationManager;
-    private final AuthenticationRepository authenticationRepository;
+    private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final TokenService tokenService;
+    private final JwtService jwtService;
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody @Valid AuthenticationRequest request) {
-        var usernamePassword = new UsernamePasswordAuthenticationToken(request.userName(), request.password());
+    public ResponseEntity<LoginResponse> login(@RequestBody @Valid LoginRequest request) {
+        var usernamePassword = new UsernamePasswordAuthenticationToken(request.username(), request.password());
         var auth = authenticationManager.authenticate(usernamePassword);
 
-        var token = tokenService.generateToken((User) Objects.requireNonNull(auth.getPrincipal()));
+        var token = jwtService.generateToken((User) Objects.requireNonNull(auth.getPrincipal()));
         return ResponseEntity.ok(new LoginResponse(token));
     }
 
     @PostMapping("/register")
     public ResponseEntity<Void> register(@RequestBody @Valid RegisterRequest request) {
 
-        if (this.authenticationRepository.findByUsername(request.username()) != null) {
+        if (this.userRepository.findByUsername(request.username()) != null) {
             return ResponseEntity.badRequest().build();
         }
 
-        String encryptedPassword = passwordEncoder.encode(request.password());
-        User user = new User(request.username(), encryptedPassword, request.role());
+        var encryptedPassword = passwordEncoder.encode(request.password());
+        var user = new User(request.username(), encryptedPassword, request.role());
 
-        this.authenticationRepository.save(user);
+        this.userRepository.save(user);
         return ResponseEntity.ok().build();
     }
 }
