@@ -1,4 +1,4 @@
-package br.gov.quixada.esporte.security.auth.dto;
+package br.gov.quixada.esporte.security.users.dto;
 
 public record LoginRequest(
         String username,

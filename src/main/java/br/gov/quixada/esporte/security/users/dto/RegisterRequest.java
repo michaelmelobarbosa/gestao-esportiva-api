@@ -1,4 +1,4 @@
-package br.gov.quixada.esporte.security.auth.dto;
+package br.gov.quixada.esporte.security.users.dto;
 
 import br.gov.quixada.esporte.security.users.UserRole;
 

@@ -1,9 +1,9 @@
 package br.gov.quixada.esporte.security.auth;
 
-import br.gov.quixada.esporte.security.JwtService;
-import br.gov.quixada.esporte.security.auth.dto.LoginRequest;
-import br.gov.quixada.esporte.security.auth.dto.LoginResponse;
-import br.gov.quixada.esporte.security.auth.dto.RegisterRequest;
+import br.gov.quixada.esporte.security.config.JwtService;
+import br.gov.quixada.esporte.security.users.dto.LoginRequest;
+import br.gov.quixada.esporte.security.users.dto.LoginResponse;
+import br.gov.quixada.esporte.security.users.dto.RegisterRequest;
 import br.gov.quixada.esporte.security.users.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

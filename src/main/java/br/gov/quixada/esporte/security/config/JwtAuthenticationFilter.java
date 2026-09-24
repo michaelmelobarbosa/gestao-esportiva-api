@@ -1,4 +1,4 @@
-package br.gov.quixada.esporte.security;
+package br.gov.quixada.esporte.security.config;
 
 import br.gov.quixada.esporte.security.auth.UserRepository;
 import jakarta.servlet.FilterChain;
