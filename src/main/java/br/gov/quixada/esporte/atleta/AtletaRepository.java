@@ -12,5 +12,5 @@ public interface AtletaRepository extends JpaRepository<Atleta, Long> {
 
     Optional<Atleta> findByCpf(String cpf);
 
-    Page<Atleta> findByNomeCompletoContainingIgnoreCase(String name, Pageable pageable);
+    Page<Atleta> findByNomeCompletoNormalizadoStartingWith(String nomeCompletoNormalizado, Pageable pageable);
 }

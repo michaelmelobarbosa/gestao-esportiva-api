@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 
 import br.gov.quixada.esporte.extras.CpfUtils;
 import br.gov.quixada.esporte.extras.Endereco;
+import br.gov.quixada.esporte.extras.NomeCompletoUtils;
 import br.gov.quixada.esporte.extras.Sexo;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
@@ -69,6 +70,9 @@ public class Atleta {
     @Column(nullable = false, updatable = false)
     private LocalDateTime dataCadastro;
 
+    @Column(name = "nome_completo_normalizado", nullable = false, length = 150)
+    private String nomeCompletoNormalizado;
+
 
     public void ativar() {
         if (this.status == StatusAtleta.ATIVO) return;
@@ -98,6 +102,10 @@ public class Atleta {
         this.cpf = CpfUtils.normalize(cpf);
     }
 
+    void definirNomeCompletoNormalizado(String nomeCompleto) {
+        this.nomeCompletoNormalizado = NomeCompletoUtils.normalize(nomeCompleto);
+    }
+
     void definirStatus(StatusAtleta status) {
         this.status = status;
     }
@@ -111,6 +119,9 @@ public class Atleta {
         if (this.status == null) {
             this.status = StatusAtleta.ATIVO;
         }
+        if (this.nomeCompleto != null) {
+            this.nomeCompletoNormalizado = NomeCompletoUtils.normalize(this.nomeCompleto);
+        }
     }
 
     @PreUpdate
@@ -118,5 +129,9 @@ public class Atleta {
         if (this.cpf != null) {
             this.cpf = CpfUtils.normalize(this.cpf);
         }
+        if (this.nomeCompleto != null) {
+            this.nomeCompletoNormalizado = NomeCompletoUtils.normalize(this.nomeCompleto);
+        }
     }
+
 }

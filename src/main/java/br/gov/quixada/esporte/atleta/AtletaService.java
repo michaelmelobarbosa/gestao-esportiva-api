@@ -4,6 +4,7 @@ import java.sql.SQLIntegrityConstraintViolationException;
 
 import br.gov.quixada.esporte.atleta.exception.AtletaNotFoundException;
 import br.gov.quixada.esporte.atleta.exception.CpfJaCadastradoException;
+import br.gov.quixada.esporte.extras.NomeCompletoUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -21,7 +22,7 @@ public class AtletaService {
     @Transactional(readOnly = true)
     public Page<Atleta> findAll(String nome, Pageable pageable) {
         return nome == null || nome.isBlank() ? repository.findAll(pageable) :
-                repository.findByNomeCompletoContainingIgnoreCase(nome, pageable);
+                repository.findByNomeCompletoNormalizadoStartingWith(NomeCompletoUtils.normalize(nome), pageable);
     }
 
     @Transactional(readOnly = true)
@@ -39,6 +40,7 @@ public class AtletaService {
     @Transactional
     public Atleta save(Atleta atleta) {
         atleta.definirCpfNormalizado(atleta.getCpf());
+        atleta.definirNomeCompletoNormalizado(atleta.getNomeCompleto());
         atleta.definirStatus(StatusAtleta.ATIVO);
 
         try {

@@ -1,14 +1,13 @@
 # Estudos — Módulo Atleta / Gestão Esportiva
 
 > Pasta `src/main/java/br/gov/quixada/esporte/iterations` — caderno de estudo do projeto.
-> Origem: tópicos `10` (Plano de Estudo) e `12` (Referências) movidos de `melhorias-atleta.md`.
 > Uso: documentar tópicos ao longo do desenvolvimento para estudar/revisar depois.
 
 ---
 
 ## Plano de Estudo Sugerido
 
-> Movido do ponto `10` de `melhorias-atleta.md`. Ordem: do menor risco ao maior impacto.
+> Ordem: do menor risco ao maior impacto.
 
 **Semana 1 — Validação:**
 1. Leia Bean Validation (JSR 380) e ciclo JPA `@PrePersist`.
@@ -31,13 +30,9 @@
 3. Escreva `AtletaServiceTest` e `AtletaControllerTest` (cobertura >80%).
 4. Troque `ddl-auto:update` por Flyway.
 
-> Checklist de implementação desses pontos: ver seção `11. Checklist Prático` em `melhorias-atleta.md`.
-
 ---
 
 ## Referências
-
-> Movido do ponto `12` de `melhorias-atleta.md`.
 
 - Bean Validation 3.0 (Jakarta) — `@CPF`, `@Past`, `@Valid`
 - Spring Data JPA — `JpaRepository`, `Pageable`, `ContainingIgnoreCase`
@@ -66,7 +61,7 @@
 ### Rich Domain Model (anemic vs rich)
 - **Onde apareceu:** `Atleta.java` (ponto `4.1`), `AtletaService.java`.
 - **O que estudar:** diferença entre entidade anêmica (só getters/setters) e rica (métodos de domínio `ativar()`, `inativar()`, `atualizarDados()`); encapsulamento de invariantes; `@Setter(AccessLevel.PRIVATE/PACKAGE)`; JPA `field access` via reflection.
-- **Decisões do projeto:** ver `decisoes.md` (handler) e `melhorias-atleta.md` ponto `4.1`.
+- **Decisões do projeto:** ver `decisoes.md` (handler).
 
 ### Open Session In View (OSIV)
 - **Onde apareceu:** `application.yaml:11` (`open-in-view: false`, ponto `9`).
