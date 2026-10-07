@@ -45,7 +45,7 @@ public class AuthController {
         }
 
         var encryptedPassword = passwordEncoder.encode(request.password());
-        var user = new User(request.username(), encryptedPassword, UserRole.USER);
+        var user = new User(request.username(), request.email(), encryptedPassword, UserRole.USER);
 
         this.userRepository.save(user);
         return ResponseEntity.ok().build();
