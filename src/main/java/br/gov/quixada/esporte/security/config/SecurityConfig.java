@@ -31,12 +31,24 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.POST).hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE).hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT).hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PATCH).hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET).hasAnyRole("ADMIN", "USER")
+
+                        .requestMatchers(HttpMethod.GET, "/v1/**")
+                        .hasAnyRole("ADMIN", "USER")
+
+                        .requestMatchers(HttpMethod.POST, "/v1/**")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.PATCH, "/v1/**")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.PUT, "/v1/**")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.DELETE, "/v1/**")
+                        .hasRole("ADMIN")
+
                         .anyRequest().hasRole("USER"))
+
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
