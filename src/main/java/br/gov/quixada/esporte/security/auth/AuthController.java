@@ -1,6 +1,7 @@
 package br.gov.quixada.esporte.security.auth;
 
 import br.gov.quixada.esporte.security.config.JwtService;
+import br.gov.quixada.esporte.security.users.UserRole;
 import br.gov.quixada.esporte.security.users.dto.LoginRequest;
 import br.gov.quixada.esporte.security.users.dto.LoginResponse;
 import br.gov.quixada.esporte.security.users.dto.RegisterRequest;
@@ -44,7 +45,7 @@ public class AuthController {
         }
 
         var encryptedPassword = passwordEncoder.encode(request.password());
-        var user = new User(request.username(), encryptedPassword, request.role());
+        var user = new User(request.username(), encryptedPassword, UserRole.USER);
 
         this.userRepository.save(user);
         return ResponseEntity.ok().build();
