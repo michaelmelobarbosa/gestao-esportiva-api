@@ -1,11 +1,14 @@
 package br.gov.quixada.esporte.extras;
 
+import java.util.Objects;
+
 public final class CpfUtils {
 
     private CpfUtils() {
     }
 
     public static String normalize(String cpf) {
-        return cpf == null ? null : cpf.replaceAll("\\D", "");
+        return Objects.requireNonNull(cpf, "CPF não pode ser nulo.")
+                .replaceAll("\\D", "");
     }
 }

@@ -78,7 +78,7 @@ class AtletaServiceTest {
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findAll(PAGEABLE);
-            verify(repository, never()).findByNomeCompletoContainingIgnoreCase(anyString(), any(Pageable.class));
+            verify(repository, never()).findByNomeCompletoNormalizadoStartingWith(anyString(), any(Pageable.class));
         }
 
         @Test
@@ -92,20 +92,34 @@ class AtletaServiceTest {
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findAll(PAGEABLE);
-            verify(repository, never()).findByNomeCompletoContainingIgnoreCase(anyString(), any(Pageable.class));
+            verify(repository, never()).findByNomeCompletoNormalizadoStartingWith(anyString(), any(Pageable.class));
         }
 
         @Test
         @Order(3)
-        @DisplayName("deve filtrar por nome quando informado")
-        void deveFiltrarPorNomeQuandoInformado() {
+        @DisplayName("deve filtrar por nome normalizado quando informado")
+        void deveFiltrarPorNomeNormalizadoQuandoInformado() {
             Page<Atleta> esperado = new PageImpl<>(List.of(umAtleta(StatusAtleta.ATIVO)));
-            when(repository.findByNomeCompletoContainingIgnoreCase("joao", PAGEABLE)).thenReturn(esperado);
+            when(repository.findByNomeCompletoNormalizadoStartingWith("joao", PAGEABLE)).thenReturn(esperado);
 
             Page<Atleta> resultado = service.findAll("joao", PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
-            verify(repository).findByNomeCompletoContainingIgnoreCase("joao", PAGEABLE);
+            verify(repository).findByNomeCompletoNormalizadoStartingWith("joao", PAGEABLE);
+            verify(repository, never()).findAll(any(Pageable.class));
+        }
+
+        @Test
+        @Order(4)
+        @DisplayName("deve normalizar a entrada da busca (acento, caixa e espaço)")
+        void deveNormalizarEntradaDaBusca() {
+            Page<Atleta> esperado = Page.empty();
+            when(repository.findByNomeCompletoNormalizadoStartingWith("joaosilva", PAGEABLE)).thenReturn(esperado);
+
+            Page<Atleta> resultado = service.findAll("João Silva", PAGEABLE);
+
+            assertThat(resultado).isSameAs(esperado);
+            verify(repository).findByNomeCompletoNormalizadoStartingWith("joaosilva", PAGEABLE);
             verify(repository, never()).findAll(any(Pageable.class));
         }
     }

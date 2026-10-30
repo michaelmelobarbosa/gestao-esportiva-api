@@ -1,7 +1,6 @@
 # Decisões de Projeto — `GlobalExceptionHandler`
 
 > Pasta `src/main/java/br/gov/quixada/esporte/iterations` — documento de estudo das decisões tomadas em `src/main/java/br/gov/quixada/esporte/common/error/GlobalExceptionHandler.java` e `ApiError.java`.
-> Referência: ponto `7` `melhorias-atleta.md` `Tratamento de Erros`.
 
 ---
 
@@ -187,4 +186,3 @@ Exemplo: `POST /v1/atletas` com body `{ "cpf": "1" }`.
 - Spring DAO — `DataIntegrityViolationException`
 - HTTP — RFC 9110 (status `400`/`404`/`409`)
 - RFC 7807 — `ProblemDetail` (evolução futura)
-- `melhorias-atleta.md` — ponto `7` Tratamento de Erros; ponto `6` validação `id`

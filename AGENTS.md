@@ -38,10 +38,10 @@ SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run   # explicit dev
 - DTOs are `record`s. Mapping via MapStruct `componentModel="spring"`.
 
 ## Gotchas — Won't Find Without Reading Code
-- **CPF normalization**: `extras/CpfUtils.java` strips non-digits, called in `Atleta.java` `@PrePersist/@PreUpdate` AND `AtletaService.java:40` before saving. Entity has `@Pattern("\\d{11}")` (`Atleta.java:46`) which rejects formatted CPF before normalization — fix belongs in DTOs/service, not entity. See `iterations/melhorias-atleta.md`.
+- **CPF normalization**: `extras/CpfUtils.java` strips non-digits, called in `Atleta.java` `@PrePersist/@PreUpdate` AND `AtletaService.java:40` before saving. Entity has `@Pattern("\\d{11}")` (`Atleta.java:46`) which rejects formatted CPF before normalization — fix belongs in DTOs/service, not entity.
 - **MapStruct + Lombok coupling**: generated mappers go to `target/generated-sources/annotations/`. After editing `AtletaMapper.java` run `./mvnw clean compile` to regenerate.
 - **`GlobalExceptionHandler`** (`common/error/GlobalExceptionHandler.java`, `@RestControllerAdvice`) maps domain exceptions plus `MethodArgumentNotValidException`, `ConstraintViolationException`, `HttpMessageNotReadableException` and `DataIntegrityViolationException` to `ApiError`. No per-controller handling needed.
 - **MySQL error code in service**: `AtletaService.java:48` inspects `SQLIntegrityConstraintViolationException.getErrorCode() == 1062` (duplicate CPF). This branch is not exercised under H2 (unit tests mock it).
 - **`@CreationTimestamp` Hibernate-specific** (`Atleta.java`) — tied to Hibernate, not Spring Data auditing. Tests need a full context.
-- **Iteration notes**: `src/main/java/br/gov/quixada/esporte/iterations/` (`melhorias-atleta.md`, `decisoes.md`, `futuras-iterações.md`, `estudos.md`) is the roadmap/decision record — check before large refactors. QA report: `docs/qa/relatorio-testes-unitarios.html` (untracked).
+- **Iteration notes**: `src/main/java/br/gov/quixada/esporte/iterations/` (`decisoes.md`, `futuras-iterações.md`, `estudos.md`, `securityfixes.md`) is the roadmap/decision record — check before large refactors. QA report: `docs/qa/relatorio-testes-unitarios.html` (untracked).
 - **Git**: current work branch is `testes`; `main`/`dev` and feature branches exist remotely. No CI / lint / formatter config, no `.github/`, no `opencode.json`. `HELP.md` is Spring Initializr boilerplate.

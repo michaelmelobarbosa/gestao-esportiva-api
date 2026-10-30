@@ -25,12 +25,14 @@ import br.gov.quixada.esporte.inscricao.exception.InscricoesEncerradasException;
 import br.gov.quixada.esporte.inscricao.exception.NumeroCamisaJaUtilizadoException;
 import br.gov.quixada.esporte.modalidade.exception.ModalidadeInativaException;
 import br.gov.quixada.esporte.modalidade.exception.ModalidadeNotFoundException;
+import br.gov.quixada.esporte.security.auth.exception.EmailJaCadastradoException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -50,6 +52,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(CpfJaCadastradoException.class)
     public ResponseEntity<ApiError> handleCpfCadastrado(CpfJaCadastradoException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(EmailJaCadastradoException.class)
+    public ResponseEntity<ApiError> handleEmailJaCadastrado(EmailJaCadastradoException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiError> handleAuthentication(AuthenticationException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNAUTHORIZED, "Credenciais inválidas", request, List.of());
     }
 
     @ExceptionHandler(AtletaInativoException.class)
