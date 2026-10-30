@@ -6,6 +6,8 @@
 
 ## 1. `hardDelete(Long id)` — `AtletaService.java:50-55` comentado
 
+> **Status (2026-10-30):** o perfil `ADMIN` já existe (`SecurityConfig` + `UserRole.ADMIN`), então o bloqueio original deixou de existir. Falta implementar o endpoint e definir a regra de integridade referencial.
+
 ```java
 // hard delete a ser implementado quando perfil admin for criado
 // @Transactional
@@ -15,10 +17,10 @@
 // }
 ```
 
-**Por que está comentado:** `AtletaService.java:50` indica que `hardDelete` só deve existir com perfil `admin`. Hoje o `inativar()` `AtletaService.java:64` é soft delete (status INATIVO). Hard delete físico é perigoso sem controle de permissão.
+**Por que está comentado:** originalmente porque `hardDelete` só deveria existir com perfil `admin`, que não existia. Hoje o `inativar()` `AtletaService.java:64` é soft delete (status INATIVO). O perfil `ADMIN` já está disponível, mas hard delete físico continua perigoso e precisa de regra explícita + tratamento de FKs.
 
 **Para implementar no futuro:**
-- [ ] Criar role `ADMIN` + `@PreAuthorize("hasRole('ADMIN')")` em `AtletaController.java:19`
+- [x] Role `ADMIN` existe (`SecurityConfig` + `UserRole.ADMIN`); a autorização pode usar `@PreAuthorize` ou os matchers atuais.
 - [ ] Adicionar endpoint `AtletaController.java:19`:
   ```java
   @DeleteMapping("/{id}")
@@ -177,7 +179,7 @@
 
 ## Checklist Geral
 
-- [ ] `hardDelete` — aguardando definição de `SecurityConfig` + `ADMIN`
+- [ ] `hardDelete` — desbloqueado: `ADMIN` já existe; falta endpoint + regra de FKs
 - [ ] `findByCpfOrThrowNotFound` — aguardando decisão de exposição na API
 - [x] Busca por nome — ✅ feito: coluna `nome_completo_normalizado` + índice BTREE + busca por prefixo (`V10`); `FULLTEXT` descartado (item `3`)
 - [x] `ddl-auto` → `validate + Flyway` — ✅ feito: `V1__baseline.sql` + `spring-boot-starter-flyway`/`flyway-mysql` + `ddl-auto: validate` (item `4`)
