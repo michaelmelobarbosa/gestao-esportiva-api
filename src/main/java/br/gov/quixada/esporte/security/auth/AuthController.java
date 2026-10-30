@@ -1,17 +1,15 @@
 package br.gov.quixada.esporte.security.auth;
 
 import br.gov.quixada.esporte.security.config.JwtService;
-import br.gov.quixada.esporte.security.users.UserRole;
+import br.gov.quixada.esporte.security.users.User;
 import br.gov.quixada.esporte.security.users.dto.LoginRequest;
 import br.gov.quixada.esporte.security.users.dto.LoginResponse;
 import br.gov.quixada.esporte.security.users.dto.RegisterRequest;
-import br.gov.quixada.esporte.security.users.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,14 +21,14 @@ import java.util.Objects;
 @RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthController {
+
+    private final AuthService authService;
     private final AuthenticationManager authenticationManager;
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody @Valid LoginRequest request) {
-        var usernamePassword = new UsernamePasswordAuthenticationToken(request.username(), request.password());
+        var usernamePassword = new UsernamePasswordAuthenticationToken(request.email(), request.password());
         var auth = authenticationManager.authenticate(usernamePassword);
 
         var token = jwtService.generateToken((User) Objects.requireNonNull(auth.getPrincipal()));
@@ -39,15 +37,7 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<Void> register(@RequestBody @Valid RegisterRequest request) {
-
-        if (this.userRepository.findByUsername(request.username()) != null) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        var encryptedPassword = passwordEncoder.encode(request.password());
-        var user = new User(request.username(), request.email(), encryptedPassword, UserRole.USER);
-
-        this.userRepository.save(user);
+        authService.register(request);
         return ResponseEntity.ok().build();
     }
 }

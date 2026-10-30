@@ -25,7 +25,7 @@ public class JwtService {
             var algorithm = Algorithm.HMAC256(secret);
 
             return JWT.create().withIssuer("gestao-esportiva-api")
-                    .withSubject(user.getUsername())
+                    .withSubject(user.getEmail())
                     .withExpiresAt(expirationDate())
                     .sign(algorithm);
                     } catch (JWTCreationException exception) {
@@ -33,7 +33,7 @@ public class JwtService {
         }
     }
 
-    public String extractUsername(String token) {
+    public String extractEmail(String token) {
 
         try {
 
