@@ -2,6 +2,7 @@
 
 > Pasta `src/main/java/br/gov/quixada/esporte/iterations` — documento de estudo e roadmap das correções de segurança.
 > Base da análise: estado do código após a reorganização dos pacotes em `security/config`, `security/auth` e `security/users`.
+> **Histórico consolidado, com explicações e decisões: `fixes.md`.**
 
 A autenticação **funciona no fluxo feliz**: `POST /auth/login` emite um JWT, o `JwtAuthenticationFilter` valida o token a cada request e as senhas são guardadas com BCrypt. A implementação evoluiu (veja o status abaixo), mas ainda restam lacunas de validação, constraints e tratamento de erro. Vários desses buracos são exploráveis.
 
@@ -12,23 +13,23 @@ Este documento lista as correções **na ordem de prioridade** (mais críticas p
 | Item | Status | Observação |
 |---|---|---|
 | A1 | ✅ Feito | `RegisterRequest` não expõe `role`; `AuthService` fixa `UserRole.USER`. |
-| A2 | ⏳ Pendente | `application.yaml` ainda tem o default `my_secret_key`. |
+| A2 | ✅ Feito | Secret obrigatório via `API_SECURITY_TOKEN_SECRET`; sem default, o boot falha sem a variável. |
 | A3 | ✅ Resolvido por decisão | Unicidade passou a ser do **email** (`V13`); username é não único (`V14` → `V15`). |
-| A4 | ✅ Feito | Constraints nos DTOs; política de senha definida em **min 8 / max 72**. |
+| A4 | 🟡 Parcial | Constraints nos DTOs; falta aplicar **min 8 / max 72** na senha. |
 | A5 | ⏳ Pendente | Sem rate limiting/lockout. |
-| B1 | ⏳ Pendente | Token inválido ainda vira 500. |
+| B1 | ✅ Feito | `JwtService.extractEmail` lança `TokenInvalidoException` (o 401 JSON final depende do B2). |
 | B2 | ⏳ Pendente | 401/403 ainda no formato padrão do Spring. |
 | B3 | ✅ Feito | `SecurityConfig` usa matchers por método em `/v1/**`. |
 | B4 | ⏳ Pendente | `CustomUserDetailsService` pode devolver `null`. |
-| B5 | ⏳ Pendente | `resolveToken` usa `replace`. |
-| B6 | ⏳ Pendente | Filtro pode estourar NPE. |
+| B5 | ✅ Feito | `resolveToken` exige `Bearer ` com `startsWith`/`substring`. |
+| B6 | ✅ Feito | Token inválido/usuário ausente viram request anônima, sem 500/NPE. |
 | B7 | ⏳ Pendente | `findByEmail` retorna `UserDetails` (não `Optional`). |
 | B8 | ✅ Feito | `AuthService` + exceção de domínio + **409** com `ApiError`. |
 | B9 | ✅ Feito | `AuthenticationException` → **401** "Credenciais inválidas". |
 | C1–C4 | ⏳ Pendente | — |
 | C5 | ✅ Feito | Email é a identidade: `@Email`, `NOT NULL`, `UNIQUE` e `sub` do JWT. |
 | C6–C8 | ⏳ Pendente | — |
-| C9 | 🟡 Parcial | `AuthServiceTest` e `AuthControllerTest` feitos; faltam `JwtServiceTest` e filtro. |
+| C9 | ✅ Feito | `AuthServiceTest`, `AuthControllerTest`, `JwtServiceTest` e `JwtAuthenticationFilterTest`. |
 | C10–C12 | ⏳ Pendente | — |
 
 ---
@@ -96,7 +97,9 @@ para qualquer pessoa criar um administrador — e `ADMIN` tem acesso a endpoints
 
 ### A2. Remover o valor padrão (`default`) do segredo do JWT
 
-- [ ] Não permitir que a aplicação suba com um segredo previsível.
+- [x] Não permitir que a aplicação suba com um segredo previsível.
+
+> ✅ **Feito (2026-11-01).** `${API_SECURITY_TOKEN_SECRET}` não tem default; o `.env.example` foi atualizado, o `.env` dev recebeu um segredo forte e `application-test.yaml` tem um valor próprio para os testes.
 
 **Onde:** `src/main/resources/application.yaml:29`.
 
@@ -166,7 +169,7 @@ O trecho `:my_secret_key` é o valor usado **quando a variável de ambiente não
 
 - [x] Adicionar constraints em `LoginRequest` e `RegisterRequest`.
 
-> ✅ **Feito (2026-10-30).** `RegisterRequest` valida `username`, `email` e `password`; `LoginRequest` valida `email`. Política de senha definida: **min 8 / max 72** (BCrypt ignora bytes além de 72) — a aplicação no DTO fica para a Fase 1.
+> 🟡 **Parcial (2026-10-30).** `RegisterRequest` valida `username`, `email` e `password`; `LoginRequest` valida `email`. Política de senha definida: **min 8 / max 72** (BCrypt ignora bytes além de 72), mas a aplicação de `@Size(min = 8, max = 72)` na senha ainda está pendente.
 
 **Onde:** `security/users/dto/LoginRequest.java` e `RegisterRequest.java`.
 
@@ -219,8 +222,10 @@ Observações:
 
 ### B1. Token inválido/expirado deve virar 401 (e não 500)
 
-- [ ] Substituir a `RuntimeException` genérica por uma exceção específica.
-- [ ] Mapear essa exceção para 401 no `GlobalExceptionHandler` (ou no filtro).
+- [x] Substituir a `RuntimeException` genérica por uma exceção específica.
+- [x] Mapear essa exceção para 401 no `GlobalExceptionHandler` (ou no filtro).
+
+> ✅ **Feito (2026-11-01).** `JwtService` lança `TokenInvalidoException`; o `JwtAuthenticationFilter` a captura e segue sem autenticação (sem 500). O 401 em JSON é concluído no B2, com o `AuthenticationEntryPoint`.
 
 **Onde:** `security/config/JwtService.java` (métodos `generateToken`/`extractUsername`) e `common/error/GlobalExceptionHandler.java`.
 
@@ -310,7 +315,9 @@ public UserDetails loadUserByUsername(String username) throws UsernameNotFoundEx
 
 ### B5. Validar o prefixo `Bearer` ao extrair o token
 
-- [ ] Trocar o `replace` por uma checagem de prefixo.
+- [x] Trocar o `replace` por uma checagem de prefixo.
+
+> ✅ **Feito (2026-11-01).** `resolveToken` retorna `null` quando o header não começa com `Bearer `; caso contrário, usa `substring(7)`.
 
 **Onde:** `security/config/JwtAuthenticationFilter.java:37-42`.
 
@@ -334,7 +341,9 @@ private String resolveToken(HttpServletRequest request) {
 
 ### B6. Evitar NPE quando o usuário do token não existe mais
 
-- [ ] Checar `null`/`Optional` antes de usar o `UserDetails`.
+- [x] Checar `null`/`Optional` antes de usar o `UserDetails`.
+
+> ✅ **Feito (2026-11-01).** O filtro só autentica se `findByEmail` devolver um usuário; token inválido é capturado por `TokenInvalidoException` e o contexto é limpo. A request segue anônima.
 
 **Onde:** `security/config/JwtAuthenticationFilter.java:28-31`.
 
@@ -541,7 +550,7 @@ Em projetos maiores, cria-se um `UserDetails` separado (adapter) e mantém a ent
 
 - [x] Testes de unidade e integração para o fluxo de auth.
 
-> 🟡 **Parcial (2026-10-30).** Existem `AuthServiceTest` e `AuthControllerTest`. Faltam `JwtServiceTest` e testes do `JwtAuthenticationFilter`.
+> ✅ **Feito (2026-11-01).** `AuthServiceTest`, `AuthControllerTest`, `JwtServiceTest` e `JwtAuthenticationFilterTest` cobrem o fluxo.
 
 **Onde:** `src/test/java/.../security/`.
 
@@ -593,18 +602,18 @@ Em projetos maiores, cria-se um `UserDetails` separado (adapter) e mantém a ent
 ```
 Segurança crítica (P0)
 [x] A1. Registro público sempre USER (sem role do cliente)
-[ ] A2. Remover default do segredo JWT (API_SECURITY_TOKEN_SECRET obrigatório)
+[x] A2. Remover default do segredo JWT (API_SECURITY_TOKEN_SECRET obrigatório)
 [x] A3. Unicidade resolvida por email (username não único; V13/V14/V15)
 [x] A4. Bean Validation em LoginRequest/RegisterRequest (senha: min 8/max 72 a aplicar)
 [ ] A5. Rate limiting / lockout no login
 
 Status HTTP e robustez (P1)
-[ ] B1. Token inválido -> 401 (TokenInvalidoException)
+[x] B1. Token inválido -> exceção específica (TokenInvalidoException), sem 500
 [ ] B2. EntryPoint 401 / AccessDeniedHandler 403 em JSON
 [x] B3. Matchers por método em /v1/** (GET USER/ADMIN; escrita ADMIN)
 [ ] B4. CustomUserDetailsService lança UsernameNotFoundException
-[ ] B5. resolveToken valida prefixo "Bearer "
-[ ] B6. Filtro não estoura NPE com usuário inexistente
+[x] B5. resolveToken valida prefixo "Bearer "
+[x] B6. Filtro não estoura NPE com usuário inexistente
 [ ] B7. findByEmail -> Optional<User>
 [x] B8. register responde ApiError (AuthService + 409)
 [x] B9. BadCredentialsException -> 401 (AuthenticationException)
@@ -618,7 +627,7 @@ Boas práticas (P2)
 [ ] C6. Refresh token / logout / revogação
 [ ] C7. (Opcional) roles como claim do token
 [ ] C8. Configurar CORS
-[x] C9. Testes de auth (parcial: AuthService/AuthController feitos; JwtService/filtro pendentes)
+[x] C9. Testes de auth (AuthService, AuthController, JwtService e filtro)
 [ ] C10. Versionar /auth
 [ ] C11. Reavaliar pacote de JwtService
 [ ] C12. Renomear authenticationManagerBean

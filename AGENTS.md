@@ -14,7 +14,7 @@ Two Spring profiles; default is `dev` (`application.yaml:8-9`, overridable via `
 
 ## Commands
 ```bash
-cp .env.example .env  # fill MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_ROOT_PASSWORD (API_SECURITY_TOKEN_SECRET after A2)
+cp .env.example .env  # fill MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_ROOT_PASSWORD, API_SECURITY_TOKEN_SECRET
 docker compose up -d  # starts gestao-esportiva-mysql on 3306 (healthcheck 30s start_period)
 ./mvnw spring-boot:run          # profile dev (default); Docker daemon required — spring-boot-docker-compose auto-starts compose.yaml
 SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run   # explicit dev
@@ -29,7 +29,7 @@ SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run   # explicit dev
 - URL dev: `jdbc:mysql://localhost:3306/gestao_esportiva?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=America/Recife` (`application-dev.yaml:3`).
 - `spring-boot-docker-compose` (`pom.xml`, runtime) manages `compose.yaml` lifecycle on `spring-boot:run`; disabled under test (`application-test.yaml`).
 - Migrations are the source of truth. `application.yaml` keeps `show-sql`/`format_sql` on by default; test turns SQL logging off.
-- **JWT secret (A2 pendente)**: `api.security.token.secret` ainda cai no default `my_secret_key` quando `API_SECURITY_TOKEN_SECRET` não existe. A correção planejada remove o default e exige a variável no `.env` (e um valor de teste em `application-test.yaml`).
+- **JWT secret (obrigatório)**: `api.security.token.secret: ${API_SECURITY_TOKEN_SECRET}` não tem default — a aplicação falha no boot sem a variável. Dev usa o valor do `.env`; testes usam o valor fixo de `application-test.yaml`.
 
 ## Architecture
 - Entrypoint: `src/main/java/br/gov/quixada/esporte/GestaoEsportivaApiApplication.java`.
@@ -48,7 +48,8 @@ SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run   # explicit dev
 - **`GlobalExceptionHandler`** (`common/error/GlobalExceptionHandler.java`, `@RestControllerAdvice`) maps domain exceptions plus `MethodArgumentNotValidException`, `ConstraintViolationException`, `HttpMessageNotReadableException`, `DataIntegrityViolationException` and `AuthenticationException` (→ 401 "Credenciais inválidas") to `ApiError`. No per-controller handling needed.
 - **MySQL error code in service**: `AtletaService.java:48` inspects `SQLIntegrityConstraintViolationException.getErrorCode() == 1062` (duplicate CPF). This branch is not exercised under H2 (unit tests mock it).
 - **Registro de usuário**: `AuthService.register` pré-checa `existsByEmail` e traduz `DataIntegrityViolationException` cujo `getMostSpecificCause().getMessage()` contém `uk_db_users_email` para `EmailJaCadastradoException` (409). Username duplicado é permitido por decisão.
+- **Token inválido no filtro**: `JwtService.extractEmail` lança `TokenInvalidoException`; o `JwtAuthenticationFilter` captura e segue a request sem autenticação (sem 500/NPE). O status final é o do Spring Security (hoje 403; 401 JSON virá com `AuthenticationEntryPoint`/B2).
 - **Política de senha**: decidida em min 8 / max 72 (BCrypt ignora bytes além de 72); a aplicação no DTO é item da Fase 1.
 - **`@CreationTimestamp` Hibernate-specific** (`Atleta.java`) — tied to Hibernate, not Spring Data auditing. Tests need a full context.
-- **Iteration notes**: `src/main/java/br/gov/quixada/esporte/iterations/` (`decisoes.md`, `futuras-iterações.md`, `estudos.md`, `securityfixes.md`) is the roadmap/decision record — check before large refactors. QA report: `docs/qa/relatorio-testes-unitarios.html` (tracked).
+- **Iteration notes**: `src/main/java/br/gov/quixada/esporte/iterations/` (`decisoes.md`, `futuras-iterações.md`, `estudos.md`, `securityfixes.md`, `fixes.md`) is the roadmap/decision record — check before large refactors. QA report: `docs/qa/relatorio-testes-unitarios.html` (tracked).
 - **Git**: current work branch is `dev`; `main` recebe PRs de `dev` (PR #8 já mergeado). No CI / lint / formatter config, no `.github/`, no `opencode.json`. `HELP.md` is Spring Initializr boilerplate.

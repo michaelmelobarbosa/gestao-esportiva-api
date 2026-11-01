@@ -26,4 +26,4 @@ spring:
 api:
   security:
     token:
-      secret: ${API_SECURITY_TOKEN_SECRET:my_secret_key}
+      secret: ${API_SECURITY_TOKEN_SECRET}

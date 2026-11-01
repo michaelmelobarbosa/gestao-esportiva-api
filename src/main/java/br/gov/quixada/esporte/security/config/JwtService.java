@@ -1,5 +1,6 @@
 package br.gov.quixada.esporte.security.config;
 
+import br.gov.quixada.esporte.security.auth.exception.TokenInvalidoException;
 import br.gov.quixada.esporte.security.users.User;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
@@ -28,7 +29,7 @@ public class JwtService {
                     .withSubject(user.getEmail())
                     .withExpiresAt(expirationDate())
                     .sign(algorithm);
-                    } catch (JWTCreationException exception) {
+        } catch (JWTCreationException exception) {
             throw new RuntimeException("Error while generating token", exception);
         }
     }
@@ -45,7 +46,7 @@ public class JwtService {
                     .verify(token)
                     .getSubject();
         } catch (JWTVerificationException exception) {
-            throw new RuntimeException("Error while validating token", exception);
+            throw new TokenInvalidoException("Token inválido ou expirado");
         }
     }
 
@@ -55,4 +56,3 @@ public class JwtService {
     }
 
 }
-
