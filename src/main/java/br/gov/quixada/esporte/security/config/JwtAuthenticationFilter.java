@@ -34,12 +34,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private void autenticar(String token) {
         try {
             var email = jwtService.extractEmail(token);
-            var userDetails = userRepository.findByEmail(email);
-
-            if (userDetails != null) {
-                var authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+            userRepository.findByEmail(email).ifPresent(user -> {
+                var authentication = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-            }
+            });
         } catch (TokenInvalidoException e) {
             SecurityContextHolder.clearContext();
         }

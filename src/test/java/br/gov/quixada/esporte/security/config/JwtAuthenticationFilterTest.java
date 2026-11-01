@@ -18,6 +18,8 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.util.Optional;
+
 import br.gov.quixada.esporte.security.auth.UserRepository;
 import br.gov.quixada.esporte.security.auth.exception.TokenInvalidoException;
 import br.gov.quixada.esporte.security.users.User;
@@ -51,7 +53,7 @@ class JwtAuthenticationFilterTest {
     void deveAutenticarComTokenValido() throws Exception {
         var user = new User("fulano", "fulano@example.com", "hash", UserRole.USER);
         when(jwtService.extractEmail("token")).thenReturn("fulano@example.com");
-        when(userRepository.findByEmail("fulano@example.com")).thenReturn(user);
+        when(userRepository.findByEmail("fulano@example.com")).thenReturn(Optional.of(user));
 
         var request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer token");
@@ -98,7 +100,7 @@ class JwtAuthenticationFilterTest {
     @DisplayName("deve seguir sem autenticação quando o usuário do token não existir")
     void deveSeguirSemAutenticacaoQuandoUsuarioNaoExistir() throws Exception {
         when(jwtService.extractEmail("token")).thenReturn("sumiu@example.com");
-        when(userRepository.findByEmail("sumiu@example.com")).thenReturn(null);
+        when(userRepository.findByEmail("sumiu@example.com")).thenReturn(Optional.empty());
 
         var request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer token");

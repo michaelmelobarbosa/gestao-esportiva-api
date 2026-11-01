@@ -15,15 +15,15 @@ Este documento lista as correções **na ordem de prioridade** (mais críticas p
 | A1 | ✅ Feito | `RegisterRequest` não expõe `role`; `AuthService` fixa `UserRole.USER`. |
 | A2 | ✅ Feito | Secret obrigatório via `API_SECURITY_TOKEN_SECRET`; sem default, o boot falha sem a variável. |
 | A3 | ✅ Resolvido por decisão | Unicidade passou a ser do **email** (`V13`); username é não único (`V14` → `V15`). |
-| A4 | 🟡 Parcial | Constraints nos DTOs; falta aplicar **min 8 / max 72** na senha. |
+| A4 | ✅ Feito | Constraints nos DTOs, incluindo senha com **min 8 / max 72**. |
 | A5 | ⏳ Pendente | Sem rate limiting/lockout. |
 | B1 | ✅ Feito | `JwtService.extractEmail` lança `TokenInvalidoException` (o 401 JSON final depende do B2). |
-| B2 | ⏳ Pendente | 401/403 ainda no formato padrão do Spring. |
+| B2 | ⏳ Adiado | EntryPoint/AccessDeniedHandler JSON — decisão posterior. |
 | B3 | ✅ Feito | `SecurityConfig` usa matchers por método em `/v1/**`. |
-| B4 | ⏳ Pendente | `CustomUserDetailsService` pode devolver `null`. |
+| B4 | ✅ Feito | `CustomUserDetailsService` lança `UsernameNotFoundException`. |
 | B5 | ✅ Feito | `resolveToken` exige `Bearer ` com `startsWith`/`substring`. |
 | B6 | ✅ Feito | Token inválido/usuário ausente viram request anônima, sem 500/NPE. |
-| B7 | ⏳ Pendente | `findByEmail` retorna `UserDetails` (não `Optional`). |
+| B7 | ✅ Feito | `findByEmail` retorna `Optional<User>`. |
 | B8 | ✅ Feito | `AuthService` + exceção de domínio + **409** com `ApiError`. |
 | B9 | ✅ Feito | `AuthenticationException` → **401** "Credenciais inválidas". |
 | C1–C4 | ⏳ Pendente | — |
@@ -169,7 +169,7 @@ O trecho `:my_secret_key` é o valor usado **quando a variável de ambiente não
 
 - [x] Adicionar constraints em `LoginRequest` e `RegisterRequest`.
 
-> 🟡 **Parcial (2026-10-30).** `RegisterRequest` valida `username`, `email` e `password`; `LoginRequest` valida `email`. Política de senha definida: **min 8 / max 72** (BCrypt ignora bytes além de 72), mas a aplicação de `@Size(min = 8, max = 72)` na senha ainda está pendente.
+> ✅ **Feito (2026-11-01).** `RegisterRequest` valida `username`, `email` e `password`; `LoginRequest` valida `email`. A senha do cadastro usa `@Size(min = 8, max = 72)` (BCrypt ignora bytes além de 72); o login continua só com `@NotBlank`.
 
 **Onde:** `security/users/dto/LoginRequest.java` e `RegisterRequest.java`.
 
@@ -251,6 +251,8 @@ Observações:
 
 - [ ] Configurar `AuthenticationEntryPoint` (401) e `AccessDeniedHandler` (403).
 
+> ⏳ **Adiado (2026-11-01).** Ficou para decisão posterior; o desenho está descrito em `fixes.md` (seção 6.3).
+
 **Onde:** `security/config/SecurityConfig.java`.
 
 **Por quê:** quando o Spring Security bloqueia por falta de token (401) ou por falta de permissão (403), ele responde no formato padrão dele (vazio/HTML), **inconsistente** com o `ApiError` do resto da API. Um front-end que espera JSON quebra.
@@ -293,7 +295,9 @@ Observações:
 
 ### B4. `CustomUserDetailsService` deve lançar `UsernameNotFoundException`
 
-- [ ] Lançar a exceção quando o usuário não existir.
+- [x] Lançar a exceção quando o usuário não existir.
+
+> ✅ **Feito (2026-11-01).** `loadUserByUsername` usa `.orElseThrow(...)`; o `DaoAuthenticationProvider` converte em `BadCredentialsException`, mantendo o 401 genérico.
 
 **Onde:** `security/auth/CustomUserDetailsService.java:20`.
 
@@ -370,7 +374,9 @@ filterChain.doFilter(request, response);
 
 ### B7. `findByUsername` deve retornar `Optional<User>`
 
-- [ ] Trocar o tipo de retorno e ajustar os usos.
+- [x] Trocar o tipo de retorno e ajustar os usos.
+
+> ✅ **Feito (2026-11-01).** Com a identidade por email, o método virou `findByEmail` e retorna `Optional<User>`; `CustomUserDetailsService` e `JwtAuthenticationFilter` foram ajustados.
 
 **Onde:** `security/auth/UserRepository.java:9`.
 
@@ -604,17 +610,17 @@ Segurança crítica (P0)
 [x] A1. Registro público sempre USER (sem role do cliente)
 [x] A2. Remover default do segredo JWT (API_SECURITY_TOKEN_SECRET obrigatório)
 [x] A3. Unicidade resolvida por email (username não único; V13/V14/V15)
-[x] A4. Bean Validation em LoginRequest/RegisterRequest (senha: min 8/max 72 a aplicar)
+[x] A4. Bean Validation em LoginRequest/RegisterRequest (senha: min 8/max 72 aplicado)
 [ ] A5. Rate limiting / lockout no login
 
 Status HTTP e robustez (P1)
 [x] B1. Token inválido -> exceção específica (TokenInvalidoException), sem 500
-[ ] B2. EntryPoint 401 / AccessDeniedHandler 403 em JSON
+[ ] B2. EntryPoint 401 / AccessDeniedHandler 403 em JSON (adiado — decidir depois)
 [x] B3. Matchers por método em /v1/** (GET USER/ADMIN; escrita ADMIN)
-[ ] B4. CustomUserDetailsService lança UsernameNotFoundException
+[x] B4. CustomUserDetailsService lança UsernameNotFoundException
 [x] B5. resolveToken valida prefixo "Bearer "
 [x] B6. Filtro não estoura NPE com usuário inexistente
-[ ] B7. findByEmail -> Optional<User>
+[x] B7. findByEmail -> Optional<User>
 [x] B8. register responde ApiError (AuthService + 409)
 [x] B9. BadCredentialsException -> 401 (AuthenticationException)
 

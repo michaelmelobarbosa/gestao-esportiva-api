@@ -15,7 +15,7 @@ O trabalho foi organizado em **batches** pequenos para facilitar revisão e apre
 | Batch | Escopo | Status |
 |---|---|---|
 | 1 | Segredo obrigatório + robustez do token (`A2`, `B1`, `B5`, `B6`) | ✅ Concluído |
-| 2 | Contrato HTTP de 401/403 + ajustes do repositório (`B2`, `B4`, `B7`) | ⏳ Pendente |
+| 2 | Repositório e validação (`B7`, `B4`, `A4`); `B2` adiado | 🟡 Parcial |
 | 3 | Configuração e testabilidade do JWT (`C1`, `C2`, `C3`) | ⏳ Pendente |
 | 4 | Decisões maiores (rate limit, refresh/logout, CORS, versionamento) | ⏳ Pendente |
 
@@ -81,7 +81,7 @@ SecurityConfig (authorizeHttpRequests) → controller
 | A1 | ✅ Feito | Registro público nunca aceita `role` do cliente. |
 | A2 | ✅ Feito | Segredo do JWT obrigatório, sem default. |
 | A3 | ✅ Resolvido por decisão | Unicidade passou a ser do **email**; username é descritivo. |
-| A4 | 🟡 Parcial | Constraints nos DTOs; falta aplicar `min 8 / max 72` na senha. |
+| A4 | ✅ Feito | Constraints nos DTOs e senha com `min 8 / max 72`. |
 | A5 | ⏳ Pendente | Rate limiting / lockout no login. |
 
 ### Status HTTP e robustez (P1)
@@ -89,12 +89,12 @@ SecurityConfig (authorizeHttpRequests) → controller
 | Item | Status | O que é |
 |---|---|---|
 | B1 | ✅ Feito | Token inválido lança `TokenInvalidoException`, não `RuntimeException`. |
-| B2 | ⏳ Pendente | 401/403 no formato `ApiError` (JSON). |
+| B2 | ⏳ Adiado | EntryPoint/AccessDeniedHandler em JSON — decisão posterior. |
 | B3 | ✅ Feito | Matchers por método em `/v1/**` (GET `USER`/`ADMIN`; escrita `ADMIN`). |
-| B4 | ⏳ Pendente | `CustomUserDetailsService` deve lançar `UsernameNotFoundException`. |
+| B4 | ✅ Feito | `UsernameNotFoundException` quando o email não existe. |
 | B5 | ✅ Feito | Header só é aceito com o esquema `Bearer`. |
 | B6 | ✅ Feito | Filtro não estoura 500/NPE; segue como anônimo. |
-| B7 | ⏳ Pendente | `findByEmail` deve retornar `Optional<User>`. |
+| B7 | ✅ Feito | `findByEmail` retorna `Optional<User>` e o filtro usa `ifPresent`. |
 | B8 | ✅ Feito | Registro duplicado responde 409 com `ApiError`. |
 | B9 | ✅ Feito | Credenciais inválidas respondem 401. |
 
@@ -215,7 +215,7 @@ api:
 public record RegisterRequest(
         @NotBlank @Size(max = 20) String username,
         @NotBlank @Email @Size(max = 254) String email,
-        @NotBlank @Size(max = 20) String password
+        @NotBlank @Size(min = 8, max = 72) String password
 ) {}
 ```
 
@@ -226,7 +226,7 @@ public record LoginRequest(
 ) {}
 ```
 
-**Pendente:** trocar o `@Size(max = 20)` da senha por `@Size(min = 8, max = 72)`.
+**Aplicado:** a senha agora usa `@Size(min = 8, max = 72)`; o login continua só com `@NotBlank`.
 
 **Conceito:** `@NotBlank` rejeita nulo/vazio/espaços; `@Email` valida formato; `@Size` limita tamanho. Quando falham, o `GlobalExceptionHandler` devolve 400 com a lista de campos.
 
@@ -337,6 +337,34 @@ Antes o `email` existia no banco, mas o registro não o preenchia. Agora ele é 
 
 Total atual: **156 testes**.
 
+### 5.13 B7 — `findByEmail` com `Optional`
+
+**Problema:** o repositório devolvia `UserDetails` ou `null`; o `null` não aparecia no tipo e o filtro precisava lembrar de checar.
+
+**Correção:**
+
+```java
+Optional<User> findByEmail(String email);
+```
+
+- `CustomUserDetailsService` usa `.orElseThrow(...)`;
+- `JwtAuthenticationFilter` usa `.ifPresent(...)`.
+
+**Conceito:** `Optional` obriga quem chama a decidir o que fazer quando o valor não existe; o `if (userDetails != null)` deixa de ser necessário.
+
+### 5.14 B4 — `UsernameNotFoundException`
+
+**Problema:** o contrato do `UserDetailsService` manda lançar `UsernameNotFoundException` quando o usuário não existe; devolver `null` virava `NullPointerException`/500.
+
+**Correção:**
+
+```java
+return userRepository.findByEmail(email)
+        .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado: " + email));
+```
+
+**Detalhe:** o `DaoAuthenticationProvider` converte essa exceção em `BadCredentialsException` por padrão, então o login continua respondendo 401 genérico — sem revelar se o email existe.
+
 ---
 
 ## 6. O que ainda falta (com o porquê)
@@ -349,17 +377,15 @@ Trocar `@Size(max = 20)` por `@Size(min = 8, max = 72)` em `RegisterRequest`. Se
 
 Hoje dá para tentar senhas infinitamente. Opções: bucket4j/Resilience4j (limite por IP/usuário) ou campos de tentativas/bloqueio no `User` + `isAccountNonLocked()`. É a defesa contra força bruta.
 
-### 6.3 B2 — 401/403 em JSON
+### 6.3 B2 — 401/403 em JSON (adiado)
 
-Hoje, quando o Spring Security barra, a resposta é o formato padrão dele. `401` e `403` devem usar `ApiError`, como o resto da API. Isso também transforma o atual **403** de token inválido no **401** correto.
+**Status:** adiado por decisão do projeto; será retomado numa iteração posterior.
 
-### 6.4 B4 — `UsernameNotFoundException`
+Hoje, quando o Spring Security barra, a resposta é o formato padrão dele. `401` e `403` devem usar `ApiError`, como o resto da API. Isso também transforma o atual **403** de token inválido no **401** correto. O desenho planejado é `AuthenticationEntryPoint` (401) + `AccessDeniedHandler` (403) + um `ApiErrorResponseWriter` compartilhado.
 
-`loadUserByUsername` devolve o que o repositório retornar, possivelmente `null`. O contrato da interface manda lançar `UsernameNotFoundException`; sem isso, o erro pode virar `NullPointerException`/500.
+### 6.4 B4/B7 — concluídos
 
-### 6.5 B7 — `findByEmail` com `Optional`
-
-`UserRepository.findByEmail` retorna `UserDetails`. O idiomático é `Optional<User>`, o que elimina o `if (userDetails != null)` e deixa a intenção explícita.
+Esses dois itens foram implementados no Batch 2 (seções 5.13 e 5.14). O restante desta lista começa em C1.
 
 ### 6.6 C1 — `Clock` no `JwtService`
 
