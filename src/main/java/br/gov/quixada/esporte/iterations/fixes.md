@@ -1,6 +1,6 @@
 # Fixes — Segurança e Autenticação
 
-> **Documento de estudo.** Atualizado em 2026-11-01.
+> **Documento de estudo.** Atualizado em 2026-11-03.
 > Este arquivo consolida **o que já foi corrigido**, **o que ainda falta** e **por que cada decisão foi tomada**.
 > O checklist detalhado item por item continua em `securityfixes.md`; o roadmap de features em `futuras-iterações.md`.
 
@@ -15,7 +15,7 @@ O trabalho foi organizado em **batches** pequenos para facilitar revisão e apre
 | Batch | Escopo | Status |
 |---|---|---|
 | 1 | Segredo obrigatório + robustez do token (`A2`, `B1`, `B5`, `B6`) | ✅ Concluído |
-| 2 | Repositório e validação (`B7`, `B4`, `A4`); `B2` adiado | 🟡 Parcial |
+| 2 | Repositório, validação e contrato HTTP (`B7`, `B4`, `A4`, `B2`) | ✅ Concluído |
 | 3 | Configuração e testabilidade do JWT (`C1`, `C2`, `C3`) | ⏳ Pendente |
 | 4 | Decisões maiores (rate limit, refresh/logout, CORS, versionamento) | ⏳ Pendente |
 
@@ -89,7 +89,7 @@ SecurityConfig (authorizeHttpRequests) → controller
 | Item | Status | O que é |
 |---|---|---|
 | B1 | ✅ Feito | Token inválido lança `TokenInvalidoException`, não `RuntimeException`. |
-| B2 | ⏳ Adiado | EntryPoint/AccessDeniedHandler em JSON — decisão posterior. |
+| B2 | ✅ Feito | 401/403 em JSON via `AuthenticationEntryPoint`/`AccessDeniedHandler`. |
 | B3 | ✅ Feito | Matchers por método em `/v1/**` (GET `USER`/`ADMIN`; escrita `ADMIN`). |
 | B4 | ✅ Feito | `UsernameNotFoundException` quando o email não existe. |
 | B5 | ✅ Feito | Header só é aceito com o esquema `Bearer`. |
@@ -365,50 +365,46 @@ return userRepository.findByEmail(email)
 
 **Detalhe:** o `DaoAuthenticationProvider` converte essa exceção em `BadCredentialsException` por padrão, então o login continua respondendo 401 genérico — sem revelar se o email existe.
 
+### 5.15 B2 — 401/403 em JSON
+
+**Problema:** o Spring Security respondia no formato padrão dele, fora do contrato `ApiError`.
+
+**Correção:** `RestAuthenticationEntryPoint` (401) e `RestAccessDeniedHandler` (403), ambos usando `ApiErrorResponseWriter` com o `ObjectMapper` do Jackson 3 (`tools.jackson.databind.ObjectMapper`). O `SecurityConfig` registra os dois em `exceptionHandling(...)`.
+
+**Conceito:** o `@RestControllerAdvice` não captura exceções de filtros. O `ExceptionTranslationFilter` decide entre entry point (anônimo → 401) e access denied handler (autenticado sem role → 403).
+
+**Verificação:** sem token → `401 {"message":"Não autenticado",...}`; token de `USER` em `POST /v1/**` → `403 {"message":"Acesso negado",...}`. Os testes dos handlers ficaram para a iteração de testes.
+
 ---
 
 ## 6. O que ainda falta (com o porquê)
 
-### 6.1 A4 (resto) — Aplicar a política de senha
-
-Trocar `@Size(max = 20)` por `@Size(min = 8, max = 72)` em `RegisterRequest`. Sem isso, uma senha de 2 caracteres passa.
-
-### 6.2 A5 — Rate limiting / lockout
+### 6.1 A5 — Rate limiting / lockout
 
 Hoje dá para tentar senhas infinitamente. Opções: bucket4j/Resilience4j (limite por IP/usuário) ou campos de tentativas/bloqueio no `User` + `isAccountNonLocked()`. É a defesa contra força bruta.
 
-### 6.3 B2 — 401/403 em JSON (adiado)
-
-**Status:** adiado por decisão do projeto; será retomado numa iteração posterior.
-
-Hoje, quando o Spring Security barra, a resposta é o formato padrão dele. `401` e `403` devem usar `ApiError`, como o resto da API. Isso também transforma o atual **403** de token inválido no **401** correto. O desenho planejado é `AuthenticationEntryPoint` (401) + `AccessDeniedHandler` (403) + um `ApiErrorResponseWriter` compartilhado.
-
-### 6.4 B4/B7 — concluídos
-
-Esses dois itens foram implementados no Batch 2 (seções 5.13 e 5.14). O restante desta lista começa em C1.
-
-### 6.6 C1 — `Clock` no `JwtService`
+### 6.2 C1 — `Clock` no `JwtService`
 
 Usar o bean `Clock` (`America/Fortaleza`) em vez de `LocalDateTime.now()` com offset fixo `-03:00`. Facilita testes com tempo congelado e evita erro em mudanças de fuso.
 
-### 6.7 C2/C3 — Configuração do token
+### 6.3 C2/C3 — Configuração do token
 
 Trocar `@Value` por `@ConfigurationProperties` validado, extrair o issuer duplicado para constante e tornar a expiração (`2h`) configurável.
 
-### 6.8 C4 — `User` implementando `UserDetails`
+### 6.4 C4 — `User` implementando `UserDetails`
 
 Acopla a entidade ao Spring Security e expõe setters de `password`/`role`. Em projetos maiores, um adapter `UserDetails` separado é mais limpo. Decisão de arquitetura, não urgente.
 
-### 6.9 C6 — Refresh token / logout
+### 6.5 C6 — Refresh token / logout
 
 O token dura 2h e não há revogação. Se for preciso invalidar antes do vencimento (troca de senha, logout), JWT puro não basta: precisa de refresh token + blacklist/allowlist.
 
-### 6.10 C7/C8 — Roles no token e CORS
+### 6.6 C7/C8 — Roles no token e CORS
 
 - **C7:** colocar roles no JWT evita um SELECT por request, mas perde revogação imediata. Trade-off performance × revogação.
 - **C8:** configurar origens permitidas quando existir front-end.
 
-### 6.11 C10/C11/C12 — Organização
+### 6.7 C10/C11/C12 — Organização
 
 - `C10`: `/auth/**` é o único recurso fora de `/v1`.
 - `C11`: `JwtService` é serviço, mas mora em `config`.
@@ -461,8 +457,8 @@ curl -X POST http://localhost:8080/auth/login \
 # acesso com token
 curl http://localhost:8080/v1/atletas -H "Authorization: Bearer <token>"
 
-# token inválido (hoje 403; vira 401 JSON com o B2)
+# token inválido -> 401 JSON
 curl http://localhost:8080/v1/atletas -H "Authorization: Bearer lixo"
 ```
 
-**Estado atual:** 156 testes, 0 falhas; boot falha sem o segredo; token inválido não gera mais 500.
+**Estado atual:** 156 testes, 0 falhas; boot falha sem o segredo; sem token/token inválido → 401 JSON; role insuficiente → 403 JSON.

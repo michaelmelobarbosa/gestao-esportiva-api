@@ -8,7 +8,7 @@ A autenticação **funciona no fluxo feliz**: `POST /auth/login` emite um JWT, o
 
 Este documento lista as correções **na ordem de prioridade** (mais críticas primeiro), com explicação do *porquê*, *onde* e *como* corrigir. Cada item é independente o suficiente para ser implementado sozinho.
 
-## Status de implementação (atualizado em 2026-10-30)
+## Status de implementação (atualizado em 2026-11-03)
 
 | Item | Status | Observação |
 |---|---|---|
@@ -18,7 +18,7 @@ Este documento lista as correções **na ordem de prioridade** (mais críticas p
 | A4 | ✅ Feito | Constraints nos DTOs, incluindo senha com **min 8 / max 72**. |
 | A5 | ⏳ Pendente | Sem rate limiting/lockout. |
 | B1 | ✅ Feito | `JwtService.extractEmail` lança `TokenInvalidoException` (o 401 JSON final depende do B2). |
-| B2 | ⏳ Adiado | EntryPoint/AccessDeniedHandler JSON — decisão posterior. |
+| B2 | ✅ Feito | 401/403 em JSON via `AuthenticationEntryPoint`/`AccessDeniedHandler`. |
 | B3 | ✅ Feito | `SecurityConfig` usa matchers por método em `/v1/**`. |
 | B4 | ✅ Feito | `CustomUserDetailsService` lança `UsernameNotFoundException`. |
 | B5 | ✅ Feito | `resolveToken` exige `Bearer ` com `startsWith`/`substring`. |
@@ -249,9 +249,9 @@ Observações:
 
 ### B2. Respostas JSON para 401 e 403 (EntryPoint / AccessDeniedHandler)
 
-- [ ] Configurar `AuthenticationEntryPoint` (401) e `AccessDeniedHandler` (403).
+- [x] Configurar `AuthenticationEntryPoint` (401) e `AccessDeniedHandler` (403).
 
-> ⏳ **Adiado (2026-11-01).** Ficou para decisão posterior; o desenho está descrito em `fixes.md` (seção 6.3).
+> ✅ **Feito (2026-11-03).** `RestAuthenticationEntryPoint` (401) e `RestAccessDeniedHandler` (403) devolvem `ApiError` via `ApiErrorResponseWriter`; wiring em `SecurityConfig.exceptionHandling(...)`.
 
 **Onde:** `security/config/SecurityConfig.java`.
 
@@ -615,7 +615,7 @@ Segurança crítica (P0)
 
 Status HTTP e robustez (P1)
 [x] B1. Token inválido -> exceção específica (TokenInvalidoException), sem 500
-[ ] B2. EntryPoint 401 / AccessDeniedHandler 403 em JSON (adiado — decidir depois)
+[x] B2. EntryPoint 401 / AccessDeniedHandler 403 em JSON
 [x] B3. Matchers por método em /v1/** (GET USER/ADMIN; escrita ADMIN)
 [x] B4. CustomUserDetailsService lança UsernameNotFoundException
 [x] B5. resolveToken valida prefixo "Bearer "
