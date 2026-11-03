@@ -16,3 +16,8 @@ spring:
   docker:
     compose:
       enabled: false
+
+api:
+  security:
+    token:
+      secret: segredo-de-teste-nao-usar-em-producao

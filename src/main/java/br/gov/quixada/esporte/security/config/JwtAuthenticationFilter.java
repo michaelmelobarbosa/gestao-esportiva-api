@@ -1,6 +1,7 @@
 package br.gov.quixada.esporte.security.config;
 
 import br.gov.quixada.esporte.security.auth.UserRepository;
+import br.gov.quixada.esporte.security.auth.exception.TokenInvalidoException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,20 +25,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @NullMarked
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         var token = this.resolveToken(request);
-        if(token != null) {
-            var email = jwtService.extractEmail(token);
-            var userDetails = userRepository.findByEmail(email);
-
-            var authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+        if (token != null) {
+            this.autenticar(token);
         }
         filterChain.doFilter(request, response);
     }
 
+    private void autenticar(String token) {
+        try {
+            var email = jwtService.extractEmail(token);
+            userRepository.findByEmail(email).ifPresent(user -> {
+                var authentication = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            });
+        } catch (TokenInvalidoException e) {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
     private String resolveToken(HttpServletRequest request) {
         var authHeader = request.getHeader("Authorization");
-        if (authHeader == null) return null;
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return null;
+        }
 
-        return authHeader.replace("Bearer ", "");
+        return authHeader.substring(7);
     }
 }
