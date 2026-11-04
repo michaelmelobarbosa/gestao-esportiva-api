@@ -16,7 +16,7 @@ O trabalho foi organizado em **batches** pequenos para facilitar revisão e apre
 |---|---|---|
 | 1 | Segredo obrigatório + robustez do token (`A2`, `B1`, `B5`, `B6`) | ✅ Concluído |
 | 2 | Repositório, validação e contrato HTTP (`B7`, `B4`, `A4`, `B2`) | ✅ Concluído |
-| 3 | Configuração e testabilidade do JWT (`C1`, `C2`, `C3`) | ⏳ Pendente |
+| 3 | Configuração e testabilidade do JWT (`C1`, `C2`, `C3`) | ✅ Concluído |
 | 4 | Decisões maiores (rate limit, refresh/logout, CORS, versionamento) | ⏳ Pendente |
 
 ---
@@ -102,9 +102,9 @@ SecurityConfig (authorizeHttpRequests) → controller
 
 | Item | Status | O que é |
 |---|---|---|
-| C1 | ⏳ Pendente | Usar o `Clock` do projeto no `JwtService`. |
-| C2 | ⏳ Pendente | `@ConfigurationProperties` no lugar de `@Value`. |
-| C3 | ⏳ Pendente | Issuer/expiração configuráveis e sem duplicação. |
+| C1 | ✅ Feito | `JwtService` usa o `Clock` do projeto. |
+| C2 | ✅ Feito | `TokenProperties` com `@ConfigurationProperties` e validação. |
+| C3 | ✅ Feito | `issuer` e `expiration` configuráveis, sem duplicação. |
 | C4 | ⏳ Pendente | Avaliar separar `UserDetails` da entidade `User`. |
 | C5 | ✅ Feito | Email usado, validado, `NOT NULL` e `UNIQUE`. |
 | C6 | ⏳ Pendente | Refresh token / logout / revogação. |
@@ -375,6 +375,19 @@ return userRepository.findByEmail(email)
 
 **Verificação:** sem token → `401 {"message":"Não autenticado",...}`; token de `USER` em `POST /v1/**` → `403 {"message":"Acesso negado",...}`. Os testes dos handlers ficaram para a iteração de testes.
 
+### 5.16 C1/C2/C3 — `Clock` e configuração do token
+
+**Problema:** o `JwtService` usava `LocalDateTime.now()` com offset fixo `-03:00`, `@Value` sem validação e issuer/expiração repetidos/no código.
+
+**Correção:**
+- `TokenProperties` (`@ConfigurationProperties(prefix = "api.security.token")`, `@Validated`) com `secret` (`@NotBlank @Size(min = 32)`), `issuer` e `expiration` (`Duration`).
+- `JwtService` recebe `TokenProperties` e `Clock` por construtor; `expirationDate()` = `clock.instant().plus(properties.expiration())`.
+- `application.yaml` e `application-test.yaml` definem `issuer` e `expiration: 2h`.
+
+**Conceitos:** `Clock` abstrai o “agora” (permite `Clock.fixed` nos testes); `@ConfigurationProperties` agrupa e valida a configuração; `Duration` converte `2h` automaticamente.
+
+**Verificação:** token emitido com `iss=gestao-esportiva-api` e `exp` exatamente 2h à frente; acesso continua 200.
+
 ---
 
 ## 6. O que ainda falta (com o porquê)
@@ -383,28 +396,20 @@ return userRepository.findByEmail(email)
 
 Hoje dá para tentar senhas infinitamente. Opções: bucket4j/Resilience4j (limite por IP/usuário) ou campos de tentativas/bloqueio no `User` + `isAccountNonLocked()`. É a defesa contra força bruta.
 
-### 6.2 C1 — `Clock` no `JwtService`
-
-Usar o bean `Clock` (`America/Fortaleza`) em vez de `LocalDateTime.now()` com offset fixo `-03:00`. Facilita testes com tempo congelado e evita erro em mudanças de fuso.
-
-### 6.3 C2/C3 — Configuração do token
-
-Trocar `@Value` por `@ConfigurationProperties` validado, extrair o issuer duplicado para constante e tornar a expiração (`2h`) configurável.
-
-### 6.4 C4 — `User` implementando `UserDetails`
+### 6.2 C4 — `User` implementando `UserDetails`
 
 Acopla a entidade ao Spring Security e expõe setters de `password`/`role`. Em projetos maiores, um adapter `UserDetails` separado é mais limpo. Decisão de arquitetura, não urgente.
 
-### 6.5 C6 — Refresh token / logout
+### 6.3 C6 — Refresh token / logout
 
 O token dura 2h e não há revogação. Se for preciso invalidar antes do vencimento (troca de senha, logout), JWT puro não basta: precisa de refresh token + blacklist/allowlist.
 
-### 6.6 C7/C8 — Roles no token e CORS
+### 6.4 C7/C8 — Roles no token e CORS
 
 - **C7:** colocar roles no JWT evita um SELECT por request, mas perde revogação imediata. Trade-off performance × revogação.
 - **C8:** configurar origens permitidas quando existir front-end.
 
-### 6.7 C10/C11/C12 — Organização
+### 6.5 C10/C11/C12 — Organização
 
 - `C10`: `/auth/**` é o único recurso fora de `/v1`.
 - `C11`: `JwtService` é serviço, mas mora em `config`.

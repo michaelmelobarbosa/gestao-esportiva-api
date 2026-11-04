@@ -26,7 +26,10 @@ Este documento lista as correções **na ordem de prioridade** (mais críticas p
 | B7 | ✅ Feito | `findByEmail` retorna `Optional<User>`. |
 | B8 | ✅ Feito | `AuthService` + exceção de domínio + **409** com `ApiError`. |
 | B9 | ✅ Feito | `AuthenticationException` → **401** "Credenciais inválidas". |
-| C1–C4 | ⏳ Pendente | — |
+| C1 | ✅ Feito | `JwtService` usa o `Clock` do projeto. |
+| C2 | ✅ Feito | `TokenProperties` com `@ConfigurationProperties` e validação. |
+| C3 | ✅ Feito | `issuer` e `expiration` configuráveis, sem duplicação. |
+| C4 | ⏳ Pendente | Avaliar separar `UserDetails` da entidade `User`. |
 | C5 | ✅ Feito | Email é a identidade: `@Email`, `NOT NULL`, `UNIQUE` e `sub` do JWT. |
 | C6–C8 | ⏳ Pendente | — |
 | C9 | ✅ Feito | `AuthServiceTest`, `AuthControllerTest`, `JwtServiceTest` e `JwtAuthenticationFilterTest`. |
@@ -447,7 +450,9 @@ public ResponseEntity<ApiError> handleBadCredentials(BadCredentialsException ex,
 
 ### C1. Usar o `Clock` do projeto no `JwtService`
 
-- [ ] Injetar `Clock` e calcular expiração a partir dele.
+- [x] Injetar `Clock` e calcular expiração a partir dele.
+
+> ✅ **Feito (2026-11-03).** `JwtService` recebe `Clock` por construtor e usa `clock.instant().plus(expiration)`; o offset fixo `-03:00` foi removido.
 
 **Onde:** `security/config/JwtService.java:53-54`.
 
@@ -469,7 +474,9 @@ private Instant expirationDate() {
 
 ### C2. Trocar `@Value` por `@ConfigurationProperties`
 
-- [ ] Criar um record de propriedades validado.
+- [x] Criar um record de propriedades validado.
+
+> ✅ **Feito (2026-11-03).** `TokenProperties` agrupa `secret` (mín. 32), `issuer` e `expiration` (`Duration`), com `@Validated`.
 
 **Onde:** `security/config/JwtService.java:18-19` e `application.yaml`.
 
@@ -486,8 +493,10 @@ public record TokenProperties(@NotBlank String secret, Duration expiration) {}
 
 ### C3. Tornar expiração e issuer configuráveis / constantes
 
-- [ ] Extrair `"gestao-esportiva-api"` (duplicado) para constante.
-- [ ] Mover `plusHours(2)` para propriedade.
+- [x] Extrair `"gestao-esportiva-api"` (duplicado) para constante.
+- [x] Mover `plusHours(2)` para propriedade.
+
+> ✅ **Feito (2026-11-03).** `issuer` e `expiration` vêm de `TokenProperties` (`application.yaml`: `2h`), eliminando a duplicação e o número mágico.
 
 **Onde:** `security/config/JwtService.java:27,43,54`.
 
@@ -625,9 +634,9 @@ Status HTTP e robustez (P1)
 [x] B9. BadCredentialsException -> 401 (AuthenticationException)
 
 Boas práticas (P2)
-[ ] C1. Usar Clock do projeto no JwtService
-[ ] C2. @ConfigurationProperties para as props do token
-[ ] C3. Expiração/issuer configuráveis/constantes
+[x] C1. Usar Clock do projeto no JwtService
+[x] C2. @ConfigurationProperties para as props do token
+[x] C3. Expiração/issuer configuráveis/constantes
 [ ] C4. Avaliar separar UserDetails da entidade User
 [x] C5. Email é a identidade: @Email, NOT NULL, UNIQUE e sub do JWT
 [ ] C6. Refresh token / logout / revogação

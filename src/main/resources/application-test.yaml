@@ -21,3 +21,5 @@ api:
   security:
     token:
       secret: segredo-de-teste-nao-usar-em-producao
+      issuer: gestao-esportiva-api
+      expiration: 2h

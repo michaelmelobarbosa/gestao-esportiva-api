@@ -6,26 +6,26 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTCreationException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 
 @Service
+@RequiredArgsConstructor
 public class JwtService {
 
-    @Value("${api.security.token.secret}")
-    private String secret;
+    private final TokenProperties properties;
+    private final Clock clock;
 
     public String generateToken(User user) {
 
         try {
 
-            var algorithm = Algorithm.HMAC256(secret);
+            var algorithm = Algorithm.HMAC256(properties.secret());
 
-            return JWT.create().withIssuer("gestao-esportiva-api")
+            return JWT.create().withIssuer(properties.issuer())
                     .withSubject(user.getEmail())
                     .withExpiresAt(expirationDate())
                     .sign(algorithm);
@@ -38,10 +38,10 @@ public class JwtService {
 
         try {
 
-            var algorithm = Algorithm.HMAC256(secret);
+            var algorithm = Algorithm.HMAC256(properties.secret());
 
             return JWT.require(algorithm)
-                    .withIssuer("gestao-esportiva-api")
+                    .withIssuer(properties.issuer())
                     .build()
                     .verify(token)
                     .getSubject();
@@ -52,7 +52,7 @@ public class JwtService {
 
 
     private Instant expirationDate() {
-        return LocalDateTime.now().plusHours(2).toInstant(ZoneOffset.of("-03:00"));
+        return clock.instant().plus(properties.expiration());
     }
 
 }

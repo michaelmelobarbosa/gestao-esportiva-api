@@ -29,7 +29,8 @@ SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run   # explicit dev
 - URL dev: `jdbc:mysql://localhost:3306/gestao_esportiva?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=America/Recife` (`application-dev.yaml:3`).
 - `spring-boot-docker-compose` (`pom.xml`, runtime) manages `compose.yaml` lifecycle on `spring-boot:run`; disabled under test (`application-test.yaml`).
 - Migrations are the source of truth. `application.yaml` keeps `show-sql`/`format_sql` on by default; test turns SQL logging off.
-- **JWT secret (obrigatório)**: `api.security.token.secret: ${API_SECURITY_TOKEN_SECRET}` não tem default — a aplicação falha no boot sem a variável. Dev usa o valor do `.env`; testes usam o valor fixo de `application-test.yaml`.
+- **Config do JWT**: `TokenProperties` (`@ConfigurationProperties(prefix = "api.security.token")`, `@Validated`) agrupa `secret` (`min 32`), `issuer` e `expiration` (`Duration`, ex. `2h`). Sem `API_SECURITY_TOKEN_SECRET`, o boot falha. Dev usa o valor do `.env`; testes usam o valor fixo de `application-test.yaml`.
+- **`Clock` no JWT**: `JwtService` injeta o bean `Clock` (`ClockConfig`) e calcula `exp` com `clock.instant().plus(properties.expiration())` — nunca use `LocalDateTime.now()` com offset fixo.
 
 ## Architecture
 - Entrypoint: `src/main/java/br/gov/quixada/esporte/GestaoEsportivaApiApplication.java`.
