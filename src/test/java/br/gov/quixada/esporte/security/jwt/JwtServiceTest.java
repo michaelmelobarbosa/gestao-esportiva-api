@@ -1,4 +1,4 @@
-package br.gov.quixada.esporte.security.config;
+package br.gov.quixada.esporte.security.jwt;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

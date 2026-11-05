@@ -112,7 +112,7 @@ SecurityConfig (authorizeHttpRequests) → controller
 | C8 | ⏳ Pendente | CORS (quando houver front-end). |
 | C9 | ✅ Feito | Testes de auth (service, controller, JWT e filtro). |
 | C10 | ✅ Feito | `/auth` está em `/v1/auth` com versionamento nativo do Spring. |
-| C11 | ⏳ Pendente | `JwtService` não é configuração; reavaliar pacote. |
+| C11 | ✅ Feito | `JwtService` e `TokenProperties` movidos para `security/jwt`. |
 | C12 | ⏳ Pendente | Renomear `authenticationManagerBean`. |
 
 ---
@@ -418,6 +418,14 @@ return userRepository.findByEmail(email)
 
 **Teste:** `AuthControllerTest` cobre `/v1/auth/*` e rejeição de `/v9/auth/login`; `ApiVersioningConfigTest` cobre o predicate de paths versionados. Total: **164 testes**.
 
+### 5.19 C11 — `JwtService` e `TokenProperties` em `security/jwt`
+
+**Problema:** `JwtService` é um serviço (comportamento), mas morava em `security/config` junto de `SecurityConfig` (wiring). `TokenProperties` só existe para o JWT e também estava em `config`.
+
+**Correção:** criado o pacote `security/jwt`, que agora concentra `JwtService` e `TokenProperties`. `security/config` ficou com `SecurityConfig`, `JwtAuthenticationFilter` e os handlers `Rest*`. Imports atualizados em `AuthController`, `JwtAuthenticationFilter`, `SecurityConfig` e nos testes.
+
+**Conceito:** pacote deve refletir responsabilidade. `config` = montagem/wiring; `jwt` = tudo relacionado a token (serviço + propriedades). Isso prepara o terreno para refresh token (C6).
+
 ---
 
 ## 6. O que ainda falta (com o porquê)
@@ -435,9 +443,8 @@ O token dura 2h e não há revogação. Se for preciso invalidar antes do vencim
 - **C7:** colocar roles no JWT evita um SELECT por request, mas perde revogação imediata. Trade-off performance × revogação.
 - **C8:** configurar origens permitidas quando existir front-end.
 
-### 6.4 C11/C12 — Organização
+### 6.4 C12 — Organização
 
-- `C11`: `JwtService` é serviço, mas mora em `config`.
 - `C12`: renomear `authenticationManagerBean` para `authenticationManager`.
 
 ---

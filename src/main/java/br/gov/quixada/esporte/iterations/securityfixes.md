@@ -34,7 +34,7 @@ Este documento lista as correções **na ordem de prioridade** (mais críticas p
 | C6–C8 | ⏳ Pendente | — |
 | C9 | ✅ Feito | `AuthServiceTest`, `AuthControllerTest`, `JwtServiceTest` e `JwtAuthenticationFilterTest`. |
 | C10 | ✅ Feito | `/v1/auth` com versionamento nativo do Spring (`ApiVersioningConfig`). |
-| C11–C12 | ⏳ Pendente | — |
+| C12 | ⏳ Pendente | — |
 
 ---
 
@@ -591,11 +591,14 @@ public record TokenProperties(@NotBlank String secret, Duration expiration) {}
 
 ### C11. Pacote `config` contém um serviço (`JwtService`)
 
-- [ ] Reavaliar a localização de `JwtService`.
+- [x] Reavaliar a localização de `JwtService`.
+- [x] Mover `JwtService` e `TokenProperties` para `security/jwt`.
 
-**Onde:** `security/config/JwtService.java`.
+**Onde:** `security/jwt/JwtService.java` e `security/jwt/TokenProperties.java`.
 
-**Por quê:** `JwtService` é um **serviço**, não configuração. Semanticamente ficaria melhor em `security/auth` ou em um pacote `security/jwt`. Puramente organizacional — você escolheu `config`, então fica a critério.
+**Por quê:** `JwtService` é um **serviço**, não configuração. `TokenProperties` só existe para o JWT.
+
+> ✅ **Feito (2026-11-05).** Criado `security/jwt` com `JwtService` + `TokenProperties`; `security/config` ficou com `SecurityConfig`, `JwtAuthenticationFilter` e `Rest*`. Imports atualizados em `AuthController`, `JwtAuthenticationFilter`, `SecurityConfig` e testes.
 
 ---
 
@@ -647,6 +650,6 @@ Boas práticas (P2)
 [ ] C8. Configurar CORS
 [x] C9. Testes de auth (AuthService, AuthController, JwtService e filtro)
 [x] C10. Versionar /auth
-[ ] C11. Reavaliar pacote de JwtService
+[x] C11. Reavaliar pacote de JwtService
 [ ] C12. Renomear authenticationManagerBean
 ```

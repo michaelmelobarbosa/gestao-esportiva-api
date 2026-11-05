@@ -1,4 +1,4 @@
-package br.gov.quixada.esporte.security.config;
+package br.gov.quixada.esporte.security.jwt;
 
 import br.gov.quixada.esporte.security.auth.exception.TokenInvalidoException;
 import br.gov.quixada.esporte.security.users.User;

@@ -1,6 +1,6 @@
 package br.gov.quixada.esporte.security.auth;
 
-import br.gov.quixada.esporte.security.config.JwtService;
+import br.gov.quixada.esporte.security.jwt.JwtService;
 import br.gov.quixada.esporte.security.users.UserDetailsAdapter;
 import br.gov.quixada.esporte.security.users.dto.LoginRequest;
 import br.gov.quixada.esporte.security.users.dto.LoginResponse;

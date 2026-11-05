@@ -1,5 +1,6 @@
 package br.gov.quixada.esporte.security.config;
 
+import br.gov.quixada.esporte.security.jwt.TokenProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;

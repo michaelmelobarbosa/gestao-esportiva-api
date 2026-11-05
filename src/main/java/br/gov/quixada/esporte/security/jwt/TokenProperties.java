@@ -1,4 +1,4 @@
-package br.gov.quixada.esporte.security.config;
+package br.gov.quixada.esporte.security.jwt;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

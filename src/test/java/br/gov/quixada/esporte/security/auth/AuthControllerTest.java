@@ -32,7 +32,7 @@ import org.springframework.web.accept.SemanticApiVersionParser;
 import br.gov.quixada.esporte.common.error.GlobalExceptionHandler;
 import br.gov.quixada.esporte.config.ApiVersioningConfig;
 import br.gov.quixada.esporte.security.auth.exception.EmailJaCadastradoException;
-import br.gov.quixada.esporte.security.config.JwtService;
+import br.gov.quixada.esporte.security.jwt.JwtService;
 import br.gov.quixada.esporte.security.users.User;
 import br.gov.quixada.esporte.security.users.UserDetailsAdapter;
 import br.gov.quixada.esporte.security.users.UserRole;

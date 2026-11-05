@@ -2,6 +2,7 @@ package br.gov.quixada.esporte.security.config;
 
 import br.gov.quixada.esporte.security.auth.UserRepository;
 import br.gov.quixada.esporte.security.auth.exception.TokenInvalidoException;
+import br.gov.quixada.esporte.security.jwt.JwtService;
 import br.gov.quixada.esporte.security.users.UserDetailsAdapter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

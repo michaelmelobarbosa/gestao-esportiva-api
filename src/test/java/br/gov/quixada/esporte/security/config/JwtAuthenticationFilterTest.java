@@ -22,6 +22,7 @@ import java.util.Optional;
 
 import br.gov.quixada.esporte.security.auth.UserRepository;
 import br.gov.quixada.esporte.security.auth.exception.TokenInvalidoException;
+import br.gov.quixada.esporte.security.jwt.JwtService;
 import br.gov.quixada.esporte.security.users.User;
 import br.gov.quixada.esporte.security.users.UserDetailsAdapter;
 import br.gov.quixada.esporte.security.users.UserRole;
