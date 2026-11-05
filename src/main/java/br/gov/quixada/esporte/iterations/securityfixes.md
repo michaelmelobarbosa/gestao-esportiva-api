@@ -34,7 +34,7 @@ Este documento lista as correções **na ordem de prioridade** (mais críticas p
 | C6–C8 | ⏳ Pendente | — |
 | C9 | ✅ Feito | `AuthServiceTest`, `AuthControllerTest`, `JwtServiceTest` e `JwtAuthenticationFilterTest`. |
 | C10 | ✅ Feito | `/v1/auth` com versionamento nativo do Spring (`ApiVersioningConfig`). |
-| C12 | ⏳ Pendente | — |
+| C12 | ✅ Feito | `authenticationManagerBean` → `authenticationManager`. |
 
 ---
 
@@ -604,11 +604,13 @@ public record TokenProperties(@NotBlank String secret, Duration expiration) {}
 
 ### C12. Renomear `authenticationManagerBean`
 
-- [ ] Trocar para `authenticationManager`.
+- [x] Trocar para `authenticationManager`.
 
-**Onde:** `security/config/SecurityConfig.java:39`.
+**Onde:** `security/config/SecurityConfig.java`.
 
 **Por quê:** sufixo `Bean` é convenção antiga (Spring pré-3). O nome comum hoje é só `authenticationManager`. Cosmético.
+
+> ✅ **Feito (2026-11-05).** Método `@Bean` renomeado; injeção é por tipo, então nenhum outro arquivo mudou.
 
 ---
 
@@ -651,5 +653,5 @@ Boas práticas (P2)
 [x] C9. Testes de auth (AuthService, AuthController, JwtService e filtro)
 [x] C10. Versionar /auth
 [x] C11. Reavaliar pacote de JwtService
-[ ] C12. Renomear authenticationManagerBean
+[x] C12. Renomear authenticationManagerBean
 ```

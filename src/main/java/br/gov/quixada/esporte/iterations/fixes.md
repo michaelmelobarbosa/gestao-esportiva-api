@@ -113,7 +113,7 @@ SecurityConfig (authorizeHttpRequests) → controller
 | C9 | ✅ Feito | Testes de auth (service, controller, JWT e filtro). |
 | C10 | ✅ Feito | `/auth` está em `/v1/auth` com versionamento nativo do Spring. |
 | C11 | ✅ Feito | `JwtService` e `TokenProperties` movidos para `security/jwt`. |
-| C12 | ⏳ Pendente | Renomear `authenticationManagerBean`. |
+| C12 | ✅ Feito | `authenticationManagerBean` renomeado para `authenticationManager`. |
 
 ---
 
@@ -426,6 +426,14 @@ return userRepository.findByEmail(email)
 
 **Conceito:** pacote deve refletir responsabilidade. `config` = montagem/wiring; `jwt` = tudo relacionado a token (serviço + propriedades). Isso prepara o terreno para refresh token (C6).
 
+### 5.20 C12 — `authenticationManagerBean` → `authenticationManager`
+
+**Problema:** o método `@Bean` tinha o sufixo redundante `Bean`; o nome do método é o nome do bean e a injeção no projeto é por tipo.
+
+**Correção:** `SecurityConfig.authenticationManagerBean(...)` renomeado para `authenticationManager(...)`. Nenhum `@Qualifier`/lookup por nome usava o nome antigo, então a mudança é segura.
+
+**Conceito:** em `@Bean`, o nome do método vira o nome do bean. O sufixo `Bean` é estilo antigo; o padrão atual é usar o nome do tipo.
+
 ---
 
 ## 6. O que ainda falta (com o porquê)
@@ -442,10 +450,6 @@ O token dura 2h e não há revogação. Se for preciso invalidar antes do vencim
 
 - **C7:** colocar roles no JWT evita um SELECT por request, mas perde revogação imediata. Trade-off performance × revogação.
 - **C8:** configurar origens permitidas quando existir front-end.
-
-### 6.4 C12 — Organização
-
-- `C12`: renomear `authenticationManagerBean` para `authenticationManager`.
 
 ---
 
