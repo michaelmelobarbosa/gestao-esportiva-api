@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -23,11 +25,16 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.accept.DefaultApiVersionStrategy;
+import org.springframework.web.accept.PathApiVersionResolver;
+import org.springframework.web.accept.SemanticApiVersionParser;
 
 import br.gov.quixada.esporte.common.error.GlobalExceptionHandler;
+import br.gov.quixada.esporte.config.ApiVersioningConfig;
 import br.gov.quixada.esporte.security.auth.exception.EmailJaCadastradoException;
 import br.gov.quixada.esporte.security.config.JwtService;
 import br.gov.quixada.esporte.security.users.User;
+import br.gov.quixada.esporte.security.users.UserDetailsAdapter;
 import br.gov.quixada.esporte.security.users.UserRole;
 import br.gov.quixada.esporte.security.users.dto.RegisterRequest;
 
@@ -59,7 +66,21 @@ class AuthControllerTest {
         var controller = new AuthController(authService, authenticationManager, jwtService);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
+                .setApiVersionStrategy(apiVersionStrategy())
                 .build();
+    }
+
+    private static DefaultApiVersionStrategy apiVersionStrategy() {
+        var strategy = new DefaultApiVersionStrategy(
+                List.of(new PathApiVersionResolver(0, ApiVersioningConfig.versionedPath())),
+                new SemanticApiVersionParser(),
+                false,
+                ApiVersioningConfig.CURRENT_VERSION,
+                true,
+                null,
+                null);
+        strategy.addSupportedVersion(ApiVersioningConfig.CURRENT_VERSION);
+        return strategy;
     }
 
     @Nested
@@ -70,11 +91,12 @@ class AuthControllerTest {
         @DisplayName("deve autenticar usando o email e retornar o token")
         void deveAutenticarComEmail() throws Exception {
             var user = new User("fulano", "fulano@example.com", "hash", UserRole.USER);
-            var authentication = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+            var userDetails = new UserDetailsAdapter(user);
+            var authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
             when(authenticationManager.authenticate(any())).thenReturn(authentication);
             when(jwtService.generateToken(user)).thenReturn("token");
 
-            mockMvc.perform(post("/auth/login")
+            mockMvc.perform(post("/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(LOGIN_JSON))
                     .andExpect(status().isOk())
@@ -91,7 +113,7 @@ class AuthControllerTest {
             when(authenticationManager.authenticate(any()))
                     .thenThrow(new BadCredentialsException("Credenciais inválidas"));
 
-            mockMvc.perform(post("/auth/login")
+            mockMvc.perform(post("/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(LOGIN_JSON))
                     .andExpect(status().isUnauthorized())
@@ -101,7 +123,7 @@ class AuthControllerTest {
         @Test
         @DisplayName("deve retornar 400 quando o email for inválido")
         void deveRetornar400QuandoEmailInvalido() throws Exception {
-            mockMvc.perform(post("/auth/login")
+            mockMvc.perform(post("/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                     {"email":"nao-email","password":"senha123"}
@@ -118,7 +140,7 @@ class AuthControllerTest {
         @Test
         @DisplayName("deve delegar o cadastro para o AuthService")
         void deveDelegarCadastro() throws Exception {
-            mockMvc.perform(post("/auth/register")
+            mockMvc.perform(post("/v1/auth/register")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(REGISTER_JSON))
                     .andExpect(status().isOk());
@@ -132,11 +154,25 @@ class AuthControllerTest {
             doThrow(new EmailJaCadastradoException("Email já cadastrado"))
                     .when(authService).register(any(RegisterRequest.class));
 
-            mockMvc.perform(post("/auth/register")
+            mockMvc.perform(post("/v1/auth/register")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(REGISTER_JSON))
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.message").value("Email já cadastrado"));
+        }
+    }
+
+    @Nested
+    @DisplayName("versionamento")
+    class Versionamento {
+
+        @Test
+        @DisplayName("deve rejeitar versão não suportada com 400")
+        void deveRejeitarVersaoNaoSuportada() throws Exception {
+            mockMvc.perform(post("/v9/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(LOGIN_JSON))
+                    .andExpect(status().isBadRequest());
         }
     }
 }

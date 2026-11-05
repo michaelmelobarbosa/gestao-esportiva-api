@@ -1,5 +1,6 @@
 package br.gov.quixada.esporte.security.auth;
 
+import br.gov.quixada.esporte.security.users.UserDetailsAdapter;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,6 +19,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     @NullMarked
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         return userRepository.findByEmail(email)
+                .map(UserDetailsAdapter::new)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado: " + email));
     }
 }

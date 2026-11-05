@@ -19,7 +19,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 
 @RestController
-@RequestMapping("/v1/categorias")
+@RequestMapping(path = "/v{version}/categorias", version = "1.0")
 @RequiredArgsConstructor
 @Validated
 public class CategoriaController {

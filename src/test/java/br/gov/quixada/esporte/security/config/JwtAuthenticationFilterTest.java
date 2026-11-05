@@ -23,6 +23,7 @@ import java.util.Optional;
 import br.gov.quixada.esporte.security.auth.UserRepository;
 import br.gov.quixada.esporte.security.auth.exception.TokenInvalidoException;
 import br.gov.quixada.esporte.security.users.User;
+import br.gov.quixada.esporte.security.users.UserDetailsAdapter;
 import br.gov.quixada.esporte.security.users.UserRole;
 
 @ExtendWith(MockitoExtension.class)
@@ -63,7 +64,8 @@ class JwtAuthenticationFilterTest {
 
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         assertThat(authentication).isNotNull();
-        assertThat(authentication.getPrincipal()).isSameAs(user);
+        assertThat(authentication.getPrincipal()).isInstanceOf(UserDetailsAdapter.class);
+        assertThat(((UserDetailsAdapter) authentication.getPrincipal()).user()).isSameAs(user);
         assertThat(chain.getRequest()).isSameAs(request);
     }
 

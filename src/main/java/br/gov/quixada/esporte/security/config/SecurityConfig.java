@@ -37,7 +37,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint(restAuthenticationEntryPoint)
                         .accessDeniedHandler(restAccessDeniedHandler))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/v1/auth/**").permitAll()
 
                         .requestMatchers(HttpMethod.GET, "/v1/**")
                         .hasAnyRole("ADMIN", "USER")

@@ -17,7 +17,7 @@ import java.net.URI;
 import java.time.Clock;
 
 @RestController
-@RequestMapping("/v1/atletas")
+@RequestMapping(path = "/v{version}/atletas", version = "1.0")
 @RequiredArgsConstructor
 @Validated
 public class AtletaController {

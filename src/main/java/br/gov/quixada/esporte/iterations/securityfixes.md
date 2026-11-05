@@ -4,7 +4,7 @@
 > Base da análise: estado do código após a reorganização dos pacotes em `security/config`, `security/auth` e `security/users`.
 > **Histórico consolidado, com explicações e decisões: `fixes.md`.**
 
-A autenticação **funciona no fluxo feliz**: `POST /auth/login` emite um JWT, o `JwtAuthenticationFilter` valida o token a cada request e as senhas são guardadas com BCrypt. A implementação evoluiu (veja o status abaixo), mas ainda restam lacunas de validação, constraints e tratamento de erro. Vários desses buracos são exploráveis.
+A autenticação **funciona no fluxo feliz**: `POST /v1/auth/login` emite um JWT, o `JwtAuthenticationFilter` valida o token a cada request e as senhas são guardadas com BCrypt. A implementação evoluiu (veja o status abaixo), mas ainda restam lacunas de validação, constraints e tratamento de erro. Vários desses buracos são exploráveis.
 
 Este documento lista as correções **na ordem de prioridade** (mais críticas primeiro), com explicação do *porquê*, *onde* e *como* corrigir. Cada item é independente o suficiente para ser implementado sozinho.
 
@@ -29,11 +29,12 @@ Este documento lista as correções **na ordem de prioridade** (mais críticas p
 | C1 | ✅ Feito | `JwtService` usa o `Clock` do projeto. |
 | C2 | ✅ Feito | `TokenProperties` com `@ConfigurationProperties` e validação. |
 | C3 | ✅ Feito | `issuer` e `expiration` configuráveis, sem duplicação. |
-| C4 | ⏳ Pendente | Avaliar separar `UserDetails` da entidade `User`. |
+| C4 | ✅ Feito | `UserDetailsAdapter` separa `UserDetails` da entidade `User`. |
 | C5 | ✅ Feito | Email é a identidade: `@Email`, `NOT NULL`, `UNIQUE` e `sub` do JWT. |
 | C6–C8 | ⏳ Pendente | — |
 | C9 | ✅ Feito | `AuthServiceTest`, `AuthControllerTest`, `JwtServiceTest` e `JwtAuthenticationFilterTest`. |
-| C10–C12 | ⏳ Pendente | — |
+| C10 | ✅ Feito | `/v1/auth` com versionamento nativo do Spring (`ApiVersioningConfig`). |
+| C11–C12 | ⏳ Pendente | — |
 
 ---
 
@@ -67,7 +68,7 @@ Este documento lista as correções **na ordem de prioridade** (mais críticas p
 **Por quê:** hoje o `RegisterRequest` tem o campo `role` e o controller grava exatamente o que o cliente mandar (`new User(request.username(), encryptedPassword, request.role())`). Basta:
 
 ```json
-POST /auth/register
+POST /v1/auth/register
 { "username": "hacker", "password": "123", "role": "ADMIN" }
 ```
 
@@ -94,7 +95,7 @@ para qualquer pessoa criar um administrador — e `ADMIN` tem acesso a endpoints
    ```
    ou criar o primeiro admin via migration/seed.
 
-**Como testar:** `POST /auth/register` com `"role":"ADMIN"` no corpo → o usuário criado deve ser `USER`. Faça login com ele e tente acessar um endpoint de admin → deve receber **403**.
+**Como testar:** `POST /v1/auth/register` com `"role":"ADMIN"` no corpo → o usuário criado deve ser `USER`. Faça login com ele e tente acessar um endpoint de admin → deve receber **403**.
 
 ---
 
@@ -164,7 +165,7 @@ O trecho `:my_secret_key` é o valor usado **quando a variável de ambiente não
    ```
    O `GlobalExceptionHandler` já sabe transformar exceções de domínio em `ApiError`.
 
-**Como testar:** dois `POST /auth/register` com o mesmo username → o segundo deve retornar **409** com `ApiError`, não 500.
+**Como testar:** dois `POST /v1/auth/register` com o mesmo username → o segundo deve retornar **409** com `ApiError`, não 500.
 
 ---
 
@@ -198,7 +199,7 @@ Observações:
 - `max = 72` na senha porque o **BCrypt ignora bytes além de 72** — limitar evita confusão.
 - O `GlobalExceptionHandler` já trata `MethodArgumentNotValidException` e devolve 400 com `ApiError`. Não precisa mexer nele.
 
-**Como testar:** `POST /auth/register` com `password` de 2 caracteres → **400** com a lista de campos inválidos.
+**Como testar:** `POST /v1/auth/register` com `password` de 2 caracteres → **400** com a lista de campos inválidos.
 
 ---
 
@@ -207,7 +208,7 @@ Observações:
 - [ ] Adicionar rate limiting no endpoint de login.
 - [ ] (Opcional) Lockout progressivo após N tentativas.
 
-**Onde:** `security/auth/AuthController.java` (`/auth/login`) e `security/users/User.java` (`isAccountNonLocked`).
+**Onde:** `security/auth/AuthController.java` (`/v1/auth/login`) e `security/users/User.java` (`isAccountNonLocked`).
 
 **Por quê:** hoje nada impede tentar senhas infinitamente (`isAccountNonLocked()` retorna sempre `true`). Um atacante pode fazer força bruta no login.
 
@@ -506,15 +507,14 @@ public record TokenProperties(@NotBlank String secret, Duration expiration) {}
 
 ### C4. Repensar `User` (entidade JPA) implementando `UserDetails`
 
-- [ ] Avaliar separar domínio de integração com o Spring Security.
+- [x] Avaliar separar domínio de integração com o Spring Security.
+- [x] Criar `UserDetailsAdapter` e remover `implements UserDetails` da entidade.
 
-**Onde:** `security/users/User.java`.
+**Onde:** `security/users/User.java` e `security/users/UserDetailsAdapter.java`.
 
-**Por quê:** hoje a entidade de banco implementa `UserDetails` e tem `@Setter` + `@AllArgsConstructor`. Isso:
-- acopla o modelo de dados ao framework de segurança;
-- expõe setters para `password` e `role`, permitindo mutação indevida em qualquer lugar.
+**Por quê:** a entidade de banco implementava `UserDetails` e tem `@Setter` + `@AllArgsConstructor`. Isso acoplava o modelo de dados ao framework de segurança e expunha setters para `password`/`role`.
 
-Em projetos maiores, cria-se um `UserDetails` separado (adapter) e mantém a entidade "pura". Não é urgente, mas é uma decisão de arquitetura importante.
+> ✅ **Feito (2026-11-05).** `User` voltou a ser entidade pura; `UserDetailsAdapter` (record) implementa `UserDetails`, devolve o email em `getUsername()` e concentra as authorities. `CustomUserDetailsService` e `JwtAuthenticationFilter` adaptam com `.map(UserDetailsAdapter::new)`. Coberto por `UserDetailsAdapterTest`.
 
 ---
 
@@ -578,11 +578,14 @@ Em projetos maiores, cria-se um `UserDetails` separado (adapter) e mantém a ent
 
 ### C10. Versionar os endpoints de auth
 
-- [ ] Decidir se `/auth/**` vira `/v1/auth/**`.
+- [x] Decidir se `/auth/**` vira `/v1/auth/**`.
+- [x] Migrar `/auth` para `/v1/auth` com versionamento nativo do Spring.
 
-**Onde:** `security/auth/AuthController.java:22`.
+**Onde:** `security/auth/AuthController.java` e `config/ApiVersioningConfig.java`.
 
-**Por quê:** todos os outros recursos são `/v1/...`; auth está fora do versionamento. Decisão sua (já anotada para depois).
+**Por quê:** todos os outros recursos são `/v1/...`; auth estava fora do versionamento.
+
+> ✅ **Feito (2026-11-05).** Adotada a estratégia A (renomear direto, sem rota legada) por não haver consumidores. O Spring 7/Boot 4 fornece o versionamento nativo: `ApiVersioningConfig` usa `usePathSegment(0, ...)`, suporta `1.0` e define default. Controllers usam `@RequestMapping(path = "/v{version}/...", version = "1.0")`; versão não suportada → 400.
 
 ---
 
@@ -637,13 +640,13 @@ Boas práticas (P2)
 [x] C1. Usar Clock do projeto no JwtService
 [x] C2. @ConfigurationProperties para as props do token
 [x] C3. Expiração/issuer configuráveis/constantes
-[ ] C4. Avaliar separar UserDetails da entidade User
+[x] C4. Avaliar separar UserDetails da entidade User
 [x] C5. Email é a identidade: @Email, NOT NULL, UNIQUE e sub do JWT
 [ ] C6. Refresh token / logout / revogação
 [ ] C7. (Opcional) roles como claim do token
 [ ] C8. Configurar CORS
 [x] C9. Testes de auth (AuthService, AuthController, JwtService e filtro)
-[ ] C10. Versionar /auth
+[x] C10. Versionar /auth
 [ ] C11. Reavaliar pacote de JwtService
 [ ] C12. Renomear authenticationManagerBean
 ```

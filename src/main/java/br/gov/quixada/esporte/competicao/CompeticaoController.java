@@ -18,7 +18,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 
 @RestController
-@RequestMapping("/v1/competicoes")
+@RequestMapping(path = "/v{version}/competicoes", version = "1.0")
 @RequiredArgsConstructor
 @Validated
 public class CompeticaoController {
