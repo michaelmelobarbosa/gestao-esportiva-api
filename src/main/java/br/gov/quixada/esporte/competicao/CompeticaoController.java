@@ -27,8 +27,10 @@ public class CompeticaoController {
     private final CompeticaoMapper mapper;
 
     @GetMapping
-    public ResponseEntity<Page<CompeticaoResumoResponse>> findAll(@RequestParam(required = false) String nome, Pageable pageable) {
-        return ResponseEntity.ok(service.findAll(nome, pageable).map(mapper::toResumo));
+    public ResponseEntity<Page<CompeticaoResumoResponse>> findAll(@RequestParam(required = false) String nome,
+                                                                  @RequestParam(required = false) StatusCompeticao status,
+                                                                  Pageable pageable) {
+        return ResponseEntity.ok(service.findAll(nome, status, pageable).map(mapper::toResumo));
     }
 
     @GetMapping("/{id}")

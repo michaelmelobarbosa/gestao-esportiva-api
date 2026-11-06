@@ -81,7 +81,7 @@ class EquipeServiceTest {
             Page<Equipe> esperado = Page.empty();
             when(repository.findAll(PAGEABLE)).thenReturn(esperado);
 
-            Page<Equipe> resultado = service.findAll(null, PAGEABLE);
+            Page<Equipe> resultado = service.findAll(null, null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findAll(PAGEABLE);
@@ -94,7 +94,7 @@ class EquipeServiceTest {
             Page<Equipe> esperado = Page.empty();
             when(repository.findAll(PAGEABLE)).thenReturn(esperado);
 
-            Page<Equipe> resultado = service.findAll("   ", PAGEABLE);
+            Page<Equipe> resultado = service.findAll("   ", null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findAll(PAGEABLE);
@@ -107,7 +107,7 @@ class EquipeServiceTest {
             Page<Equipe> esperado = Page.empty();
             when(repository.findByNomeContainingIgnoreCase("equipe", PAGEABLE)).thenReturn(esperado);
 
-            Page<Equipe> resultado = service.findAll("equipe", PAGEABLE);
+            Page<Equipe> resultado = service.findAll("equipe", null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findByNomeContainingIgnoreCase("equipe", PAGEABLE);

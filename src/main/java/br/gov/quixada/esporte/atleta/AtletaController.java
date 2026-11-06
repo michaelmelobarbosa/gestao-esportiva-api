@@ -27,9 +27,11 @@ public class AtletaController {
     private final Clock clock;
 
     @GetMapping
-    public ResponseEntity<Page<AtletaResumoResponse>> findAll(@RequestParam(required = false) String nome, Pageable pageable) {
+    public ResponseEntity<Page<AtletaResumoResponse>> findAll(@RequestParam(required = false) String nome,
+                                                              @RequestParam(required = false) StatusAtleta status,
+                                                              Pageable pageable) {
 
-        return ResponseEntity.ok(service.findAll(nome, pageable).map(atleta -> mapper.toResumo(atleta, clock)));
+        return ResponseEntity.ok(service.findAll(nome, status, pageable).map(atleta -> mapper.toResumo(atleta, clock)));
     }
 
     @GetMapping("/{id}")

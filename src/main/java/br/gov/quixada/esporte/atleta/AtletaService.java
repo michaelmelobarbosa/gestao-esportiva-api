@@ -20,9 +20,15 @@ public class AtletaService {
 
 
     @Transactional(readOnly = true)
-    public Page<Atleta> findAll(String nome, Pageable pageable) {
-        return nome == null || nome.isBlank() ? repository.findAll(pageable) :
-                repository.findByNomeCompletoNormalizadoStartingWith(NomeCompletoUtils.normalize(nome), pageable);
+    public Page<Atleta> findAll(String nome, StatusAtleta status, Pageable pageable) {
+        if (nome == null || nome.isBlank()) {
+            return status == null ? repository.findAll(pageable) : repository.findByStatus(status, pageable);
+        }
+
+        var nomeNormalizado = NomeCompletoUtils.normalize(nome);
+        return status == null
+                ? repository.findByNomeCompletoNormalizadoStartingWith(nomeNormalizado, pageable)
+                : repository.findByNomeCompletoNormalizadoStartingWithAndStatus(nomeNormalizado, status, pageable);
     }
 
     @Transactional(readOnly = true)

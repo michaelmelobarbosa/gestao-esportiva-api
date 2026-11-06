@@ -74,7 +74,7 @@ class AtletaServiceTest {
             Page<Atleta> esperado = Page.empty();
             when(repository.findAll(PAGEABLE)).thenReturn(esperado);
 
-            Page<Atleta> resultado = service.findAll(null, PAGEABLE);
+            Page<Atleta> resultado = service.findAll(null, null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findAll(PAGEABLE);
@@ -88,7 +88,7 @@ class AtletaServiceTest {
             Page<Atleta> esperado = Page.empty();
             when(repository.findAll(PAGEABLE)).thenReturn(esperado);
 
-            Page<Atleta> resultado = service.findAll("   ", PAGEABLE);
+            Page<Atleta> resultado = service.findAll("   ", null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findAll(PAGEABLE);
@@ -102,7 +102,7 @@ class AtletaServiceTest {
             Page<Atleta> esperado = new PageImpl<>(List.of(umAtleta(StatusAtleta.ATIVO)));
             when(repository.findByNomeCompletoNormalizadoStartingWith("joao", PAGEABLE)).thenReturn(esperado);
 
-            Page<Atleta> resultado = service.findAll("joao", PAGEABLE);
+            Page<Atleta> resultado = service.findAll("joao", null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findByNomeCompletoNormalizadoStartingWith("joao", PAGEABLE);
@@ -116,7 +116,7 @@ class AtletaServiceTest {
             Page<Atleta> esperado = Page.empty();
             when(repository.findByNomeCompletoNormalizadoStartingWith("joaosilva", PAGEABLE)).thenReturn(esperado);
 
-            Page<Atleta> resultado = service.findAll("João Silva", PAGEABLE);
+            Page<Atleta> resultado = service.findAll("João Silva", null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findByNomeCompletoNormalizadoStartingWith("joaosilva", PAGEABLE);

@@ -14,10 +14,13 @@ public class ClubeService {
     private final ClubeRepository repository;
 
     @Transactional(readOnly = true)
-    public Page<Clube> findAll(String nome, Pageable pageable) {
-        return nome == null || nome.isBlank()
-                ? repository.findAll(pageable)
-                : repository.findByNomeContainingIgnoreCase(nome, pageable);
+    public Page<Clube> findAll(String nome, StatusClube status, Pageable pageable) {
+        if (nome == null || nome.isBlank()) {
+            return status == null ? repository.findAll(pageable) : repository.findByStatus(status, pageable);
+        }
+        return status == null
+                ? repository.findByNomeContainingIgnoreCase(nome, pageable)
+                : repository.findByNomeContainingIgnoreCaseAndStatus(nome, status, pageable);
     }
 
     @Transactional(readOnly = true)

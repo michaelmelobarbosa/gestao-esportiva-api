@@ -14,10 +14,13 @@ public class ModalidadeService {
     private final ModalidadeRepository repository;
 
     @Transactional(readOnly = true)
-    public Page<Modalidade> findAll(String nome, Pageable pageable) {
-        return nome == null || nome.isBlank()
-                ? repository.findAll(pageable)
-                : repository.findByNomeContainingIgnoreCase(nome, pageable);
+    public Page<Modalidade> findAll(String nome, StatusModalidade status, Pageable pageable) {
+        if (nome == null || nome.isBlank()) {
+            return status == null ? repository.findAll(pageable) : repository.findByStatus(status, pageable);
+        }
+        return status == null
+                ? repository.findByNomeContainingIgnoreCase(nome, pageable)
+                : repository.findByNomeContainingIgnoreCaseAndStatus(nome, status, pageable);
     }
 
     @Transactional(readOnly = true)

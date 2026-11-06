@@ -107,7 +107,7 @@ class InscricaoAtletaServiceTest {
             Page<InscricaoAtleta> esperado = Page.empty();
             when(repository.findAll(PAGEABLE)).thenReturn(esperado);
 
-            Page<InscricaoAtleta> resultado = service.findAll(null, PAGEABLE);
+            Page<InscricaoAtleta> resultado = service.findAll(null, null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findAll(PAGEABLE);
@@ -119,7 +119,7 @@ class InscricaoAtletaServiceTest {
             Page<InscricaoAtleta> esperado = Page.empty();
             when(repository.findByInscricaoEquipeId(1L, PAGEABLE)).thenReturn(esperado);
 
-            Page<InscricaoAtleta> resultado = service.findAll(1L, PAGEABLE);
+            Page<InscricaoAtleta> resultado = service.findAll(1L, null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findByInscricaoEquipeId(1L, PAGEABLE);

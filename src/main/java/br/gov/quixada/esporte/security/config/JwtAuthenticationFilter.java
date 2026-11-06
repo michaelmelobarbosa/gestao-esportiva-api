@@ -36,7 +36,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private void autenticar(String token) {
         try {
             var email = jwtService.extractEmail(token);
-            userRepository.findByEmail(email).map(UserDetailsAdapter::new).ifPresent(userDetails -> {
+            userRepository.findByEmail(email).map(UserDetailsAdapter::new)
+                    .filter(UserDetailsAdapter::isEnabled).ifPresent(userDetails -> {
                 var authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             });

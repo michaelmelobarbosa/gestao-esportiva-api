@@ -73,7 +73,7 @@ class CompeticaoServiceTest {
             Page<Competicao> esperado = Page.empty();
             when(repository.findAll(PAGEABLE)).thenReturn(esperado);
 
-            Page<Competicao> resultado = service.findAll(null, PAGEABLE);
+            Page<Competicao> resultado = service.findAll(null, null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findAll(PAGEABLE);
@@ -86,7 +86,7 @@ class CompeticaoServiceTest {
             Page<Competicao> esperado = Page.empty();
             when(repository.findAll(PAGEABLE)).thenReturn(esperado);
 
-            Page<Competicao> resultado = service.findAll("   ", PAGEABLE);
+            Page<Competicao> resultado = service.findAll("   ", null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findAll(PAGEABLE);
@@ -99,7 +99,7 @@ class CompeticaoServiceTest {
             Page<Competicao> esperado = Page.empty();
             when(repository.findByNomeContainingIgnoreCase("copa", PAGEABLE)).thenReturn(esperado);
 
-            Page<Competicao> resultado = service.findAll("copa", PAGEABLE);
+            Page<Competicao> resultado = service.findAll("copa", null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findByNomeContainingIgnoreCase("copa", PAGEABLE);

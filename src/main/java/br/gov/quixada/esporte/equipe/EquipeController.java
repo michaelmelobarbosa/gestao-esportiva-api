@@ -27,8 +27,10 @@ public class EquipeController {
     private final EquipeMapper mapper;
 
     @GetMapping
-    public ResponseEntity<Page<EquipeResumoResponse>> findAll(@RequestParam(required = false) String nome, Pageable pageable) {
-        return ResponseEntity.ok(service.findAll(nome, pageable).map(mapper::toResumo));
+    public ResponseEntity<Page<EquipeResumoResponse>> findAll(@RequestParam(required = false) String nome,
+                                                              @RequestParam(required = false) StatusEquipe status,
+                                                              Pageable pageable) {
+        return ResponseEntity.ok(service.findAll(nome, status, pageable).map(mapper::toResumo));
     }
 
     @GetMapping("/{id}")

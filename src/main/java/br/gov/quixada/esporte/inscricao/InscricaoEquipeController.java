@@ -26,8 +26,10 @@ public class InscricaoEquipeController {
     private final InscricaoEquipeMapper mapper;
 
     @GetMapping
-    public ResponseEntity<Page<InscricaoEquipeResumoResponse>> findAll(@RequestParam(required = false) Long competicaoId, Pageable pageable) {
-        return ResponseEntity.ok(service.findAll(competicaoId, pageable).map(mapper::toResumo));
+    public ResponseEntity<Page<InscricaoEquipeResumoResponse>> findAll(@RequestParam(required = false) Long competicaoId,
+                                                                       @RequestParam(required = false) StatusInscricao status,
+                                                                       Pageable pageable) {
+        return ResponseEntity.ok(service.findAll(competicaoId, status, pageable).map(mapper::toResumo));
     }
 
     @GetMapping("/{id}")

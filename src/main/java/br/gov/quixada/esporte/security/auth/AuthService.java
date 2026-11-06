@@ -3,6 +3,7 @@ package br.gov.quixada.esporte.security.auth;
 import br.gov.quixada.esporte.security.auth.exception.EmailJaCadastradoException;
 import br.gov.quixada.esporte.security.users.User;
 import br.gov.quixada.esporte.security.users.UserRole;
+import br.gov.quixada.esporte.security.users.UserStatus;
 import br.gov.quixada.esporte.security.users.dto.RegisterRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -25,6 +26,7 @@ public class AuthService {
 
         var user = new User(request.username(), request.email(),
                 passwordEncoder.encode(request.password()), UserRole.USER);
+        user.setStatus(UserStatus.ATIVO);
 
         try {
             userRepository.save(user);

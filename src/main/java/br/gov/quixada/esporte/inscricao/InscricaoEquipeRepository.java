@@ -18,6 +18,12 @@ public interface InscricaoEquipeRepository extends JpaRepository<InscricaoEquipe
     @EntityGraph(attributePaths = {"competicao", "categoria", "equipe"})
     Page<InscricaoEquipe> findByCompeticaoId(Long competicaoId, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"competicao", "categoria", "equipe"})
+    Page<InscricaoEquipe> findByStatus(StatusInscricao status, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"competicao", "categoria", "equipe"})
+    Page<InscricaoEquipe> findByCompeticaoIdAndStatus(Long competicaoId, StatusInscricao status, Pageable pageable);
+
     @Override
     @EntityGraph(attributePaths = {"competicao", "categoria", "equipe"})
     Optional<InscricaoEquipe> findById(Long id);

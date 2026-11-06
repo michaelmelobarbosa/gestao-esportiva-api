@@ -6,7 +6,7 @@
 
 ## 1. `hardDelete(Long id)` — `AtletaService.java:50-55` comentado
 
-> **Status (2026-10-30):** o perfil `ADMIN` já existe (`SecurityConfig` + `UserRole.ADMIN`), então o bloqueio original deixou de existir. Falta implementar o endpoint e definir a regra de integridade referencial.
+> **Status (2026-11-05):** hard delete **adiado por decisão**; por enquanto o delete é sempre soft (`status`). Quando for implementado, a regra definida é: **só permitir hard delete de registro já `INATIVO`/`CANCELADO`** e apenas para `ADMIN`. O perfil `ADMIN` já existe (`SecurityConfig` + `UserRole.ADMIN`) e `DELETE /v1/**` já exige essa role.
 
 ```java
 // hard delete a ser implementado quando perfil admin for criado
@@ -30,7 +30,7 @@
       return ResponseEntity.noContent().build();
   }
   ```
-- [ ] Descomentar `AtletaService.java:50` e validar regra: bloquear `hardDelete` se `atleta.status == ATIVO` (?) ou permitir sempre?
+- [ ] Descomentar `AtletaService.java:50` e aplicar a regra: bloquear `hardDelete` se `atleta.status == ATIVO`; só permitir após `INATIVO`.
 - [ ] Considerar `ON DELETE` em `db/migration` para tabelas relacionadas (`inscricao`, `equipe`) — `Atleta.java:37` `@Table(name="db_atletas")`
 - [ ] Teste: `AtletaServiceTest#hardDelete_deveRemoverQuandoAdmin`
 

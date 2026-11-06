@@ -50,6 +50,6 @@ public record UserDetailsAdapter(User user) implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return user.getStatus() == UserStatus.ATIVO;
     }
 }

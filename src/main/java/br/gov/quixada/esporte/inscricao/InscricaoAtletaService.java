@@ -29,10 +29,13 @@ public class InscricaoAtletaService {
     private final Clock clock;
 
     @Transactional(readOnly = true)
-    public Page<InscricaoAtleta> findAll(Long inscricaoEquipeId, Pageable pageable) {
-        return inscricaoEquipeId == null
-                ? repository.findAll(pageable)
-                : repository.findByInscricaoEquipeId(inscricaoEquipeId, pageable);
+    public Page<InscricaoAtleta> findAll(Long inscricaoEquipeId, StatusInscricao status, Pageable pageable) {
+        if (inscricaoEquipeId == null) {
+            return status == null ? repository.findAll(pageable) : repository.findByStatus(status, pageable);
+        }
+        return status == null
+                ? repository.findByInscricaoEquipeId(inscricaoEquipeId, pageable)
+                : repository.findByInscricaoEquipeIdAndStatus(inscricaoEquipeId, status, pageable);
     }
 
     @Transactional(readOnly = true)
@@ -67,6 +70,23 @@ public class InscricaoAtletaService {
     public InscricaoAtleta alterarStatus(Long id, StatusInscricao status) {
         InscricaoAtleta inscricao = findByIdOrThrowNotFound(id);
         inscricao.alterarStatus(status);
+        return inscricao;
+    }
+
+    @Transactional
+    public InscricaoAtleta update(Long id, String numeroCamisa) {
+        InscricaoAtleta inscricao = findByIdOrThrowNotFound(id);
+
+        if (numeroCamisa.equals(inscricao.getNumeroCamisa())) {
+            return inscricao;
+        }
+
+        Long inscricaoEquipeId = inscricao.getInscricaoEquipe().getId();
+        if (repository.existsByInscricaoEquipeIdAndNumeroCamisaAndIdNot(inscricaoEquipeId, numeroCamisa, id)) {
+            throw new NumeroCamisaJaUtilizadoException("Número da camisa já utilizado nesta inscrição");
+        }
+
+        inscricao.atualizarDados(numeroCamisa);
         return inscricao;
     }
 

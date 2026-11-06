@@ -31,10 +31,13 @@ public class InscricaoEquipeService {
     private final EquipeRepository equipeRepository;
 
     @Transactional(readOnly = true)
-    public Page<InscricaoEquipe> findAll(Long competicaoId, Pageable pageable) {
-        return competicaoId == null
-                ? repository.findAll(pageable)
-                : repository.findByCompeticaoId(competicaoId, pageable);
+    public Page<InscricaoEquipe> findAll(Long competicaoId, StatusInscricao status, Pageable pageable) {
+        if (competicaoId == null) {
+            return status == null ? repository.findAll(pageable) : repository.findByStatus(status, pageable);
+        }
+        return status == null
+                ? repository.findByCompeticaoId(competicaoId, pageable)
+                : repository.findByCompeticaoIdAndStatus(competicaoId, status, pageable);
     }
 
     @Transactional(readOnly = true)

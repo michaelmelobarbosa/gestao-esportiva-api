@@ -26,6 +26,7 @@ import br.gov.quixada.esporte.inscricao.exception.NumeroCamisaJaUtilizadoExcepti
 import br.gov.quixada.esporte.modalidade.exception.ModalidadeInativaException;
 import br.gov.quixada.esporte.modalidade.exception.ModalidadeNotFoundException;
 import br.gov.quixada.esporte.security.auth.exception.EmailJaCadastradoException;
+import br.gov.quixada.esporte.security.users.exception.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -36,6 +37,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -57,6 +59,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(EmailJaCadastradoException.class)
     public ResponseEntity<ApiError> handleEmailJaCadastrado(EmailJaCadastradoException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ApiError> handleUserNotFound(UserNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(AuthenticationException.class)
@@ -185,6 +192,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiError> handleHttpMessageNotReadable(HttpMessageNotReadableException ex, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, MSG_JSON_INVALIDO, request, List.of());
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex,
+                                                                     HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Parâmetro inválido: " + ex.getName(), request, List.of());
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

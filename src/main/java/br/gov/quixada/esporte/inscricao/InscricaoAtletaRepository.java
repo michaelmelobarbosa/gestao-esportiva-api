@@ -18,6 +18,13 @@ public interface InscricaoAtletaRepository extends JpaRepository<InscricaoAtleta
     @EntityGraph(attributePaths = {"atleta", "inscricaoEquipe"})
     Page<InscricaoAtleta> findByInscricaoEquipeId(Long inscricaoEquipeId, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"atleta", "inscricaoEquipe"})
+    Page<InscricaoAtleta> findByStatus(StatusInscricao status, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"atleta", "inscricaoEquipe"})
+    Page<InscricaoAtleta> findByInscricaoEquipeIdAndStatus(Long inscricaoEquipeId, StatusInscricao status,
+                                                           Pageable pageable);
+
     @Override
     @EntityGraph(attributePaths = {"atleta", "inscricaoEquipe"})
     Optional<InscricaoAtleta> findById(Long id);
@@ -25,6 +32,8 @@ public interface InscricaoAtletaRepository extends JpaRepository<InscricaoAtleta
     boolean existsByInscricaoEquipeIdAndAtletaId(Long inscricaoEquipeId, Long atletaId);
 
     boolean existsByInscricaoEquipeIdAndNumeroCamisa(Long inscricaoEquipeId, String numeroCamisa);
+
+    boolean existsByInscricaoEquipeIdAndNumeroCamisaAndIdNot(Long inscricaoEquipeId, String numeroCamisa, Long id);
 
     boolean existsByInscricaoEquipeCompeticaoIdAndAtletaId(Long competicaoId, Long atletaId);
 }

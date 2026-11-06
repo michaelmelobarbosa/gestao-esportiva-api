@@ -18,10 +18,13 @@ public class CompeticaoService {
     private final ModalidadeRepository modalidadeRepository;
 
     @Transactional(readOnly = true)
-    public Page<Competicao> findAll(String nome, Pageable pageable) {
-        return nome == null || nome.isBlank()
-                ? repository.findAll(pageable)
-                : repository.findByNomeContainingIgnoreCase(nome, pageable);
+    public Page<Competicao> findAll(String nome, StatusCompeticao status, Pageable pageable) {
+        if (nome == null || nome.isBlank()) {
+            return status == null ? repository.findAll(pageable) : repository.findByStatus(status, pageable);
+        }
+        return status == null
+                ? repository.findByNomeContainingIgnoreCase(nome, pageable)
+                : repository.findByNomeContainingIgnoreCaseAndStatus(nome, status, pageable);
     }
 
     @Transactional(readOnly = true)

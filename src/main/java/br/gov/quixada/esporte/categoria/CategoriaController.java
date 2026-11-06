@@ -28,8 +28,10 @@ public class CategoriaController {
     private final CategoriaMapper mapper;
 
     @GetMapping
-    public ResponseEntity<Page<CategoriaResumoResponse>> findAll(@RequestParam(required = false) String nome, Pageable pageable) {
-        return ResponseEntity.ok(service.findAll(nome, pageable).map(mapper::toResumo));
+    public ResponseEntity<Page<CategoriaResumoResponse>> findAll(@RequestParam(required = false) String nome,
+                                                                 @RequestParam(required = false) StatusCategoria status,
+                                                                 Pageable pageable) {
+        return ResponseEntity.ok(service.findAll(nome, status, pageable).map(mapper::toResumo));
     }
 
     @GetMapping("/{id}")

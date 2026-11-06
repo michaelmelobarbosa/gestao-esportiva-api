@@ -56,7 +56,7 @@ class ModalidadeServiceTest {
             Page<Modalidade> esperado = Page.empty();
             when(repository.findAll(PAGEABLE)).thenReturn(esperado);
 
-            Page<Modalidade> resultado = service.findAll(null, PAGEABLE);
+            Page<Modalidade> resultado = service.findAll(null, null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findAll(PAGEABLE);
@@ -69,7 +69,7 @@ class ModalidadeServiceTest {
             Page<Modalidade> esperado = Page.empty();
             when(repository.findAll(PAGEABLE)).thenReturn(esperado);
 
-            Page<Modalidade> resultado = service.findAll("   ", PAGEABLE);
+            Page<Modalidade> resultado = service.findAll("   ", null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findAll(PAGEABLE);
@@ -82,7 +82,7 @@ class ModalidadeServiceTest {
             Page<Modalidade> esperado = Page.empty();
             when(repository.findByNomeContainingIgnoreCase("futebol", PAGEABLE)).thenReturn(esperado);
 
-            Page<Modalidade> resultado = service.findAll("futebol", PAGEABLE);
+            Page<Modalidade> resultado = service.findAll("futebol", null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findByNomeContainingIgnoreCase("futebol", PAGEABLE);

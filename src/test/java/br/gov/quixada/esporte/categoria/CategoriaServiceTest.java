@@ -72,7 +72,7 @@ class CategoriaServiceTest {
             Page<Categoria> esperado = Page.empty();
             when(repository.findAll(PAGEABLE)).thenReturn(esperado);
 
-            Page<Categoria> resultado = service.findAll(null, PAGEABLE);
+            Page<Categoria> resultado = service.findAll(null, null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findAll(PAGEABLE);
@@ -85,7 +85,7 @@ class CategoriaServiceTest {
             Page<Categoria> esperado = Page.empty();
             when(repository.findAll(PAGEABLE)).thenReturn(esperado);
 
-            Page<Categoria> resultado = service.findAll("   ", PAGEABLE);
+            Page<Categoria> resultado = service.findAll("   ", null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findAll(PAGEABLE);
@@ -98,7 +98,7 @@ class CategoriaServiceTest {
             Page<Categoria> esperado = Page.empty();
             when(repository.findByNomeContainingIgnoreCase("sub", PAGEABLE)).thenReturn(esperado);
 
-            Page<Categoria> resultado = service.findAll("sub", PAGEABLE);
+            Page<Categoria> resultado = service.findAll("sub", null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findByNomeContainingIgnoreCase("sub", PAGEABLE);

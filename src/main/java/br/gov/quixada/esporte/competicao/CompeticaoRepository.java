@@ -18,6 +18,12 @@ public interface CompeticaoRepository extends JpaRepository<Competicao, Long> {
     @EntityGraph(attributePaths = "modalidade")
     Page<Competicao> findByNomeContainingIgnoreCase(String nome, Pageable pageable);
 
+    @EntityGraph(attributePaths = "modalidade")
+    Page<Competicao> findByStatus(StatusCompeticao status, Pageable pageable);
+
+    @EntityGraph(attributePaths = "modalidade")
+    Page<Competicao> findByNomeContainingIgnoreCaseAndStatus(String nome, StatusCompeticao status, Pageable pageable);
+
     @Override
     @EntityGraph(attributePaths = "modalidade")
     Optional<Competicao> findById(Long id);
