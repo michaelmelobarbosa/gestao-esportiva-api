@@ -46,6 +46,17 @@ class UserDetailsAdapterTest {
     }
 
     @Test
+    @DisplayName("deve conceder ROLE_SUPERADMIN, ROLE_ADMIN e ROLE_USER para superadministrador")
+    void deveConcederRolesDeSuperadmin() {
+        var adapter = new UserDetailsAdapter(
+                new User("super", "super@example.com", "hash", UserRole.SUPERADMIN));
+
+        assertThat(adapter.getAuthorities())
+                .extracting(GrantedAuthority::getAuthority)
+                .containsExactlyInAnyOrder("ROLE_SUPERADMIN", "ROLE_ADMIN", "ROLE_USER");
+    }
+
+    @Test
     @DisplayName("deve manter a conta habilitada e sem expiração")
     void deveManterContaHabilitada() {
         var adapter = new UserDetailsAdapter(
@@ -56,5 +67,14 @@ class UserDetailsAdapterTest {
                 adapter.isAccountNonLocked(),
                 adapter.isCredentialsNonExpired(),
                 adapter.isEnabled())).containsOnly(true);
+    }
+
+    @Test
+    @DisplayName("deve desabilitar usuário inativo")
+    void deveDesabilitarUsuarioInativo() {
+        var user = new User("fulano", "fulano@example.com", "hash", UserRole.USER);
+        user.setStatus(UserStatus.INATIVO);
+
+        assertThat(new UserDetailsAdapter(user).isEnabled()).isFalse();
     }
 }

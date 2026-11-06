@@ -3,7 +3,7 @@
 ## Stack
 - Java 25 + Spring Boot 4.1.0 + Maven wrapper (`./mvnw`, Maven 3.9.16). `pom.xml:16` pins `java.version=25` — ensure JDK 25 is active (`java -version`).
 - Spring Data JPA + MySQL 8.4 (`mysql-connector-j` runtime) in `dev`; H2 in-memory (`com.h2database:h2`, test scope) in `test`.
-- **Flyway is active** (`spring-boot-starter-flyway` + `flyway-mysql`, `pom.xml:44-51`). Migrations live in `src/main/resources/db/migration/` (`V1__baseline.sql` .. `V16__add_status_users.sql`). `ddl-auto: validate` in dev — schema comes from migrations, not Hibernate. Never edit an applied migration (checksum breaks); add `V17__...`.
+- **Flyway is active** (`spring-boot-starter-flyway` + `flyway-mysql`, `pom.xml:44-51`). Migrations live in `src/main/resources/db/migration/` (`V1__baseline.sql` .. `V18__create_user_audit.sql`). `ddl-auto: validate` in dev — schema comes from migrations, not Hibernate. Never edit an applied migration (checksum breaks); add `V19__...`.
 - MapStruct 1.6.3 + Lombok. Both must stay in `pom.xml:103-113` `maven-compiler-plugin.annotationProcessorPaths` — removing either breaks generated mappers.
 
 ## Environments / Profiles
@@ -39,11 +39,12 @@ SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run   # explicit dev
 - REST base paths (all v1): `/v1/atletas`, `/v1/categorias`, `/v1/clubes`, `/v1/competicoes`, `/v1/equipes`, `/v1/modalidades`, `/v1/inscricoes-atletas`, `/v1/inscricoes-equipes`, `/v1/users`.
 - **Filtro de status**: todas as listagens aceitam `?status=VALOR` (enum do recurso); omitido = ativos + inativos. `GET /{id}` continua retornando inativos.
 - **Auth (versionado)**: `POST /v1/auth/register` (`username`, `email`, `password`; role sempre `USER`) e `POST /v1/auth/login` (`email`, `password`).
-- **Módulo `security`**: `security/config` (`SecurityConfig`, `JwtAuthenticationFilter`, `Rest*`), `security/jwt` (`JwtService`, `TokenProperties`), `security/auth` (`AuthController`, `AuthService`, `CustomUserDetailsService`, `UserRepository`), `security/users` (`User`, `UserRole`, `UserStatus`, `UserDetailsAdapter`, `UserController`, `UserService`, `UserMapper`, `UserSpecifications`, `dto/*`).
+- **Módulo `security`**: `security/config` (`SecurityConfig`, `JwtAuthenticationFilter`, `Rest*`), `security/jwt` (`JwtService`, `TokenProperties`), `security/auth` (`AuthController`, `AuthService`, `CustomUserDetailsService`, `UserRepository`), `security/users` (`User`, `UserRole`, `UserStatus`, `UserDetailsAdapter`, `UserController`, `UserService`, `UserMapper`, `UserSpecifications`, `UserAudit`, `UserAuditService`, `dto/*`).
 - **Identidade**: email é único (`uk_db_users_email`, V13) e é o `sub` do JWT; username **não** é único (V14 adicionou, V15 removeu) e é apenas descritivo. A entidade `User` não implementa mais `UserDetails`; `UserDetailsAdapter` (record em `security/users`) embrulha a entidade e devolve **email** em `getUsername()`, então `Authentication.getName()` é o email.
-- **Autorização** (`SecurityConfig`): `/v1/auth/**` público; `/v1/users/**` exige `ADMIN`; `GET /v1/**` exige `USER` ou `ADMIN`; `POST`/`PATCH`/`PUT`/`DELETE /v1/**` exige `ADMIN`; demais requests exigem `USER`. `ADMIN` também carrega `ROLE_USER` (`UserDetailsAdapter.getAuthorities`).
+- **Autorização** (`SecurityConfig`): `/v1/auth/**` público; `GET /v1/users/**` exige `ADMIN` ou `SUPERADMIN`; escrita em `/v1/users/**` e `GET /v1/users/audit` exige `SUPERADMIN`; `GET /v1/**` exige `USER` ou `ADMIN`; `POST`/`PATCH`/`PUT`/`DELETE /v1/**` exige `ADMIN`; demais requests exigem `USER`. `ADMIN` carrega `ROLE_ADMIN`+`ROLE_USER`; `SUPERADMIN` carrega `ROLE_SUPERADMIN`+`ROLE_ADMIN`+`ROLE_USER` (`UserDetailsAdapter.getAuthorities`).
 - Atleta: `GET /?nome=&status=&page=&size=`, `GET /{id}`, `POST /`, `PUT /{id}`, `PATCH /{id}/status`. Paginated — `AtletaService.java:22` returns `Page`.
-- **Users (admin)**: `GET /v1/users?search=&status=`, `GET /v1/users/{id}`, `POST /v1/users`, `PUT /v1/users/{id}` (senha opcional), `PATCH /v1/users/{id}/status` (soft delete).
+- **Users**: `GET /v1/users?search=&status=` e `GET /v1/users/{id}` (ADMIN/SUPERADMIN); `POST /v1/users`, `PUT /v1/users/{id}` (senha opcional) e `PATCH /v1/users/{id}/status` (soft delete) só `SUPERADMIN`; `GET /v1/users/audit` só `SUPERADMIN`.
+- **Regras de usuário**: `ADMIN` é somente leitura em `/v1/users`. `SUPERADMIN` não cria/promove `SUPERADMIN` pela API (só o seed da `V17`), não altera o próprio `role`/`status`, não edita/inativa outro `SUPERADMIN` e pode editar o próprio perfil (mantendo `role`).
 - Inscrições de atleta têm `PUT /v1/inscricoes-atletas/{id}` para editar apenas `numeroCamisa`; inscrições de equipe são imutáveis (cancele e crie outra).
 - DTOs are `record`s. Mapping via MapStruct `componentModel="spring"`.
 
@@ -59,6 +60,8 @@ SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run   # explicit dev
 - **Token inválido no filtro**: `JwtService.extractEmail` lança `TokenInvalidoException`; o `JwtAuthenticationFilter` captura e segue a request sem autenticação (sem 500/NPE). O status final é tratado pelo `RestAuthenticationEntryPoint` (sem token/inválido → 401 JSON) e pelo `RestAccessDeniedHandler` (role insuficiente → 403 JSON).
 - **Usuário inativo**: `UserStatus` (ATIVO/INATIVO, coluna `status` criada na `V16`) é checado em `UserDetailsAdapter.isEnabled()`. O filtro JWT aplica `.filter(UserDetailsAdapter::isEnabled)`, então token já emitido de usuário inativado deixa de autenticar; o login também é bloqueado.
 - **Soft delete**: é apenas `status` (`ATIVO/INATIVO`, ou `CANCELADA` em competição/inscrição). Não há `@SQLDelete`/`@Where`: listagens trazem inativos a menos que o cliente envie `?status=`; uniques (CPF, email, número de camisa) continuam ocupados.
+- **Bootstrap SUPERADMIN**: `V17__promote_seed_superadmin.sql` promove `admin@quixada.gov.br` (seed da `V11`) a `SUPERADMIN` e garante `status=ATIVO`. A senha padrão é `admin@123` — troque no primeiro acesso via `PUT /v1/users/{id}` (auto-edição de perfil).
+- **Auditoria de usuários**: `V18__create_user_audit.sql` cria `db_user_audit`; `UserService` grava `CREATE`/`UPDATE`/`STATUS_CHANGE` via `UserAuditService` (nunca registra senha). Leitura em `GET /v1/users/audit` (SUPERADMIN).
 - **Política de senha**: aplicada em `RegisterRequest` (`@Size(min = 8, max = 72)`; BCrypt ignora bytes além de 72).
 - **`@CreationTimestamp` Hibernate-specific** (`Atleta.java`) — tied to Hibernate, not Spring Data auditing. Tests need a full context.
 - **Iteration notes**: `src/main/java/br/gov/quixada/esporte/iterations/` (`decisoes.md`, `futuras-iterações.md`, `estudos.md`, `securityfixes.md`, `fixes.md`) is the roadmap/decision record — check before large refactors. QA report: `docs/qa/relatorio-testes-unitarios.html` (tracked).

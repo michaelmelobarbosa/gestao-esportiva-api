@@ -189,3 +189,13 @@
 - [ ] `Infra ponto 9` — Java25/Boot4.1/MapStruct compat + separar `application-dev/prod.yaml` + OpenAPI (ver item `7`)
 
 > Ao implementar os itens `1`/`2`, descomentar o método correspondente em `AtletaService.java` e expor o endpoint em `AtletaController.java`.
+
+---
+
+## Governança de usuários
+
+- [x] Perfil `SUPERADMIN` + invariantes: `ADMIN` é somente leitura em `/v1/users`; mutações só `SUPERADMIN`; ninguém altera o próprio `role`/`status`; outro `SUPERADMIN` não é editável/inativável.
+- [x] Bootstrap: `V17__promote_seed_superadmin.sql` promove `admin@quixada.gov.br`.
+- [x] Auditoria: `V18__create_user_audit.sql` + `GET /v1/users/audit` (SUPERADMIN).
+- [ ] Criar novos `SUPERADMIN` (hoje só o seed) — decidir se haverá endpoint e regra de “último SUPERADMIN”.
+- [ ] Auditoria: filtros por ator/alvo/período, retenção/expurgo e exportação.

@@ -39,7 +39,10 @@ public class SecurityConfig {
                         .accessDeniedHandler(restAccessDeniedHandler))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/v1/auth/**").permitAll()
-                        .requestMatchers("/v1/users", "/v1/users/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/v1/users/audit").hasRole("SUPERADMIN")
+                        .requestMatchers(HttpMethod.GET, "/v1/users", "/v1/users/**")
+                        .hasAnyRole("ADMIN", "SUPERADMIN")
+                        .requestMatchers("/v1/users", "/v1/users/**").hasRole("SUPERADMIN")
 
                         .requestMatchers(HttpMethod.GET, "/v1/**")
                         .hasAnyRole("ADMIN", "USER")

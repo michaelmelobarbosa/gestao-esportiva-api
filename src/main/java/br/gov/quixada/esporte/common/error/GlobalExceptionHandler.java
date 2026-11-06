@@ -26,6 +26,7 @@ import br.gov.quixada.esporte.inscricao.exception.NumeroCamisaJaUtilizadoExcepti
 import br.gov.quixada.esporte.modalidade.exception.ModalidadeInativaException;
 import br.gov.quixada.esporte.modalidade.exception.ModalidadeNotFoundException;
 import br.gov.quixada.esporte.security.auth.exception.EmailJaCadastradoException;
+import br.gov.quixada.esporte.security.users.exception.OperacaoNaoPermitidaException;
 import br.gov.quixada.esporte.security.users.exception.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
@@ -64,6 +65,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<ApiError> handleUserNotFound(UserNotFoundException ex, HttpServletRequest request) {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(OperacaoNaoPermitidaException.class)
+    public ResponseEntity<ApiError> handleOperacaoNaoPermitida(OperacaoNaoPermitidaException ex,
+                                                               HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, ex.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(AuthenticationException.class)
