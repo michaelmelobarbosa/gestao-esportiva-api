@@ -1,6 +1,9 @@
 package br.gov.quixada.esporte.clube;
 
 import br.gov.quixada.esporte.clube.exception.ClubeNotFoundException;
+import br.gov.quixada.esporte.common.error.VinculoAtivoException;
+import br.gov.quixada.esporte.equipe.EquipeRepository;
+import br.gov.quixada.esporte.equipe.StatusEquipe;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -12,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ClubeService {
 
     private final ClubeRepository repository;
+    private final EquipeRepository equipeRepository;
 
     @Transactional(readOnly = true)
     public Page<Clube> findAll(String nome, StatusClube status, Pageable pageable) {
@@ -45,6 +49,9 @@ public class ClubeService {
     @Transactional
     public Clube inativar(Long id) {
         Clube clube = findByIdOrThrowNotFound(id);
+        if (equipeRepository.existsByClubeIdAndStatus(id, StatusEquipe.ATIVO)) {
+            throw new VinculoAtivoException("Clube possui equipes ativas e não pode ser inativado");
+        }
         clube.inativar();
         return clube;
     }

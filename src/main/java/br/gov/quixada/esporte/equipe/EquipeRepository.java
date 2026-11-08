@@ -27,4 +27,8 @@ public interface EquipeRepository extends JpaRepository<Equipe, Long> {
     @Override
     @EntityGraph(attributePaths = {"clube", "modalidade"})
     Optional<Equipe> findById(Long id);
+
+    boolean existsByClubeIdAndStatus(Long clubeId, StatusEquipe status);
+
+    boolean existsByModalidadeIdAndStatus(Long modalidadeId, StatusEquipe status);
 }

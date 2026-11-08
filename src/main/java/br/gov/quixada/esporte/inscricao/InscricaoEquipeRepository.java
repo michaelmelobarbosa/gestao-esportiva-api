@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -17,6 +19,15 @@ public interface InscricaoEquipeRepository extends JpaRepository<InscricaoEquipe
 
     @EntityGraph(attributePaths = {"competicao", "categoria", "equipe"})
     Page<InscricaoEquipe> findByCompeticaoId(Long competicaoId, Pageable pageable);
+
+    List<InscricaoEquipe> findByCompeticaoId(Long competicaoId);
+
+    boolean existsByCompeticaoIdAndEquipeIdAndStatusIn(Long competicaoId, Long equipeId,
+                                                       Collection<StatusInscricao> statuses);
+
+    boolean existsByEquipeIdAndStatusIn(Long equipeId, Collection<StatusInscricao> statuses);
+
+    boolean existsByCategoriaIdAndStatusIn(Long categoriaId, Collection<StatusInscricao> statuses);
 
     @EntityGraph(attributePaths = {"competicao", "categoria", "equipe"})
     Page<InscricaoEquipe> findByStatus(StatusInscricao status, Pageable pageable);

@@ -8,13 +8,19 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Optional;
 
 import br.gov.quixada.esporte.competicao.exception.CompeticaoNaoEditavelException;
 import br.gov.quixada.esporte.competicao.exception.CompeticaoNotFoundException;
 import br.gov.quixada.esporte.competicao.exception.PeriodoInvalidoException;
+import br.gov.quixada.esporte.competicao.exception.TransicaoStatusCompeticaoException;
+import br.gov.quixada.esporte.inscricao.InscricaoEquipeService;
 import br.gov.quixada.esporte.modalidade.Modalidade;
+import br.gov.quixada.esporte.partida.PartidaService;
 import br.gov.quixada.esporte.modalidade.ModalidadeRepository;
 import br.gov.quixada.esporte.modalidade.exception.ModalidadeNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,17 +46,26 @@ class CompeticaoServiceTest {
     @Mock
     private ModalidadeRepository modalidadeRepository;
 
+    @Mock
+    private InscricaoEquipeService inscricaoEquipeService;
+
+    @Mock
+    private PartidaService partidaService;
+
     private CompeticaoService service;
 
     @BeforeEach
     void setUp() {
-        service = new CompeticaoService(repository, modalidadeRepository);
+        var clock = Clock.fixed(Instant.parse("2026-06-15T12:00:00Z"), ZoneId.of("America/Fortaleza"));
+        service = new CompeticaoService(repository, modalidadeRepository, inscricaoEquipeService, partidaService, clock);
     }
 
     private Competicao umaCompeticao(StatusCompeticao status) {
         return Competicao.builder()
                 .nome("Copa Teste")
                 .ano(2026)
+                .dataInicioInscricao(LocalDate.of(2025, 11, 1))
+                .dataFimInscricao(LocalDate.of(2025, 12, 1))
                 .dataInicio(LocalDate.of(2026, 1, 1))
                 .dataFim(LocalDate.of(2026, 1, 31))
                 .status(status)
@@ -182,33 +197,28 @@ class CompeticaoServiceTest {
     class AlterarStatus {
 
         @Test
-        @DisplayName("deve alterar o status e não chamar save")
-        void deveAlterarStatus() {
+        @DisplayName("deve cancelar e propagar o cancelamento para as inscrições")
+        void deveCancelarCompeticao() {
             Competicao competicao = umaCompeticao(StatusCompeticao.PLANEJAMENTO);
             when(repository.findById(1L)).thenReturn(Optional.of(competicao));
 
-            Competicao resultado = service.alterarStatus(1L, StatusCompeticao.INSCRICOES_ABERTAS);
+            Competicao resultado = service.alterarStatus(1L, StatusCompeticao.CANCELADA);
 
-            assertThat(resultado.getStatus()).isEqualTo(StatusCompeticao.INSCRICOES_ABERTAS);
-            verify(repository, never()).save(any(Competicao.class));
+            assertThat(resultado.getStatus()).isEqualTo(StatusCompeticao.CANCELADA);
+            verify(inscricaoEquipeService).cancelarPorCompeticao(1L);
         }
 
         @Test
-        @DisplayName("deve manter o status quando for o mesmo (idempotência)")
-        void deveManterStatusQuandoIgual() {
-            Competicao competicao = umaCompeticao(StatusCompeticao.EM_ANDAMENTO);
-            when(repository.findById(1L)).thenReturn(Optional.of(competicao));
-
-            Competicao resultado = service.alterarStatus(1L, StatusCompeticao.EM_ANDAMENTO);
-
-            assertThat(resultado.getStatus()).isEqualTo(StatusCompeticao.EM_ANDAMENTO);
-            verify(repository, never()).save(any(Competicao.class));
+        @DisplayName("deve proibir alteração manual de status que não seja CANCELADA")
+        void deveProibirStatusManual() {
+            assertThatThrownBy(() -> service.alterarStatus(1L, StatusCompeticao.INSCRICOES_ABERTAS))
+                    .isInstanceOf(TransicaoStatusCompeticaoException.class);
         }
 
         @Test
         @DisplayName("deve lançar CompeticaoNotFoundException quando o id não existir")
         void deveLancarNotFoundQuandoInexistente() {
-            assertThatThrownBy(() -> service.alterarStatus(1L, StatusCompeticao.EM_ANDAMENTO))
+            assertThatThrownBy(() -> service.alterarStatus(1L, StatusCompeticao.CANCELADA))
                     .isInstanceOf(CompeticaoNotFoundException.class)
                     .hasMessage("Competição não encontrada");
         }
@@ -222,6 +232,8 @@ class CompeticaoServiceTest {
             return Competicao.builder()
                     .nome("Copa Nova")
                     .ano(2027)
+                    .dataInicioInscricao(LocalDate.of(2026, 10, 1))
+                    .dataFimInscricao(LocalDate.of(2026, 11, 1))
                     .dataInicio(LocalDate.of(2027, 2, 1))
                     .dataFim(LocalDate.of(2027, 2, 28))
                     .build();

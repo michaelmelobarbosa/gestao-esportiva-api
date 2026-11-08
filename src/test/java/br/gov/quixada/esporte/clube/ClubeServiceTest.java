@@ -12,6 +12,7 @@ import java.util.Optional;
 
 import br.gov.quixada.esporte.clube.exception.ClubeInativoException;
 import br.gov.quixada.esporte.clube.exception.ClubeNotFoundException;
+import br.gov.quixada.esporte.equipe.EquipeRepository;
 import br.gov.quixada.esporte.extras.Endereco;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -33,11 +34,14 @@ class ClubeServiceTest {
     @Mock
     private ClubeRepository repository;
 
+    @Mock
+    private EquipeRepository equipeRepository;
+
     private ClubeService service;
 
     @BeforeEach
     void setUp() {
-        service = new ClubeService(repository);
+        service = new ClubeService(repository, equipeRepository);
     }
 
     private Clube umClube(StatusClube status) {

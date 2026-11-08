@@ -18,6 +18,7 @@ import br.gov.quixada.esporte.atleta.exception.AtletaNotFoundException;
 import br.gov.quixada.esporte.atleta.exception.CpfJaCadastradoException;
 import br.gov.quixada.esporte.extras.Endereco;
 import br.gov.quixada.esporte.extras.Sexo;
+import br.gov.quixada.esporte.inscricao.InscricaoAtletaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
@@ -44,11 +45,14 @@ class AtletaServiceTest {
     @Mock
     private AtletaRepository repository;
 
+    @Mock
+    private InscricaoAtletaRepository inscricaoAtletaRepository;
+
     private AtletaService service;
 
     @BeforeEach
     void setUp() {
-        service = new AtletaService(repository);
+        service = new AtletaService(repository, inscricaoAtletaRepository);
     }
 
     private Atleta umAtleta(StatusAtleta status) {

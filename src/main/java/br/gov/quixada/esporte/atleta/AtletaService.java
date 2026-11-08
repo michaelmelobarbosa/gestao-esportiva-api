@@ -4,7 +4,11 @@ import java.sql.SQLIntegrityConstraintViolationException;
 
 import br.gov.quixada.esporte.atleta.exception.AtletaNotFoundException;
 import br.gov.quixada.esporte.atleta.exception.CpfJaCadastradoException;
+import br.gov.quixada.esporte.common.error.VinculoAtivoException;
+import br.gov.quixada.esporte.extras.CpfUtils;
 import br.gov.quixada.esporte.extras.NomeCompletoUtils;
+import br.gov.quixada.esporte.inscricao.InscricaoAtletaRepository;
+import br.gov.quixada.esporte.inscricao.StatusInscricao;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -17,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AtletaService {
 
     private final AtletaRepository repository;
+    private final InscricaoAtletaRepository inscricaoAtletaRepository;
 
 
     @Transactional(readOnly = true)
@@ -37,11 +42,11 @@ public class AtletaService {
                 .orElseThrow(() -> new AtletaNotFoundException("Atleta não encontrado"));
     }
 
-//    @Transactional(readOnly = true)
-//    public Atleta findByCpfOrThrowNotFound(String cpf) {
-//        return repository.findByCpf(CpfUtils.normalize(cpf))
-//                .orElseThrow(() -> new AtletaNotFoundException("Atleta não encontrado"));
-//    }
+    @Transactional(readOnly = true)
+    public Atleta findByCpfOrThrowNotFound(String cpf) {
+        return repository.findByCpf(CpfUtils.normalize(cpf))
+                .orElseThrow(() -> new AtletaNotFoundException("Atleta não encontrado"));
+    }
 
     @Transactional
     public Atleta save(Atleta atleta) {
@@ -78,6 +83,9 @@ public class AtletaService {
     @Transactional
     public Atleta inativar(Long id) {
         Atleta atleta = findByIdOrThrowNotFound(id);
+        if (inscricaoAtletaRepository.existsByAtletaIdAndStatusIn(id, StatusInscricao.OCUPAM_VAGA)) {
+            throw new VinculoAtivoException("Atleta possui inscrições ativas e não pode ser inativado");
+        }
         atleta.inativar();
         return atleta;
     }

@@ -10,6 +10,8 @@ import static org.mockito.Mockito.when;
 
 import java.util.Optional;
 
+import br.gov.quixada.esporte.competicao.CompeticaoRepository;
+import br.gov.quixada.esporte.equipe.EquipeRepository;
 import br.gov.quixada.esporte.modalidade.exception.ModalidadeInativaException;
 import br.gov.quixada.esporte.modalidade.exception.ModalidadeNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,11 +34,17 @@ class ModalidadeServiceTest {
     @Mock
     private ModalidadeRepository repository;
 
+    @Mock
+    private EquipeRepository equipeRepository;
+
+    @Mock
+    private CompeticaoRepository competicaoRepository;
+
     private ModalidadeService service;
 
     @BeforeEach
     void setUp() {
-        service = new ModalidadeService(repository);
+        service = new ModalidadeService(repository, equipeRepository, competicaoRepository);
     }
 
     private Modalidade umaModalidade(StatusModalidade status) {

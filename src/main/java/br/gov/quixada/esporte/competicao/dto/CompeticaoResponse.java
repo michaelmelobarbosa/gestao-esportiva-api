@@ -10,6 +10,8 @@ public record CompeticaoResponse(
         Integer ano,
         Long modalidadeId,
         String modalidadeNome,
+        LocalDate dataInicioInscricao,
+        LocalDate dataFimInscricao,
         LocalDate dataInicio,
         LocalDate dataFim,
         StatusCompeticao status

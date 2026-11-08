@@ -18,12 +18,14 @@ import br.gov.quixada.esporte.atleta.AtletaRepository;
 import br.gov.quixada.esporte.atleta.exception.AtletaNotFoundException;
 import br.gov.quixada.esporte.categoria.Categoria;
 import br.gov.quixada.esporte.competicao.Competicao;
+import br.gov.quixada.esporte.competicao.StatusCompeticao;
 import br.gov.quixada.esporte.equipe.Equipe;
 import br.gov.quixada.esporte.inscricao.exception.AtletaForaDaCategoriaException;
 import br.gov.quixada.esporte.inscricao.exception.AtletaJaInscritoException;
 import br.gov.quixada.esporte.inscricao.exception.InscricaoAtletaNotFoundException;
 import br.gov.quixada.esporte.inscricao.exception.InscricaoEquipeNotFoundException;
 import br.gov.quixada.esporte.inscricao.exception.NumeroCamisaJaUtilizadoException;
+import br.gov.quixada.esporte.inscricao.exception.TransicaoStatusInvalidaException;
 import br.gov.quixada.esporte.modalidade.Modalidade;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -78,7 +80,8 @@ class InscricaoAtletaServiceTest {
     }
 
     private Categoria umaCategoria(Long id, Integer idadeMinima, Integer idadeMaxima) {
-        Competicao competicao = Competicao.builder().id(1L).nome("Copa Teste").build();
+        Competicao competicao = Competicao.builder().id(1L).nome("Copa Teste")
+                .status(StatusCompeticao.INSCRICOES_ABERTAS).build();
         return Categoria.builder()
                 .id(id)
                 .nome("Sub-20")
@@ -91,7 +94,9 @@ class InscricaoAtletaServiceTest {
     private InscricaoEquipe umaInscricaoEquipe(Categoria categoria) {
         return InscricaoEquipe.builder()
                 .id(1L)
-                .competicao(Competicao.builder().id(1L).nome("Copa Teste").build())
+                .competicao(Competicao.builder().id(1L).nome("Copa Teste")
+                        .status(StatusCompeticao.INSCRICOES_ABERTAS).build())
+                .status(StatusInscricao.PENDENTE)
                 .categoria(categoria)
                 .equipe(umaEquipe(3L, 10L))
                 .build();
@@ -204,7 +209,7 @@ class InscricaoAtletaServiceTest {
             Atleta atleta = umAtleta(LocalDate.of(2000, 6, 15));
             when(inscricaoEquipeRepository.findById(1L)).thenReturn(Optional.of(inscricaoEquipe));
             when(atletaRepository.findById(2L)).thenReturn(Optional.of(atleta));
-            when(repository.existsByInscricaoEquipeIdAndAtletaId(1L, 2L)).thenReturn(true);
+            when(repository.existsByInscricaoEquipeIdAndAtletaIdAndStatusIn(1L, 2L, StatusInscricao.OCUPAM_VAGA)).thenReturn(true);
             InscricaoAtleta inscricao = InscricaoAtleta.builder().numeroCamisa("10").build();
 
             assertThatThrownBy(() -> service.save(inscricao, 1L, 2L))
@@ -219,7 +224,7 @@ class InscricaoAtletaServiceTest {
             Atleta atleta = umAtleta(LocalDate.of(2000, 6, 15));
             when(inscricaoEquipeRepository.findById(1L)).thenReturn(Optional.of(inscricaoEquipe));
             when(atletaRepository.findById(2L)).thenReturn(Optional.of(atleta));
-            when(repository.existsByInscricaoEquipeCompeticaoIdAndAtletaId(1L, 2L)).thenReturn(true);
+            when(repository.existsByInscricaoEquipeCompeticaoIdAndAtletaIdAndStatusIn(1L, 2L, StatusInscricao.OCUPAM_VAGA)).thenReturn(true);
             InscricaoAtleta inscricao = InscricaoAtleta.builder().numeroCamisa("10").build();
 
             assertThatThrownBy(() -> service.save(inscricao, 1L, 2L))
@@ -234,7 +239,7 @@ class InscricaoAtletaServiceTest {
             Atleta atleta = umAtleta(LocalDate.of(2000, 6, 15));
             when(inscricaoEquipeRepository.findById(1L)).thenReturn(Optional.of(inscricaoEquipe));
             when(atletaRepository.findById(2L)).thenReturn(Optional.of(atleta));
-            when(repository.existsByInscricaoEquipeIdAndNumeroCamisa(1L, "10")).thenReturn(true);
+            when(repository.existsByInscricaoEquipeIdAndNumeroCamisaAndStatusIn(1L, "10", StatusInscricao.OCUPAM_VAGA)).thenReturn(true);
             InscricaoAtleta inscricao = InscricaoAtleta.builder().numeroCamisa("10").build();
 
             assertThatThrownBy(() -> service.save(inscricao, 1L, 2L))
@@ -300,6 +305,16 @@ class InscricaoAtletaServiceTest {
 
             assertThat(resultado.getStatus()).isEqualTo(StatusInscricao.APROVADA);
             verify(repository, never()).save(any(InscricaoAtleta.class));
+        }
+
+        @Test
+        @DisplayName("deve bloquear transição a partir de CANCELADA")
+        void deveBloquearTransicaoDeCancelada() {
+            InscricaoAtleta inscricao = InscricaoAtleta.builder().status(StatusInscricao.CANCELADA).build();
+            when(repository.findById(1L)).thenReturn(Optional.of(inscricao));
+
+            assertThatThrownBy(() -> service.alterarStatus(1L, StatusInscricao.APROVADA))
+                    .isInstanceOf(TransicaoStatusInvalidaException.class);
         }
 
         @Test

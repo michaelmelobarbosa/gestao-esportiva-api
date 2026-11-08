@@ -199,3 +199,27 @@
 - [x] Auditoria: `V18__create_user_audit.sql` + `GET /v1/users/audit` (SUPERADMIN).
 - [ ] Criar novos `SUPERADMIN` (hoje só o seed) — decidir se haverá endpoint e regra de “último SUPERADMIN”.
 - [ ] Auditoria: filtros por ator/alvo/período, retenção/expurgo e exportação.
+
+---
+
+## Regras de negócio e core esportivo (2026-11-07)
+
+**Implementado:**
+- [x] Filtro `?status=` em todas as listagens (omitido = todos).
+- [x] Inscrição de equipe única por competição (somente service; sem unique no banco).
+- [x] `CANCELADA`/`REJEITADA` liberam vaga; `PENDENTE`/`APROVADA`/`INATIVA` ocupam.
+- [x] Máquina de estados de `StatusInscricao` e `StatusCompeticao`.
+- [x] Cascata: competição cancelada → inscrições/partidas; equipe cancelada/inativada → atletas/partidas.
+- [x] Bloqueio de inativação com vínculos ativos (atleta, equipe, categoria, clube, modalidade).
+- [x] Datas de inscrição + status automático da competição (`V19`, scheduler horário).
+- [x] Duplicidade de categoria por faixa etária idêntica entre categorias ativas.
+- [x] `@CPF` reativado e `GET /v1/atletas/cpf/{cpf}`.
+- [x] Partidas (`V20`), resultado e classificação 3/1/0.
+
+**Pendente:**
+- [ ] Geração automática de rodadas (turno único/returno).
+- [ ] Mínimo/máximo de elenco (decisão com equipe técnica).
+- [ ] Hard delete (somente após `INATIVO/CANCELADO`, ADMIN).
+- [ ] Criar novos `SUPERADMIN` pela API e regra de “último SUPERADMIN”.
+- [ ] Auditoria: filtros/retenção/exportação.
+- [ ] Testes de controller/mapper para os novos fluxos.

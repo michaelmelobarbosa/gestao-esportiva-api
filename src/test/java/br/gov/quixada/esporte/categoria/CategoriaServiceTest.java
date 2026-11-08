@@ -8,6 +8,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Optional;
 
 import br.gov.quixada.esporte.categoria.exception.CategoriaInativaException;
@@ -16,6 +19,7 @@ import br.gov.quixada.esporte.categoria.exception.IdadeInvalidaException;
 import br.gov.quixada.esporte.competicao.Competicao;
 import br.gov.quixada.esporte.competicao.CompeticaoRepository;
 import br.gov.quixada.esporte.competicao.exception.CompeticaoNotFoundException;
+import br.gov.quixada.esporte.inscricao.InscricaoEquipeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -39,11 +43,15 @@ class CategoriaServiceTest {
     @Mock
     private CompeticaoRepository competicaoRepository;
 
+    @Mock
+    private InscricaoEquipeRepository inscricaoEquipeRepository;
+
     private CategoriaService service;
 
     @BeforeEach
     void setUp() {
-        service = new CategoriaService(repository, competicaoRepository);
+        var clock = Clock.fixed(Instant.parse("2026-06-15T12:00:00Z"), ZoneId.of("America/Fortaleza"));
+        service = new CategoriaService(repository, competicaoRepository, inscricaoEquipeRepository, clock);
     }
 
     private Categoria umaCategoria(StatusCategoria status) {

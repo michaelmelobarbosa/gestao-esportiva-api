@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -29,11 +31,26 @@ public interface InscricaoAtletaRepository extends JpaRepository<InscricaoAtleta
     @EntityGraph(attributePaths = {"atleta", "inscricaoEquipe"})
     Optional<InscricaoAtleta> findById(Long id);
 
-    boolean existsByInscricaoEquipeIdAndAtletaId(Long inscricaoEquipeId, Long atletaId);
+    List<InscricaoAtleta> findByInscricaoEquipeId(Long inscricaoEquipeId);
 
-    boolean existsByInscricaoEquipeIdAndNumeroCamisa(Long inscricaoEquipeId, String numeroCamisa);
+    boolean existsByAtletaIdAndStatusIn(Long atletaId, Collection<StatusInscricao> statuses);
 
-    boolean existsByInscricaoEquipeIdAndNumeroCamisaAndIdNot(Long inscricaoEquipeId, String numeroCamisa, Long id);
+    boolean existsByInscricaoEquipeIdAndAtletaIdAndStatusIn(Long inscricaoEquipeId, Long atletaId,
+                                                            Collection<StatusInscricao> statuses);
 
-    boolean existsByInscricaoEquipeCompeticaoIdAndAtletaId(Long competicaoId, Long atletaId);
+    boolean existsByInscricaoEquipeIdAndNumeroCamisaAndStatusIn(Long inscricaoEquipeId, String numeroCamisa,
+                                                                Collection<StatusInscricao> statuses);
+
+    boolean existsByInscricaoEquipeCompeticaoIdAndAtletaIdAndStatusIn(Long competicaoId, Long atletaId,
+                                                                      Collection<StatusInscricao> statuses);
+
+    boolean existsByInscricaoEquipeIdAndAtletaIdAndIdNotAndStatusIn(Long inscricaoEquipeId, Long atletaId, Long id,
+                                                                   Collection<StatusInscricao> statuses);
+
+    boolean existsByInscricaoEquipeIdAndNumeroCamisaAndIdNotAndStatusIn(Long inscricaoEquipeId, String numeroCamisa,
+                                                                       Long id, Collection<StatusInscricao> statuses);
+
+    boolean existsByInscricaoEquipeCompeticaoIdAndAtletaIdAndIdNotAndStatusIn(Long competicaoId, Long atletaId,
+                                                                             Long id,
+                                                                             Collection<StatusInscricao> statuses);
 }

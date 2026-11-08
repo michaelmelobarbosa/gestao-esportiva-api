@@ -6,6 +6,7 @@ import java.util.List;
 import br.gov.quixada.esporte.atleta.exception.AtletaInativoException;
 import br.gov.quixada.esporte.atleta.exception.AtletaNotFoundException;
 import br.gov.quixada.esporte.atleta.exception.CpfJaCadastradoException;
+import br.gov.quixada.esporte.categoria.exception.CategoriaDuplicadaException;
 import br.gov.quixada.esporte.categoria.exception.CategoriaInativaException;
 import br.gov.quixada.esporte.categoria.exception.CategoriaNotFoundException;
 import br.gov.quixada.esporte.categoria.exception.IdadeInvalidaException;
@@ -14,17 +15,23 @@ import br.gov.quixada.esporte.clube.exception.ClubeNotFoundException;
 import br.gov.quixada.esporte.competicao.exception.CompeticaoNaoEditavelException;
 import br.gov.quixada.esporte.competicao.exception.CompeticaoNotFoundException;
 import br.gov.quixada.esporte.competicao.exception.PeriodoInvalidoException;
+import br.gov.quixada.esporte.competicao.exception.TransicaoStatusCompeticaoException;
 import br.gov.quixada.esporte.equipe.exception.EquipeInativaException;
 import br.gov.quixada.esporte.equipe.exception.EquipeNotFoundException;
 import br.gov.quixada.esporte.inscricao.exception.AtletaForaDaCategoriaException;
 import br.gov.quixada.esporte.inscricao.exception.AtletaJaInscritoException;
+import br.gov.quixada.esporte.inscricao.exception.EquipeJaInscritaException;
 import br.gov.quixada.esporte.inscricao.exception.InscricaoAtletaNotFoundException;
 import br.gov.quixada.esporte.inscricao.exception.InscricaoEquipeNotFoundException;
 import br.gov.quixada.esporte.inscricao.exception.InscricaoInvalidaException;
 import br.gov.quixada.esporte.inscricao.exception.InscricoesEncerradasException;
 import br.gov.quixada.esporte.inscricao.exception.NumeroCamisaJaUtilizadoException;
+import br.gov.quixada.esporte.inscricao.exception.TransicaoStatusInvalidaException;
 import br.gov.quixada.esporte.modalidade.exception.ModalidadeInativaException;
 import br.gov.quixada.esporte.modalidade.exception.ModalidadeNotFoundException;
+import br.gov.quixada.esporte.partida.exception.PartidaInvalidaException;
+import br.gov.quixada.esporte.partida.exception.PartidaNotFoundException;
+import br.gov.quixada.esporte.partida.exception.TransicaoStatusPartidaException;
 import br.gov.quixada.esporte.security.auth.exception.EmailJaCadastradoException;
 import br.gov.quixada.esporte.security.users.exception.OperacaoNaoPermitidaException;
 import br.gov.quixada.esporte.security.users.exception.UserNotFoundException;
@@ -108,6 +115,12 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 
+    @ExceptionHandler(CategoriaDuplicadaException.class)
+    public ResponseEntity<ApiError> handleCategoriaDuplicada(CategoriaDuplicadaException ex,
+                                                             HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
     @ExceptionHandler(ClubeInativoException.class)
     public ResponseEntity<ApiError> handleClubeInativo(ClubeInativoException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
@@ -158,6 +171,22 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 
+    @ExceptionHandler(EquipeJaInscritaException.class)
+    public ResponseEntity<ApiError> handleEquipeJaInscrita(EquipeJaInscritaException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(TransicaoStatusInvalidaException.class)
+    public ResponseEntity<ApiError> handleTransicaoStatusInvalida(TransicaoStatusInvalidaException ex,
+                                                                  HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(VinculoAtivoException.class)
+    public ResponseEntity<ApiError> handleVinculoAtivo(VinculoAtivoException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
     @ExceptionHandler(NumeroCamisaJaUtilizadoException.class)
     public ResponseEntity<ApiError> handleNumeroCamisaJaUtilizado(NumeroCamisaJaUtilizadoException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
@@ -175,6 +204,28 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(CompeticaoNaoEditavelException.class)
     public ResponseEntity<ApiError> handleCompeticaoNaoEditavel(CompeticaoNaoEditavelException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(TransicaoStatusCompeticaoException.class)
+    public ResponseEntity<ApiError> handleTransicaoStatusCompeticao(TransicaoStatusCompeticaoException ex,
+                                                                    HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(PartidaNotFoundException.class)
+    public ResponseEntity<ApiError> handlePartidaNotFound(PartidaNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(PartidaInvalidaException.class)
+    public ResponseEntity<ApiError> handlePartidaInvalida(PartidaInvalidaException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(TransicaoStatusPartidaException.class)
+    public ResponseEntity<ApiError> handleTransicaoStatusPartida(TransicaoStatusPartidaException ex,
+                                                                 HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.Optional;
 
 @Repository
@@ -27,4 +28,6 @@ public interface CompeticaoRepository extends JpaRepository<Competicao, Long> {
     @Override
     @EntityGraph(attributePaths = "modalidade")
     Optional<Competicao> findById(Long id);
+
+    boolean existsByModalidadeIdAndStatusNotIn(Long modalidadeId, Collection<StatusCompeticao> statuses);
 }

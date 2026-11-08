@@ -3,6 +3,7 @@ package br.gov.quixada.esporte.atleta;
 
 import br.gov.quixada.esporte.atleta.dto.*;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -40,6 +41,15 @@ public class AtletaController {
         AtletaResponse response = mapper.toGetResponse(atleta, clock);
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/cpf/{cpf}")
+    public ResponseEntity<AtletaResponse> findByCpf(@PathVariable
+                                                    @Pattern(regexp = "\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}|\\d{11}",
+                                                            message = "CPF inválido")
+                                                    String cpf) {
+        Atleta atleta = service.findByCpfOrThrowNotFound(cpf);
+        return ResponseEntity.ok(mapper.toGetResponse(atleta, clock));
     }
 
     @PostMapping

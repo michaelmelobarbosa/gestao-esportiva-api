@@ -27,4 +27,11 @@ public interface CategoriaRepository extends JpaRepository<Categoria, Long> {
     @Override
     @EntityGraph(attributePaths = "competicao")
     Optional<Categoria> findById(Long id);
+
+    boolean existsByCompeticaoIdAndIdadeMinimaAndIdadeMaximaAndStatus(Long competicaoId, Integer idadeMinima,
+                                                                      Integer idadeMaxima, StatusCategoria status);
+
+    boolean existsByCompeticaoIdAndIdadeMinimaAndIdadeMaximaAndStatusAndIdNot(Long competicaoId, Integer idadeMinima,
+                                                                             Integer idadeMaxima, StatusCategoria status,
+                                                                             Long id);
 }

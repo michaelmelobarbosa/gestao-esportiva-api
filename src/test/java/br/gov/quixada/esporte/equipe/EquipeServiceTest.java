@@ -11,11 +11,14 @@ import static org.mockito.Mockito.when;
 import java.util.Optional;
 
 import br.gov.quixada.esporte.clube.Clube;
+import br.gov.quixada.esporte.clube.StatusClube;
 import br.gov.quixada.esporte.clube.ClubeRepository;
 import br.gov.quixada.esporte.clube.exception.ClubeNotFoundException;
 import br.gov.quixada.esporte.equipe.exception.EquipeInativaException;
 import br.gov.quixada.esporte.equipe.exception.EquipeNotFoundException;
+import br.gov.quixada.esporte.inscricao.InscricaoEquipeRepository;
 import br.gov.quixada.esporte.modalidade.Modalidade;
+import br.gov.quixada.esporte.modalidade.StatusModalidade;
 import br.gov.quixada.esporte.modalidade.ModalidadeRepository;
 import br.gov.quixada.esporte.modalidade.exception.ModalidadeNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,11 +47,14 @@ class EquipeServiceTest {
     @Mock
     private ModalidadeRepository modalidadeRepository;
 
+    @Mock
+    private InscricaoEquipeRepository inscricaoEquipeRepository;
+
     private EquipeService service;
 
     @BeforeEach
     void setUp() {
-        service = new EquipeService(repository, clubeRepository, modalidadeRepository);
+        service = new EquipeService(repository, clubeRepository, modalidadeRepository, inscricaoEquipeRepository);
     }
 
     private Equipe umaEquipe(StatusEquipe status) {
@@ -62,12 +68,14 @@ class EquipeServiceTest {
     private Clube umClube() {
         return Clube.builder()
                 .nome("Clube A")
+                .status(StatusClube.ATIVO)
                 .build();
     }
 
     private Modalidade umaModalidade() {
         return Modalidade.builder()
                 .nome("Futebol")
+                .status(StatusModalidade.ATIVO)
                 .build();
     }
 
