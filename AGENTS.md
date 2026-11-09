@@ -70,5 +70,5 @@ SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run   # explicit dev
 - **Auditoria de usuários**: `V18__create_user_audit.sql` cria `db_user_audit`; `UserService` grava `CREATE`/`UPDATE`/`STATUS_CHANGE` via `UserAuditService` (nunca registra senha). Leitura em `GET /v1/users/audit` (SUPERADMIN).
 - **Política de senha**: aplicada em `RegisterRequest` (`@Size(min = 8, max = 72)`; BCrypt ignora bytes além de 72).
 - **`@CreationTimestamp` Hibernate-specific** (`Atleta.java`) — tied to Hibernate, not Spring Data auditing. Tests need a full context.
-- **Iteration notes**: `src/main/java/br/gov/quixada/esporte/iterations/` (`decisoes.md`, `futuras-iterações.md`, `estudos.md`, `securityfixes.md`, `fixes.md`) is the roadmap/decision record — check before large refactors. QA report: `docs/qa/relatorio-testes-unitarios.html` (tracked).
+- **Iteration notes**: `src/main/java/br/gov/quixada/esporte/iterations/pendencias.md` is the consolidated roadmap of everything not yet implemented/pending — check before large refactors. QA report: `docs/qa/relatorio-testes-unitarios.html` (tracked).
 - **Git**: current work branch is `dev`; `main` recebe PRs de `dev` (PR #8 já mergeado). No CI / lint / formatter config, no `.github/`, no `opencode.json`. `HELP.md` is Spring Initializr boilerplate.

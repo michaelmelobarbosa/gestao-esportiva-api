@@ -1,0 +1,161 @@
+# Pendências — Gestão Esportiva API
+
+> Arquivo consolidado em 2026-11-09. Reúne **tudo que ainda não foi implementado ou está pendente** no projeto, extraído de `decisoes.md`, `estudos.md`, `fixes.md`, `futuras-iterações.md` e `securityfixes.md` (removidos após a consolidação).
+>
+> Itens já concluídos foram descartados; aqui ficam apenas as lacunas reais, verificadas contra o código.
+>
+> Prioridades: **P0** crítico/explorável · **P1** importante · **P2** melhoria/boa prática.
+
+---
+
+## Checklist
+
+### Segurança / Autenticação
+- [ ] **A5** — Rate limiting / lockout no login (P0)
+- [ ] **C6** — Refresh token / logout / revogação (P2)
+- [ ] **C7** — (Opcional) roles como claim do JWT (P2)
+- [ ] **C8** — Configurar CORS (P2)
+
+### Usuários / Governança
+- [ ] Criar novos `SUPERADMIN` pela API + regra de "último SUPERADMIN" (P1)
+- [ ] Auditoria: filtros por ator/alvo/período, retenção/expurgo e exportação (P2)
+
+### Atleta
+- [ ] `hardDelete` + endpoint `DELETE /v1/atletas/{id}` (P1)
+- [ ] `AtletaControllerTest` (P1)
+- [ ] `AtletaMapperTest` (P1)
+- [ ] Configurar `MockMvc` + `Clock` fixo nos testes de controller (P1)
+
+### Testes dos novos fluxos
+- [ ] Testes de controller/mapper para competição, inscrição, partida e classificação (P1)
+
+### Core esportivo
+- [ ] Geração automática de rodadas (turno único / returno) (P1)
+- [ ] Mínimo / máximo de elenco — decisão com equipe técnica (P1)
+
+### Infra / Documentação
+- [ ] OpenAPI/springdoc + `@Tag`/`@Operation` (P2)
+- [ ] README + documentação da estratégia de versionamento (P2)
+- [ ] `application-prod.yaml` + separar config dev/prod (P2)
+- [ ] Verificar compatibilidade Java 25 + Spring Boot 4.1.0 + MapStruct 1.6.3 (P2)
+- [ ] CI (GitHub Actions) rodando `./mvnw test` (P2)
+- [ ] Testcontainers (opcional) (P2)
+
+---
+
+## Detalhamento
+
+### A5 — Rate limiting / lockout no login (P0)
+- **Onde:** `security/auth/AuthController` (`/v1/auth/login`), `security/users/User` (`isAccountNonLocked`), `security/config/SecurityConfig`.
+- **Situação:** hoje é possível tentar senhas infinitamente; `isAccountNonLocked()` retorna sempre `true`. Não há `bucket4j`/`Resilience4j` no `pom.xml`.
+- **Por quê:** é a defesa contra força bruta em um endpoint público de login.
+- **Como implementar (opções):**
+  1. Rate limit por IP/usuário com `bucket4j` ou `Resilience4j` (ex.: N tentativas por minuto).
+  2. Lockout usando o `User`: campos `tentativasFalhas`/`bloqueadoAte` e `isAccountNonLocked()` refletindo isso; requer migration nova.
+  3. WAF/proxy (nginx, API Gateway) na infraestrutura.
+- **Como testar:** várias tentativas de login com senha errada → a partir da N-ésima, `429` (rate limit) ou `401` com conta bloqueada.
+
+### C6 — Refresh token / logout / revogação (P2)
+- **Onde:** fluxo de auth como um todo (`security/jwt/JwtService`, `security/auth/AuthController`).
+- **Situação:** o token dura `2h` (`api.security.token.expiration`) e não há refresh nem logout no servidor.
+- **Por quê:** ao expirar, o usuário precisa logar de novo; não há como invalidar um token antes do vencimento (ex.: troca de senha, logout). JWT puro não resolve.
+- **Como implementar:** definir a estratégia de sessão de longo prazo — refresh token + blacklist/allowlist. O pacote `security/jwt` já foi separado justamente para preparar isso.
+- **Como testar:** revogar token e verificar que passa a responder `401`; refresh emite novo access token.
+
+### C7 — (Opcional) roles como claim do JWT (P2)
+- **Onde:** `security/jwt/JwtService` + `security/config/JwtAuthenticationFilter`.
+- **Situação:** o filtro faz **um SELECT no banco por request** para carregar o usuário e suas authorities.
+- **Trade-off:** colocar as roles no token evita a consulta, mas perde a revogação imediata (token antigo mantém a role velha até expirar). Desempenho × revogação — decidir.
+
+### C8 — Configurar CORS (P2)
+- **Onde:** `security/config/SecurityConfig`.
+- **Situação:** não há nenhuma configuração de CORS.
+- **Por quê:** sem CORS, um front-end em outro domínio/porta será bloqueado pelo navegador.
+- **Como implementar:** definir origens permitidas conforme ambiente (dev/prod) via `CorsConfigurationSource` no `SecurityConfig`.
+
+### Criar novos `SUPERADMIN` pela API + regra de "último SUPERADMIN" (P1)
+- **Onde:** `security/users/UserService` (`create`/`update`), `security/users/UserController`.
+- **Situação:** hoje a API **bloqueia** criação e promoção de `SUPERADMIN` (`UserService.java:42-43,73-74`); o único `SUPERADMIN` é o seed da migration `V17`.
+- **Por quê:** a governança atual exige apenas o seed; se for necessário criar mais, é preciso um endpoint protegido e a regra de não remover/desativar o último `SUPERADMIN` do sistema.
+- **Como implementar:** endpoint `SUPERADMIN`-only, validação do invariante "pelo menos um `SUPERADMIN` ativo" e auditoria da ação.
+- **Como testar:** tentar inativar/rebaixar o último `SUPERADMIN` → `409`; criar/promover com token `SUPERADMIN` → sucesso.
+
+### Auditoria de usuários: filtros, retenção/expurgo e exportação (P2)
+- **Onde:** `security/users/UserController#findAudit` (`GET /v1/users/audit`), `security/users/UserAuditService#findAll`, `UserAuditRepository`, tabela `db_user_audit` (`V18`).
+- **Situação:** existe apenas `findAll(Pageable)` — sem filtros e sem exportação; não há política de retenção/expurgo.
+- **Como implementar:** filtros por ator/alvo/ação e intervalo de datas (Specifications), endpoint de exportação (CSV/JSON) e rotina/job de retenção.
+- **Como testar:** `GET /v1/users/audit?actorEmail=...&from=...&to=...`; expurgo remove registros fora da janela.
+
+### `hardDelete` de atleta + endpoint (P1)
+- **Onde:** `AtletaService.java:70-75` (método comentado) e `AtletaController` (não há `@DeleteMapping`).
+- **Situação:** o delete atual é sempre soft (`status`); `hardDelete` está adiado por decisão.
+- **Regra definida:** só permitir hard delete de registro já `INATIVO`/`CANCELADO`, e apenas para `ADMIN` (a role já existe; `DELETE /v1/**` já exige `ADMIN`).
+- **Como implementar:**
+  - Descomentar/implementar `AtletaService#hardDelete(Long id)`, bloqueando se `status == ATIVO`.
+  - Adicionar `@DeleteMapping("/{id}")` no `AtletaController`.
+  - Avaliar `ON DELETE` nas tabelas relacionadas (`inscricao`, `equipe`) via nova migration.
+- **Como testar:** `hardDelete` de atleta `ATIVO` → erro/`409`; de `INATIVO` por `ADMIN` → `204`.
+
+### `AtletaControllerTest` (P1)
+- **Onde:** `src/test/java/.../atleta/` (não existe).
+- **Cenários mínimos:** `POST /v1/atletas` válido → `201` + header `Location`; `POST` inválido → `400` com `errors[].field`; `PATCH /{id}/status` → `200`; `GET /v1/atletas/-1` → `400`; `PUT /{id}` em atleta inativo → `409`.
+- **Atenção:** controller versionado exige `ApiVersionStrategy` no MockMvc standalone (ver `AuthControllerTest`), senão lança `IllegalStateException`.
+
+### `AtletaMapperTest` (P1)
+- **Onde:** `src/test/java/.../atleta/` (não existe).
+- **Cenários:** `calcularIdade` com `Clock.fixed(...)`; `toEntity(AtletaUpdateRequest)` não mapear `cpf`; `toGetResponse`/`toResumo` com `dataNascimento == null` → `idade == null`.
+
+### Configurar `MockMvc` + `Clock` fixo nos testes de controller (P1)
+- **Onde:** testes de controller.
+- **Como:** `@Import(ClockConfig.class)` com `@TestConfiguration` sobrescrevendo o bean `Clock` por um `Clock.fixed(...)`.
+
+### Testes de controller/mapper dos novos fluxos (P1)
+- **Onde:** `src/test/java/.../` — hoje só existe `AuthControllerTest`.
+- **Escopo faltante:** competição, inscrição (`InscricaoAtleta`/`InscricaoEquipe`), partida e classificação — controllers e mappers.
+
+### Geração automática de rodadas (turno único / returno) (P1)
+- **Onde:** `partida/` (`Partida.rodada`, `PartidaCreateRequest.rodada`).
+- **Situação:** `rodada` é um campo informado manualmente; não há geração automática de tabela de jogos.
+- **Como implementar:** gerar confrontos a partir das inscrições `APROVADA` da competição/categoria (round-robin, turno único/returno), respeitando a regra de "uma equipe por rodada/horário".
+- **Como testar:** N equipes → quantidade/estrutura esperada de partidas; returno inverte mandante/visitante.
+
+### Mínimo / máximo de elenco (P1)
+- **Onde:** regras de `equipe`/`inscricao`.
+- **Situação:** não há validação de tamanho mínimo/máximo de elenco.
+- **Bloqueio:** depende de decisão com a equipe técnica sobre os limites por modalidade/categoria.
+- **Como implementar:** após a definição, validar no `InscricaoEquipeService` e cobrir em testes.
+
+### OpenAPI/springdoc + anotações (P2)
+- **Onde:** `pom.xml` (sem `springdoc-openapi-starter-webmvc-ui`), controllers.
+- **Como implementar:** adicionar a dependência, anotar controllers com `@Tag`/`@Operation`, expor `swagger-ui.html` e validar `GET /v1/atletas?nome=&page=0` e `POST` com `Location`.
+- **Atenção:** `spring.jpa.open-in-view=false` já está ligado — mapear DTOs dentro do `@Transactional` ou usar `@EntityGraph`/`JOIN FETCH`.
+
+### README + documentação da estratégia de versionamento (P2)
+- **Onde:** não há `README.md`.
+- **Situação:** versionamento nativo do Spring já implementado (`/v{version}/...`, `version = "1.0"`), mas não documentado.
+- **Como implementar:** README com setup, endpoints e decisão de versionamento (URL `/v1`; alternativa descartada: header `Accept: application/vnd...+json`; política de evolução/deprecação).
+
+### `application-prod.yaml` + separar config dev/prod (P2)
+- **Onde:** `src/main/resources/` (existem `application.yaml`, `application-dev.yaml`, `application-test.yaml`; falta `application-prod.yaml`).
+- **Situação:** `show-sql`/`format_sql` ficam ligados no default. `application-dev.yaml` já existe; falta o perfil de produção.
+- **Como implementar:** `application-prod.yaml` com `show-sql:false`, `format_sql:false`, `ddl-auto: validate` e `logging.level` adequado.
+
+### Verificar compatibilidade Java 25 + Boot 4.1.0 + MapStruct 1.6.3 (P2)
+- **Onde:** `pom.xml:16,89-99`.
+- **Situação:** combinação recente (2026); precisa confirmação contínua.
+- **Como verificar:** `./mvnw clean compile` deve gerar `*MapperImpl` sem warnings de `annotationProcessor`; testar upgrade de MapStruct se surgir problema com Java 25.
+
+### CI (GitHub Actions) (P2)
+- **Onde:** sem `.github/`.
+- **Como implementar:** workflow rodando `./mvnw verify` (perfil `test`/H2, sem MySQL) a cada PR.
+
+### Testcontainers (opcional) (P2)
+- **Onde:** testes de integração.
+- **Como implementar:** subir MySQL real em container para testes que dependam do dialeto/constraints do MySQL (hoje os testes usam H2 — o branch de `errorCode == 1062` do CPF não é exercitado).
+
+---
+
+## Bloqueios / decisões necessárias antes de implementar
+- **Mínimo/máximo de elenco:** depende da equipe técnica (limites por modalidade/categoria).
+- **Criação de `SUPERADMIN` pela API:** definir se haverá endpoint e a regra do "último SUPERADMIN".
+- **C6/C7:** definir trade-off entre revogação imediata e desempenho (SELECT por request × roles no token).
