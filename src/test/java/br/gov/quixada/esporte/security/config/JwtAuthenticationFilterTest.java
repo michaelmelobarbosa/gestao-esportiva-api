@@ -114,4 +114,21 @@ class JwtAuthenticationFilterTest {
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         assertThat(chain.getRequest()).isSameAs(request);
     }
+
+    @Test
+    @DisplayName("não deve autenticar usuário inativo")
+    void naoDeveAutenticarUsuarioInativo() throws Exception {
+        var user = new User("fulano", "fulano@example.com", "hash", UserRole.USER);
+        user.setStatus(br.gov.quixada.esporte.security.users.UserStatus.INATIVO);
+        when(jwtService.extractEmail("token")).thenReturn("fulano@example.com");
+        when(userRepository.findByEmail("fulano@example.com")).thenReturn(Optional.of(user));
+
+        var request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer token");
+        var chain = new MockFilterChain();
+
+        filter.doFilter(request, new MockHttpServletResponse(), chain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
 }

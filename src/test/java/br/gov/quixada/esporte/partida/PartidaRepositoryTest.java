@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,15 +27,19 @@ import br.gov.quixada.esporte.modalidade.Modalidade;
 @DisplayName("Partida — persistência")
 class PartidaRepositoryTest {
 
+    private static final LocalDateTime DATA_HORA = LocalDateTime.of(2026, 4, 1, 15, 0);
+
     @Autowired
     private TestEntityManager entityManager;
 
     @Autowired
     private PartidaRepository repository;
 
-    @Test
-    @DisplayName("deve salvar partida e buscar por competição/categoria")
-    void deveBuscarPorCompeticaoECategoria() {
+    private record Cenario(Competicao competicao, Categoria categoria,
+                           InscricaoEquipe inscricao, Partida partida) {
+    }
+
+    private Cenario cenario() {
         var modalidade = entityManager.persistFlushFind(Modalidade.builder().nome("Futebol").build());
 
         var competicao = entityManager.persistFlushFind(Competicao.builder()
@@ -78,16 +83,69 @@ class PartidaRepositoryTest {
 
         var partida = entityManager.persistFlushFind(Partida.builder()
                 .rodada(1)
-                .dataHora(LocalDateTime.of(2026, 4, 1, 15, 0))
+                .dataHora(DATA_HORA)
                 .local("Ginásio")
                 .inscricaoMandante(inscricaoEquipe)
                 .inscricaoVisitante(inscricaoEquipe)
                 .status(StatusPartida.AGENDADA)
                 .build());
 
-        var pagina = repository.findByCompeticaoAndCategoria(competicao.getId(), categoria.getId(),
-                PageRequest.of(0, 10));
+        return new Cenario(competicao, categoria, inscricaoEquipe, partida);
+    }
 
-        assertThat(pagina.getContent()).extracting(Partida::getId).containsExactly(partida.getId());
+    @Test
+    @DisplayName("deve salvar partida e buscar por competição/categoria")
+    void deveBuscarPorCompeticaoECategoria() {
+        var cenario = cenario();
+
+        var pagina = repository.findByCompeticaoAndCategoria(
+                cenario.competicao().getId(), cenario.categoria().getId(), PageRequest.of(0, 10));
+
+        assertThat(pagina.getContent()).extracting(Partida::getId)
+                .containsExactly(cenario.partida().getId());
+    }
+
+    @Test
+    @DisplayName("deve filtrar por competição isoladamente")
+    void deveFiltrarPorCompeticao() {
+        var cenario = cenario();
+
+        var pagina = repository.search(cenario.competicao().getId(), null, null, PageRequest.of(0, 10));
+
+        assertThat(pagina.getContent()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("deve detectar equipe com partida na mesma rodada")
+    void deveDetectarEquipeNaRodada() {
+        var cenario = cenario();
+        var ids = List.of(cenario.inscricao().getId());
+
+        assertThat(repository.existsEquipeNaRodada(ids, 1, -1L, StatusPartida.CANCELADA)).isTrue();
+        assertThat(repository.existsEquipeNaRodada(ids, 2, -1L, StatusPartida.CANCELADA)).isFalse();
+    }
+
+    @Test
+    @DisplayName("deve detectar conflito de data e hora")
+    void deveDetectarConflitoDataHora() {
+        var cenario = cenario();
+        var ids = List.of(cenario.inscricao().getId());
+
+        assertThat(repository.existsConflitoDataHora(ids, DATA_HORA, -1L, StatusPartida.CANCELADA)).isTrue();
+        assertThat(repository.existsConflitoDataHora(ids, DATA_HORA.plusHours(1), -1L, StatusPartida.CANCELADA))
+                .isFalse();
+    }
+
+    @Test
+    @DisplayName("deve cancelar partidas em cascata pela competição e pela inscrição")
+    void deveCancelarPartidasEmCascata() {
+        var cenario = cenario();
+
+        repository.cancelarPorInscricao(cenario.inscricao().getId(),
+                List.of(StatusPartida.AGENDADA, StatusPartida.EM_ANDAMENTO), StatusPartida.CANCELADA);
+        entityManager.clear();
+
+        assertThat(repository.findById(cenario.partida().getId()).orElseThrow().getStatus())
+                .isEqualTo(StatusPartida.CANCELADA);
     }
 }

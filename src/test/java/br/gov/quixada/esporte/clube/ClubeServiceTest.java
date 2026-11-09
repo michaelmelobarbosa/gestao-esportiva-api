@@ -13,6 +13,8 @@ import java.util.Optional;
 import br.gov.quixada.esporte.clube.exception.ClubeInativoException;
 import br.gov.quixada.esporte.clube.exception.ClubeNotFoundException;
 import br.gov.quixada.esporte.equipe.EquipeRepository;
+import br.gov.quixada.esporte.common.error.VinculoAtivoException;
+import br.gov.quixada.esporte.equipe.StatusEquipe;
 import br.gov.quixada.esporte.extras.Endereco;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -257,5 +259,16 @@ class ClubeServiceTest {
                     .isInstanceOf(ClubeNotFoundException.class)
                     .hasMessage("Clube não encontrado");
         }
+    }
+
+    @Test
+    @DisplayName("não deve inativar clube com equipe ativa")
+    void naoDeveInativarComEquipeAtiva() {
+        Clube clube = Clube.builder().id(1L).status(StatusClube.ATIVO).build();
+        when(repository.findById(1L)).thenReturn(Optional.of(clube));
+        when(equipeRepository.existsByClubeIdAndStatus(1L, StatusEquipe.ATIVO)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.inativar(1L))
+                .isInstanceOf(VinculoAtivoException.class);
     }
 }

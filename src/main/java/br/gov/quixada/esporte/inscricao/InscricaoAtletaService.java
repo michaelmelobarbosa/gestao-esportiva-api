@@ -2,8 +2,10 @@ package br.gov.quixada.esporte.inscricao;
 
 import br.gov.quixada.esporte.atleta.Atleta;
 import br.gov.quixada.esporte.atleta.AtletaRepository;
+import br.gov.quixada.esporte.atleta.StatusAtleta;
 import br.gov.quixada.esporte.atleta.exception.AtletaNotFoundException;
 import br.gov.quixada.esporte.categoria.Categoria;
+import br.gov.quixada.esporte.categoria.StatusCategoria;
 import br.gov.quixada.esporte.competicao.Competicao;
 import br.gov.quixada.esporte.competicao.StatusCompeticao;
 import br.gov.quixada.esporte.inscricao.exception.AtletaForaDaCategoriaException;
@@ -13,6 +15,7 @@ import br.gov.quixada.esporte.inscricao.exception.InscricaoEquipeNotFoundExcepti
 import br.gov.quixada.esporte.inscricao.exception.InscricaoInvalidaException;
 import br.gov.quixada.esporte.inscricao.exception.NumeroCamisaJaUtilizadoException;
 import br.gov.quixada.esporte.inscricao.exception.TransicaoStatusInvalidaException;
+import br.gov.quixada.esporte.inscricao.exception.UltimoAtletaAtivoException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.Period;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -55,6 +59,8 @@ public class InscricaoAtletaService {
 
         validarCompeticaoAberta(inscricaoEquipe.getCompeticao());
         validarInscricaoEquipeAtiva(inscricaoEquipe);
+        validarAtletaAtivo(atleta);
+        validarCategoriaAtiva(inscricaoEquipe.getCategoria());
         validarVagas(inscricaoEquipeId, inscricaoEquipe.getCompeticao().getId(), atletaId,
                 inscricao.getNumeroCamisa(), null);
         validarIdade(atleta, inscricaoEquipe.getCategoria());
@@ -73,6 +79,8 @@ public class InscricaoAtletaService {
             throw new TransicaoStatusInvalidaException(
                     "Transição de status inválida: " + inscricao.getStatus() + " -> " + status);
         }
+
+        validarRemocaoUltimoAtleta(inscricao, status);
 
         if (status == StatusInscricao.PENDENTE) {
             revalidarReativacao(inscricao);
@@ -104,6 +112,8 @@ public class InscricaoAtletaService {
         var inscricaoEquipe = inscricao.getInscricaoEquipe();
         validarCompeticaoAberta(inscricaoEquipe.getCompeticao());
         validarInscricaoEquipeAtiva(inscricaoEquipe);
+        validarAtletaAtivo(inscricao.getAtleta());
+        validarCategoriaAtiva(inscricaoEquipe.getCategoria());
         validarVagas(inscricaoEquipe.getId(), inscricaoEquipe.getCompeticao().getId(),
                 inscricao.getAtleta().getId(), inscricao.getNumeroCamisa(), inscricao.getId());
         validarIdade(inscricao.getAtleta(), inscricaoEquipe.getCategoria());
@@ -136,6 +146,42 @@ public class InscricaoAtletaService {
                         inscricaoEquipeId, numeroCamisa, idIgnorado, StatusInscricao.OCUPAM_VAGA);
         if (camisaDuplicada) {
             throw new NumeroCamisaJaUtilizadoException("Número da camisa já utilizado nesta inscrição");
+        }
+    }
+
+    private void validarRemocaoUltimoAtleta(InscricaoAtleta inscricao, StatusInscricao novoStatus) {
+        boolean removeDaAtiva = novoStatus == StatusInscricao.CANCELADA
+                || novoStatus == StatusInscricao.INATIVA
+                || novoStatus == StatusInscricao.REJEITADA;
+        boolean estavaAtiva = inscricao.getStatus() == StatusInscricao.PENDENTE
+                || inscricao.getStatus() == StatusInscricao.APROVADA;
+
+        if (!removeDaAtiva || !estavaAtiva) {
+            return;
+        }
+
+        var inscricaoEquipe = inscricao.getInscricaoEquipe();
+        if (inscricaoEquipe == null || inscricaoEquipe.getStatus() != StatusInscricao.APROVADA) {
+            return;
+        }
+
+        long atletasAtivos = repository.countByInscricaoEquipeIdAndStatusIn(
+                inscricaoEquipe.getId(), List.of(StatusInscricao.PENDENTE, StatusInscricao.APROVADA));
+        if (atletasAtivos <= 1) {
+            throw new UltimoAtletaAtivoException(
+                    "Equipe aprovada precisa manter ao menos um atleta ativo");
+        }
+    }
+
+    private void validarAtletaAtivo(Atleta atleta) {
+        if (atleta.getStatus() != StatusAtleta.ATIVO) {
+            throw new InscricaoInvalidaException("Atleta inativo não pode ser inscrito");
+        }
+    }
+
+    private void validarCategoriaAtiva(Categoria categoria) {
+        if (categoria.getStatus() != StatusCategoria.ATIVO) {
+            throw new InscricaoInvalidaException("Categoria inativa não pode receber inscrições");
         }
     }
 

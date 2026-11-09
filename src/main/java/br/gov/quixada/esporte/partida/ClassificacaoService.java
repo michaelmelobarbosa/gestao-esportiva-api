@@ -1,6 +1,15 @@
 package br.gov.quixada.esporte.partida;
 
+import br.gov.quixada.esporte.categoria.Categoria;
+import br.gov.quixada.esporte.categoria.CategoriaRepository;
+import br.gov.quixada.esporte.categoria.exception.CategoriaNotFoundException;
+import br.gov.quixada.esporte.competicao.Competicao;
+import br.gov.quixada.esporte.competicao.CompeticaoRepository;
+import br.gov.quixada.esporte.competicao.exception.CompeticaoNotFoundException;
 import br.gov.quixada.esporte.inscricao.InscricaoEquipe;
+import br.gov.quixada.esporte.inscricao.InscricaoEquipeRepository;
+import br.gov.quixada.esporte.inscricao.StatusInscricao;
+import br.gov.quixada.esporte.inscricao.exception.InscricaoInvalidaException;
 import br.gov.quixada.esporte.partida.dto.ClassificacaoResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,12 +25,27 @@ import java.util.Map;
 public class ClassificacaoService {
 
     private final PartidaRepository repository;
+    private final CompeticaoRepository competicaoRepository;
+    private final CategoriaRepository categoriaRepository;
+    private final InscricaoEquipeRepository inscricaoEquipeRepository;
 
     @Transactional(readOnly = true)
     public List<ClassificacaoResponse> calcular(Long competicaoId, Long categoriaId) {
-        List<Partida> partidas = repository.findByCompeticaoAndCategoria(competicaoId, categoriaId);
+        Competicao competicao = competicaoRepository.findById(competicaoId)
+                .orElseThrow(() -> new CompeticaoNotFoundException("Competição não encontrada"));
+        Categoria categoria = categoriaRepository.findById(categoriaId)
+                .orElseThrow(() -> new CategoriaNotFoundException("Categoria não encontrada"));
+
+        if (!categoria.getCompeticao().getId().equals(competicao.getId())) {
+            throw new InscricaoInvalidaException("Categoria não pertence à competição informada");
+        }
 
         Map<Long, Linha> linhas = new LinkedHashMap<>();
+        inscricaoEquipeRepository.findByCompeticaoIdAndCategoriaIdAndStatus(
+                        competicaoId, categoriaId, StatusInscricao.APROVADA)
+                .forEach(inscricao -> linhas.put(inscricao.getId(), new Linha(inscricao)));
+
+        List<Partida> partidas = repository.findByCompeticaoAndCategoria(competicaoId, categoriaId);
         for (Partida partida : partidas) {
             if (!partidaValidaParaClassificacao(partida)) {
                 continue;

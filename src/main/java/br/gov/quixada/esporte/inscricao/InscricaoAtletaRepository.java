@@ -38,6 +38,8 @@ public interface InscricaoAtletaRepository extends JpaRepository<InscricaoAtleta
     boolean existsByInscricaoEquipeIdAndAtletaIdAndStatusIn(Long inscricaoEquipeId, Long atletaId,
                                                             Collection<StatusInscricao> statuses);
 
+    long countByInscricaoEquipeIdAndStatusIn(Long inscricaoEquipeId, Collection<StatusInscricao> statuses);
+
     boolean existsByInscricaoEquipeIdAndNumeroCamisaAndStatusIn(Long inscricaoEquipeId, String numeroCamisa,
                                                                 Collection<StatusInscricao> statuses);
 

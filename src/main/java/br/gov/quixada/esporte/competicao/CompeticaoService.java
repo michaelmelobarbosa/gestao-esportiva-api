@@ -6,6 +6,8 @@ import br.gov.quixada.esporte.inscricao.InscricaoEquipeService;
 import br.gov.quixada.esporte.modalidade.Modalidade;
 import br.gov.quixada.esporte.partida.PartidaService;
 import br.gov.quixada.esporte.modalidade.ModalidadeRepository;
+import br.gov.quixada.esporte.modalidade.StatusModalidade;
+import br.gov.quixada.esporte.modalidade.exception.ModalidadeInativaException;
 import br.gov.quixada.esporte.modalidade.exception.ModalidadeNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -88,7 +90,11 @@ public class CompeticaoService {
     }
 
     private Modalidade buscarModalidade(Long id) {
-        return modalidadeRepository.findById(id)
+        Modalidade modalidade = modalidadeRepository.findById(id)
                 .orElseThrow(() -> new ModalidadeNotFoundException("Modalidade não encontrada"));
+        if (modalidade.getStatus() != StatusModalidade.ATIVO) {
+            throw new ModalidadeInativaException("Modalidade está inativa, não pode ser vinculada a uma competição");
+        }
+        return modalidade;
     }
 }

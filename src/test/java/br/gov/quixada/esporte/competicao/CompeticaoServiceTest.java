@@ -19,6 +19,8 @@ import br.gov.quixada.esporte.competicao.exception.CompeticaoNotFoundException;
 import br.gov.quixada.esporte.competicao.exception.PeriodoInvalidoException;
 import br.gov.quixada.esporte.competicao.exception.TransicaoStatusCompeticaoException;
 import br.gov.quixada.esporte.inscricao.InscricaoEquipeService;
+import br.gov.quixada.esporte.modalidade.StatusModalidade;
+import br.gov.quixada.esporte.modalidade.exception.ModalidadeInativaException;
 import br.gov.quixada.esporte.modalidade.Modalidade;
 import br.gov.quixada.esporte.partida.PartidaService;
 import br.gov.quixada.esporte.modalidade.ModalidadeRepository;
@@ -75,6 +77,7 @@ class CompeticaoServiceTest {
     private Modalidade umaModalidade() {
         return Modalidade.builder()
                 .nome("Futebol")
+                .status(br.gov.quixada.esporte.modalidade.StatusModalidade.ATIVO)
                 .build();
     }
 
@@ -206,6 +209,7 @@ class CompeticaoServiceTest {
 
             assertThat(resultado.getStatus()).isEqualTo(StatusCompeticao.CANCELADA);
             verify(inscricaoEquipeService).cancelarPorCompeticao(1L);
+            verify(partidaService).cancelarPorCompeticao(1L);
         }
 
         @Test
@@ -300,6 +304,35 @@ class CompeticaoServiceTest {
             assertThatThrownBy(() -> service.update(1L, novosDados()))
                     .isInstanceOf(CompeticaoNotFoundException.class)
                     .hasMessage("Competição não encontrada");
+        }
+    }
+
+    @Nested
+    @DisplayName("regras de negócio")
+    class RegrasDeNegocio {
+
+        @Test
+        @DisplayName("deve bloquear criação com modalidade inativa")
+        void deveBloquearModalidadeInativa() {
+            Modalidade modalidade = Modalidade.builder().id(1L).nome("Futebol")
+                    .status(StatusModalidade.INATIVO).build();
+            when(modalidadeRepository.findById(1L)).thenReturn(Optional.of(modalidade));
+
+            assertThatThrownBy(() -> service.save(umaCompeticao(StatusCompeticao.PLANEJAMENTO), 1L))
+                    .isInstanceOf(ModalidadeInativaException.class);
+        }
+
+        @Test
+        @DisplayName("deve recalcular o status ao criar com base nas datas")
+        void deveRecalcularStatusAoCriar() {
+            Modalidade modalidade = umaModalidade();
+            when(modalidadeRepository.findById(1L)).thenReturn(Optional.of(modalidade));
+            when(repository.save(any(Competicao.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            Competicao competicao = umaCompeticao(StatusCompeticao.PLANEJAMENTO);
+
+            Competicao salva = service.save(competicao, 1L);
+
+            assertThat(salva.getStatus()).isEqualTo(StatusCompeticao.FINALIZADA);
         }
     }
 }

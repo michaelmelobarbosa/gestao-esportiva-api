@@ -17,6 +17,9 @@ import br.gov.quixada.esporte.clube.exception.ClubeNotFoundException;
 import br.gov.quixada.esporte.equipe.exception.EquipeInativaException;
 import br.gov.quixada.esporte.equipe.exception.EquipeNotFoundException;
 import br.gov.quixada.esporte.inscricao.InscricaoEquipeRepository;
+import br.gov.quixada.esporte.clube.exception.ClubeInativoException;
+import br.gov.quixada.esporte.common.error.VinculoAtivoException;
+import br.gov.quixada.esporte.inscricao.StatusInscricao;
 import br.gov.quixada.esporte.modalidade.Modalidade;
 import br.gov.quixada.esporte.modalidade.StatusModalidade;
 import br.gov.quixada.esporte.modalidade.ModalidadeRepository;
@@ -304,6 +307,45 @@ class EquipeServiceTest {
             assertThatThrownBy(() -> service.update(1L, novosDados()))
                     .isInstanceOf(EquipeNotFoundException.class)
                     .hasMessage("Equipe não encontrada");
+        }
+    }
+
+    @Nested
+    @DisplayName("regras de negócio")
+    class RegrasDeNegocio {
+
+        @Test
+        @DisplayName("deve bloquear equipe com clube inativo")
+        void deveBloquearClubeInativo() {
+            Clube clube = Clube.builder().id(1L).nome("Clube A").status(StatusClube.INATIVO).build();
+            when(clubeRepository.findById(1L)).thenReturn(Optional.of(clube));
+
+            assertThatThrownBy(() -> service.save(umaEquipe(StatusEquipe.ATIVO), 1L, 2L))
+                    .isInstanceOf(ClubeInativoException.class);
+        }
+
+        @Test
+        @DisplayName("deve bloquear equipe com modalidade inativa")
+        void deveBloquearModalidadeInativa() {
+            Clube clube = Clube.builder().id(1L).nome("Clube A").status(StatusClube.ATIVO).build();
+            Modalidade modalidade = Modalidade.builder().id(2L).nome("Futebol").status(StatusModalidade.INATIVO).build();
+            when(clubeRepository.findById(1L)).thenReturn(Optional.of(clube));
+            when(modalidadeRepository.findById(2L)).thenReturn(Optional.of(modalidade));
+
+            assertThatThrownBy(() -> service.save(umaEquipe(StatusEquipe.ATIVO), 1L, 2L))
+                    .isInstanceOf(br.gov.quixada.esporte.modalidade.exception.ModalidadeInativaException.class);
+        }
+
+        @Test
+        @DisplayName("não deve inativar equipe com inscrição ativa")
+        void naoDeveInativarComInscricaoAtiva() {
+            Equipe equipe = Equipe.builder().id(1L).status(StatusEquipe.ATIVO).build();
+            when(repository.findById(1L)).thenReturn(Optional.of(equipe));
+            when(inscricaoEquipeRepository.existsByEquipeIdAndStatusIn(1L, StatusInscricao.OCUPAM_VAGA))
+                    .thenReturn(true);
+
+            assertThatThrownBy(() -> service.inativar(1L))
+                    .isInstanceOf(VinculoAtivoException.class);
         }
     }
 }

@@ -35,12 +35,7 @@ public class PartidaService {
 
     @Transactional(readOnly = true)
     public Page<Partida> findAll(Long competicaoId, Long categoriaId, StatusPartida status, Pageable pageable) {
-        if (competicaoId != null && categoriaId != null) {
-            return status == null
-                    ? repository.findByCompeticaoAndCategoria(competicaoId, categoriaId, pageable)
-                    : repository.findByCompeticaoAndCategoriaAndStatus(competicaoId, categoriaId, status, pageable);
-        }
-        return status == null ? repository.findAll(pageable) : repository.findByStatus(status, pageable);
+        return repository.search(competicaoId, categoriaId, status, pageable);
     }
 
     @Transactional(readOnly = true)
@@ -55,13 +50,18 @@ public class PartidaService {
         var visitante = buscarInscricao(request.inscricaoVisitanteId());
         validarDados(request.rodada(), request.dataHora(), mandante, visitante, -1L);
 
+        var statusInicial = mandante.getCompeticao().calcularStatus(LocalDate.now(clock))
+                == StatusCompeticao.CANCELADA
+                ? StatusPartida.CANCELADA
+                : StatusPartida.AGENDADA;
+
         var partida = Partida.builder()
                 .rodada(request.rodada())
                 .dataHora(request.dataHora())
                 .local(request.local())
                 .inscricaoMandante(mandante)
                 .inscricaoVisitante(visitante)
-                .status(StatusPartida.AGENDADA)
+                .status(statusInicial)
                 .build();
         return repository.save(partida);
     }
@@ -103,8 +103,9 @@ public class PartidaService {
         if (partida.getStatus() != StatusPartida.EM_ANDAMENTO) {
             throw new PartidaInvalidaException("Só é possível registrar resultado de partida EM_ANDAMENTO");
         }
-        if (request.golsMandante() < 0 || request.golsVisitante() < 0) {
-            throw new PartidaInvalidaException("Gols não podem ser negativos");
+        if (request.golsMandante() == null || request.golsVisitante() == null
+                || request.golsMandante() < 0 || request.golsVisitante() < 0) {
+            throw new PartidaInvalidaException("Gols não podem ser nulos ou negativos");
         }
 
         partida.registrarResultado(request.golsMandante(), request.golsVisitante());
@@ -137,10 +138,6 @@ public class PartidaService {
         }
 
         Competicao competicao = mandante.getCompeticao();
-        if (competicao.calcularStatus(LocalDate.now(clock)) == StatusCompeticao.CANCELADA) {
-            throw new PartidaInvalidaException("Competição cancelada não permite partidas");
-        }
-
         LocalDate dataPartida = dataHora.toLocalDate();
         if (dataPartida.isBefore(competicao.getDataInicio()) || dataPartida.isAfter(competicao.getDataFim())) {
             throw new PartidaInvalidaException("Data da partida deve estar dentro do período da competição");
@@ -149,6 +146,11 @@ public class PartidaService {
         if (repository.existsConfrontoNaRodada(mandante.getId(), visitante.getId(), rodada,
                 idIgnorado, StatusPartida.CANCELADA)) {
             throw new PartidaInvalidaException("Já existe uma partida entre essas equipes nesta rodada");
+        }
+
+        if (repository.existsEquipeNaRodada(List.of(mandante.getId(), visitante.getId()), rodada,
+                idIgnorado, StatusPartida.CANCELADA)) {
+            throw new PartidaInvalidaException("Uma das equipes já tem partida nesta rodada");
         }
 
         if (repository.existsConflitoDataHora(List.of(mandante.getId(), visitante.getId()), dataHora,

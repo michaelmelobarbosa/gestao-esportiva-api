@@ -25,6 +25,13 @@ public interface InscricaoEquipeRepository extends JpaRepository<InscricaoEquipe
     boolean existsByCompeticaoIdAndEquipeIdAndStatusIn(Long competicaoId, Long equipeId,
                                                        Collection<StatusInscricao> statuses);
 
+    boolean existsByCompeticaoIdAndEquipeIdAndStatusInAndIdNot(Long competicaoId, Long equipeId,
+                                                               Collection<StatusInscricao> statuses, Long id);
+
+    @EntityGraph(attributePaths = {"competicao", "categoria", "equipe"})
+    List<InscricaoEquipe> findByCompeticaoIdAndCategoriaIdAndStatus(Long competicaoId, Long categoriaId,
+                                                                    StatusInscricao status);
+
     boolean existsByEquipeIdAndStatusIn(Long equipeId, Collection<StatusInscricao> statuses);
 
     boolean existsByCategoriaIdAndStatusIn(Long categoriaId, Collection<StatusInscricao> statuses);

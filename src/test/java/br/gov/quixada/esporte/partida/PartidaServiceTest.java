@@ -57,6 +57,11 @@ class PartidaServiceTest {
     }
 
     private InscricaoEquipe inscricao(Long id, StatusInscricao status, Long categoriaId, String equipeNome) {
+        return inscricao(id, status, categoriaId, equipeNome, StatusCompeticao.INSCRICOES_ABERTAS);
+    }
+
+    private InscricaoEquipe inscricao(Long id, StatusInscricao status, Long categoriaId, String equipeNome,
+                                      StatusCompeticao statusCompeticao) {
         var competicao = Competicao.builder()
                 .id(1L)
                 .nome("Copa Teste")
@@ -64,7 +69,7 @@ class PartidaServiceTest {
                 .dataFimInscricao(LocalDate.of(2026, 2, 1))
                 .dataInicio(LocalDate.of(2026, 3, 1))
                 .dataFim(LocalDate.of(2026, 12, 31))
-                .status(StatusCompeticao.INSCRICOES_ABERTAS)
+                .status(statusCompeticao)
                 .build();
         var categoria = Categoria.builder()
                 .id(categoriaId)
@@ -176,5 +181,69 @@ class PartidaServiceTest {
         assertThatThrownBy(() -> service.registrarResultado(1L, new PartidaResultadoRequest(1, 0)))
                 .isInstanceOf(PartidaInvalidaException.class)
                 .hasMessage("Só é possível registrar resultado de partida EM_ANDAMENTO");
+    }
+
+    @Test
+    @DisplayName("deve bloquear equipe com outra partida na mesma rodada")
+    void deveBloquearEquipeNaMesmaRodada() {
+        var mandante = inscricao(1L, StatusInscricao.APROVADA, 10L, "Equipe A");
+        var visitante = inscricao(2L, StatusInscricao.APROVADA, 10L, "Equipe B");
+        when(inscricaoEquipeRepository.findById(1L)).thenReturn(Optional.of(mandante));
+        when(inscricaoEquipeRepository.findById(2L)).thenReturn(Optional.of(visitante));
+        when(repository.existsConfrontoNaRodada(anyLong(), anyLong(), any(), anyLong(), any())).thenReturn(false);
+        when(repository.existsEquipeNaRodada(any(), any(), anyLong(), any())).thenReturn(true);
+
+        assertThatThrownBy(() -> service.create(new PartidaCreateRequest(1L, 2L, 1, DATA_HORA, null)))
+                .isInstanceOf(PartidaInvalidaException.class)
+                .hasMessage("Uma das equipes já tem partida nesta rodada");
+    }
+
+    @Test
+    @DisplayName("deve permitir cadastro atrasado em competição cancelada criando partida CANCELADA")
+    void deveCriarPartidaCanceladaEmCompeticaoCancellada() {
+        var mandante = inscricao(1L, StatusInscricao.APROVADA, 10L, "Equipe A", StatusCompeticao.CANCELADA);
+        var visitante = inscricao(2L, StatusInscricao.APROVADA, 10L, "Equipe B", StatusCompeticao.CANCELADA);
+        when(inscricaoEquipeRepository.findById(1L)).thenReturn(Optional.of(mandante));
+        when(inscricaoEquipeRepository.findById(2L)).thenReturn(Optional.of(visitante));
+        stubCriacaoSemConflito();
+
+        var partida = service.create(new PartidaCreateRequest(1L, 2L, 1, DATA_HORA, null));
+
+        assertThat(partida.getStatus()).isEqualTo(StatusPartida.CANCELADA);
+    }
+
+    @Test
+    @DisplayName("deve permitir cadastro atrasado em competição finalizada")
+    void deveCriarPartidaEmCompeticaoFinalizada() {
+        var mandante = inscricao(1L, StatusInscricao.APROVADA, 10L, "Equipe A", StatusCompeticao.FINALIZADA);
+        var visitante = inscricao(2L, StatusInscricao.APROVADA, 10L, "Equipe B", StatusCompeticao.FINALIZADA);
+        when(inscricaoEquipeRepository.findById(1L)).thenReturn(Optional.of(mandante));
+        when(inscricaoEquipeRepository.findById(2L)).thenReturn(Optional.of(visitante));
+        stubCriacaoSemConflito();
+
+        var partida = service.create(new PartidaCreateRequest(1L, 2L, 1, DATA_HORA, null));
+
+        assertThat(partida.getStatus()).isEqualTo(StatusPartida.AGENDADA);
+    }
+
+    @Test
+    @DisplayName("deve repassar filtros isolados para a busca")
+    void deveRepassarFiltrosIsolados() {
+        when(repository.search(1L, null, null, org.springframework.data.domain.PageRequest.of(0, 10)))
+                .thenReturn(org.springframework.data.domain.Page.empty());
+
+        service.findAll(1L, null, null, org.springframework.data.domain.PageRequest.of(0, 10));
+
+        verify(repository).search(1L, null, null, org.springframework.data.domain.PageRequest.of(0, 10));
+    }
+
+    @Test
+    @DisplayName("deve rejeitar resultado com gols nulos")
+    void deveRejeitarResultadoComGolsNulos() {
+        var partida = Partida.builder().id(1L).status(StatusPartida.EM_ANDAMENTO).build();
+        when(repository.findById(1L)).thenReturn(Optional.of(partida));
+
+        assertThatThrownBy(() -> service.registrarResultado(1L, new PartidaResultadoRequest(null, 1)))
+                .isInstanceOf(PartidaInvalidaException.class);
     }
 }

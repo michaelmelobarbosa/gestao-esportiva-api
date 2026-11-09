@@ -23,10 +23,12 @@ import br.gov.quixada.esporte.inscricao.exception.AtletaJaInscritoException;
 import br.gov.quixada.esporte.inscricao.exception.EquipeJaInscritaException;
 import br.gov.quixada.esporte.inscricao.exception.InscricaoAtletaNotFoundException;
 import br.gov.quixada.esporte.inscricao.exception.InscricaoEquipeNotFoundException;
+import br.gov.quixada.esporte.inscricao.exception.InscricaoEquipeSemAtletasException;
 import br.gov.quixada.esporte.inscricao.exception.InscricaoInvalidaException;
 import br.gov.quixada.esporte.inscricao.exception.InscricoesEncerradasException;
 import br.gov.quixada.esporte.inscricao.exception.NumeroCamisaJaUtilizadoException;
 import br.gov.quixada.esporte.inscricao.exception.TransicaoStatusInvalidaException;
+import br.gov.quixada.esporte.inscricao.exception.UltimoAtletaAtivoException;
 import br.gov.quixada.esporte.modalidade.exception.ModalidadeInativaException;
 import br.gov.quixada.esporte.modalidade.exception.ModalidadeNotFoundException;
 import br.gov.quixada.esporte.partida.exception.PartidaInvalidaException;
@@ -173,6 +175,18 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(EquipeJaInscritaException.class)
     public ResponseEntity<ApiError> handleEquipeJaInscrita(EquipeJaInscritaException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(InscricaoEquipeSemAtletasException.class)
+    public ResponseEntity<ApiError> handleInscricaoEquipeSemAtletas(InscricaoEquipeSemAtletasException ex,
+                                                                    HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(UltimoAtletaAtivoException.class)
+    public ResponseEntity<ApiError> handleUltimoAtletaAtivo(UltimoAtletaAtivoException ex,
+                                                            HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 

@@ -655,3 +655,6 @@ Boas práticas (P2)
 [x] C11. Reavaliar pacote de JwtService
 [x] C12. Renomear authenticationManagerBean
 ```
+
+
+> **Atualização (2026-11-09):** suíte atual com **251 testes**, 0 falhas. Regras de negócio de inscrição, competição, partidas e classificação documentadas em `futuras-iterações.md`.

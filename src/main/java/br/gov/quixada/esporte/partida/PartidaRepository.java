@@ -75,6 +75,22 @@ public interface PartidaRepository extends JpaRepository<Partida, Long> {
     List<Partida> findByCompeticaoAndCategoria(@Param("competicaoId") Long competicaoId,
                                                @Param("categoriaId") Long categoriaId);
 
+    @EntityGraph(attributePaths = {
+            "inscricaoMandante", "inscricaoVisitante",
+            "inscricaoMandante.equipe", "inscricaoVisitante.equipe",
+            "inscricaoMandante.competicao", "inscricaoVisitante.competicao",
+            "inscricaoMandante.categoria", "inscricaoVisitante.categoria"})
+    @Query("""
+            select p from Partida p
+            where (:competicaoId is null or p.inscricaoMandante.competicao.id = :competicaoId)
+              and (:categoriaId is null or p.inscricaoMandante.categoria.id = :categoriaId)
+              and (:status is null or p.status = :status)
+            """)
+    Page<Partida> search(@Param("competicaoId") Long competicaoId,
+                         @Param("categoriaId") Long categoriaId,
+                         @Param("status") StatusPartida status,
+                         Pageable pageable);
+
     @Override
     @EntityGraph(attributePaths = {
             "inscricaoMandante", "inscricaoVisitante",
@@ -108,6 +124,18 @@ public interface PartidaRepository extends JpaRepository<Partida, Long> {
                                    @Param("dataHora") LocalDateTime dataHora,
                                    @Param("idIgnorado") Long idIgnorado,
                                    @Param("cancelada") StatusPartida cancelada);
+
+    @Query("""
+            select (count(p) > 0) from Partida p
+            where p.id <> :idIgnorado
+              and p.rodada = :rodada
+              and p.status <> :cancelada
+              and (p.inscricaoMandante.id in :inscricaoIds or p.inscricaoVisitante.id in :inscricaoIds)
+            """)
+    boolean existsEquipeNaRodada(@Param("inscricaoIds") Collection<Long> inscricaoIds,
+                                 @Param("rodada") Integer rodada,
+                                 @Param("idIgnorado") Long idIgnorado,
+                                 @Param("cancelada") StatusPartida cancelada);
 
     @Modifying(clearAutomatically = true)
     @Query("""

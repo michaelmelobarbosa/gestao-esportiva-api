@@ -138,7 +138,7 @@ SecurityConfig (authorizeHttpRequests) → controller
 
 ### 4.3 Senha: BCrypt e o limite de 72 bytes
 
-**Decisão:** política **mínimo 8 / máximo 72 caracteres** (aplicação no DTO pendente).
+**Decisão:** política **mínimo 8 / máximo 72 caracteres** (aplicação no DTO feita).
 
 **Por quê:** o BCrypt ignora bytes além de 72. Aceitar uma senha de 200 caracteres dá uma falsa sensação de segurança: os últimos 128 não contam. O mínimo 8 evita senhas triviais. O hash gerado tem ~60 caracteres, por isso a coluna do banco é `varchar(255)`.
 
@@ -335,7 +335,7 @@ Antes o `email` existia no banco, mas o registro não o preenchia. Agora ele é 
 | `JwtServiceTest` | token válido, assinatura errada, expirado, malformado. |
 | `JwtAuthenticationFilterTest` | token válido autentica; inválido/sem Bearer/usuário ausente seguem anônimos. |
 
-Total atual: **164 testes**.
+Total atual: **251 testes**.
 
 ### 5.13 B7 — `findByEmail` com `Optional`
 
@@ -402,7 +402,7 @@ return userRepository.findByEmail(email)
 
 **Efeito colateral positivo:** `Authentication.getName()` passa a devolver o **email** (antes devolvia `username`), alinhado à decisão de identidade por email.
 
-**Teste:** `UserDetailsAdapterTest` cobre email como username, delegação da senha, authorities de `USER`/`ADMIN` e flags de conta. Total: **164 testes**.
+**Teste:** `UserDetailsAdapterTest` cobre email como username, delegação da senha, authorities de `USER`/`ADMIN` e flags de conta. Total: **251 testes**.
 
 ### 5.18 C10 — Versionamento nativo do Spring (`/v1/auth`)
 
@@ -416,7 +416,7 @@ return userRepository.findByEmail(email)
 
 **Conceito:** o Spring 7 tem três peças — resolver (de onde vem a versão), parser (`SemanticApiVersionParser`, aceita `v1`) e mapping (`version` no `@RequestMapping`). Antes disso, versionar era só nome de URL sem garantia.
 
-**Teste:** `AuthControllerTest` cobre `/v1/auth/*` e rejeição de `/v9/auth/login`; `ApiVersioningConfigTest` cobre o predicate de paths versionados. Total: **164 testes**.
+**Teste:** `AuthControllerTest` cobre `/v1/auth/*` e rejeição de `/v9/auth/login`; `ApiVersioningConfigTest` cobre o predicate de paths versionados. Total: **251 testes**.
 
 ### 5.19 C11 — `JwtService` e `TokenProperties` em `security/jwt`
 
@@ -458,7 +458,7 @@ O token dura 2h e não há revogação. Se for preciso invalidar antes do vencim
 Itens já mapeados em `futuras-iterações.md`:
 
 - **`hardDelete` de atleta** — desbloqueado, pois o perfil `ADMIN` existe; falta endpoint + regra de FKs.
-- **`GET /v1/atletas/cpf/{cpf}`** — método já existe comentado; falta expor.
+- **`GET /v1/atletas/cpf/{cpf}`** — ✅ feito.
 - **OpenAPI/springdoc + README** — documentar a API e a estratégia de versionamento.
 - **Separar `application-dev`/`application-prod`** — `show-sql` ligado globalmente hoje.
 - **`AtletaControllerTest` + `AtletaMapperTest`** — lacunas de teste no domínio.
@@ -502,4 +502,4 @@ curl http://localhost:8080/v1/atletas -H "Authorization: Bearer <token>"
 curl http://localhost:8080/v1/atletas -H "Authorization: Bearer lixo"
 ```
 
-**Estado atual:** 164 testes, 0 falhas; boot falha sem o segredo; sem token/token inválido → 401 JSON; role insuficiente → 403 JSON.
+**Estado atual:** 251 testes, 0 falhas; boot falha sem o segredo; sem token/token inválido → 401 JSON; role insuficiente → 403 JSON.

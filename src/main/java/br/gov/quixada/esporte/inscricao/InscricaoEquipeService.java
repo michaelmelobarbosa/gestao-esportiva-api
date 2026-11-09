@@ -2,6 +2,8 @@ package br.gov.quixada.esporte.inscricao;
 
 import br.gov.quixada.esporte.categoria.Categoria;
 import br.gov.quixada.esporte.categoria.CategoriaRepository;
+import br.gov.quixada.esporte.categoria.StatusCategoria;
+import br.gov.quixada.esporte.categoria.exception.CategoriaInativaException;
 import br.gov.quixada.esporte.categoria.exception.CategoriaNotFoundException;
 import br.gov.quixada.esporte.competicao.Competicao;
 import br.gov.quixada.esporte.competicao.CompeticaoRepository;
@@ -14,6 +16,7 @@ import br.gov.quixada.esporte.equipe.exception.EquipeInativaException;
 import br.gov.quixada.esporte.equipe.exception.EquipeNotFoundException;
 import br.gov.quixada.esporte.inscricao.exception.EquipeJaInscritaException;
 import br.gov.quixada.esporte.inscricao.exception.InscricaoEquipeNotFoundException;
+import br.gov.quixada.esporte.inscricao.exception.InscricaoEquipeSemAtletasException;
 import br.gov.quixada.esporte.inscricao.exception.InscricaoInvalidaException;
 import br.gov.quixada.esporte.inscricao.exception.InscricoesEncerradasException;
 import br.gov.quixada.esporte.inscricao.exception.TransicaoStatusInvalidaException;
@@ -68,6 +71,9 @@ public class InscricaoEquipeService {
         if (equipe.getStatus() != StatusEquipe.ATIVO) {
             throw new EquipeInativaException("Equipe está inativa, não pode ser inscrita");
         }
+        if (categoria.getStatus() != StatusCategoria.ATIVO) {
+            throw new CategoriaInativaException("Categoria está inativa, não pode receber inscrições");
+        }
         if (!categoria.getCompeticao().getId().equals(competicao.getId())) {
             throw new InscricaoInvalidaException("Categoria não pertence à competição informada");
         }
@@ -98,6 +104,13 @@ public class InscricaoEquipeService {
                     "Transição de status inválida: " + inscricao.getStatus() + " -> " + status);
         }
 
+        if (status == StatusInscricao.PENDENTE) {
+            revalidarReativacao(inscricao);
+        }
+        if (status == StatusInscricao.APROVADA) {
+            validarMinimoAtletas(inscricao);
+        }
+
         inscricao.alterarStatus(status);
 
         if (status == StatusInscricao.CANCELADA || status == StatusInscricao.INATIVA) {
@@ -120,12 +133,53 @@ public class InscricaoEquipeService {
         }
     }
 
+    private void revalidarReativacao(InscricaoEquipe inscricao) {
+        Competicao competicao = inscricao.getCompeticao();
+        Categoria categoria = inscricao.getCategoria();
+        Equipe equipe = inscricao.getEquipe();
+
+        if (competicao.calcularStatus(LocalDate.now(clock)) != StatusCompeticao.INSCRICOES_ABERTAS) {
+            throw new InscricoesEncerradasException("Competição não está com inscrições abertas");
+        }
+        if (equipe.getStatus() != StatusEquipe.ATIVO) {
+            throw new EquipeInativaException("Equipe está inativa, não pode ser reativada");
+        }
+        if (categoria.getStatus() != StatusCategoria.ATIVO) {
+            throw new CategoriaInativaException("Categoria está inativa, não pode receber inscrições");
+        }
+        if (!categoria.getCompeticao().getId().equals(competicao.getId())) {
+            throw new InscricaoInvalidaException("Categoria não pertence à competição informada");
+        }
+        if (!equipe.getModalidade().getId().equals(competicao.getModalidade().getId())) {
+            throw new InscricaoInvalidaException("Modalidade da equipe difere da modalidade da competição");
+        }
+        if (repository.existsByCompeticaoIdAndEquipeIdAndStatusInAndIdNot(
+                competicao.getId(), equipe.getId(), StatusInscricao.OCUPAM_VAGA, inscricao.getId())) {
+            throw new EquipeJaInscritaException("Equipe já possui inscrição ativa nesta competição");
+        }
+    }
+
+    private void validarMinimoAtletas(InscricaoEquipe inscricao) {
+        long atletasAtivos = inscricaoAtletaRepository.countByInscricaoEquipeIdAndStatusIn(
+                inscricao.getId(), List.of(StatusInscricao.PENDENTE, StatusInscricao.APROVADA));
+        if (atletasAtivos < 1) {
+            throw new InscricaoEquipeSemAtletasException(
+                    "Inscrição de equipe precisa de ao menos um atleta para ser aprovada");
+        }
+    }
+
     private void cascatearStatusAtletas(Long inscricaoEquipeId, StatusInscricao status) {
         for (InscricaoAtleta inscricaoAtleta : inscricaoAtletaRepository.findByInscricaoEquipeId(inscricaoEquipeId)) {
-            if (inscricaoAtleta.getStatus() == StatusInscricao.CANCELADA
-                    || inscricaoAtleta.getStatus() == status) {
+            StatusInscricao atual = inscricaoAtleta.getStatus();
+
+            if (atual == StatusInscricao.CANCELADA || atual == StatusInscricao.REJEITADA || atual == status) {
                 continue;
             }
+            if (status == StatusInscricao.INATIVA && atual != StatusInscricao.PENDENTE
+                    && atual != StatusInscricao.APROVADA) {
+                continue;
+            }
+
             inscricaoAtleta.alterarStatus(status);
         }
     }

@@ -91,3 +91,6 @@
 - **O que estudar:** versionamento `V<n>__`, checksum e imutabilidade das migrations aplicadas, `flyway_schema_history`, `baseline-on-migrate` (adoção sobre banco existente), `validate-on-migrate`, comandos `flyway:info`/`validate`/`repair` e por que `flyway:clean` fica desabilitado, `ddl-auto: validate` vs `none`. Temas futuros: `application-dev/prod.yaml` e Testcontainers.
 
 
+
+
+> **Atualização (2026-11-09):** documento revisado após implementação das regras de inscrição, status por datas, partidas e classificação. A suíte atual tem 251 testes.
