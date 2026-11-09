@@ -4,6 +4,7 @@ import br.gov.quixada.esporte.inscricao.dto.InscricaoAtletaCreateRequest;
 import br.gov.quixada.esporte.inscricao.dto.InscricaoAtletaResponse;
 import br.gov.quixada.esporte.inscricao.dto.InscricaoAtletaResumoResponse;
 import br.gov.quixada.esporte.inscricao.dto.InscricaoAtletaStatusRequest;
+import br.gov.quixada.esporte.inscricao.dto.InscricaoAtletaUpdateRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 
 @RestController
-@RequestMapping("/v1/inscricoes-atletas")
+@RequestMapping(path = "/v{version}/inscricoes-atletas", version = "1.0")
 @RequiredArgsConstructor
 @Validated
 public class InscricaoAtletaController {
@@ -26,8 +27,10 @@ public class InscricaoAtletaController {
     private final InscricaoAtletaMapper mapper;
 
     @GetMapping
-    public ResponseEntity<Page<InscricaoAtletaResumoResponse>> findAll(@RequestParam(required = false) Long inscricaoEquipeId, Pageable pageable) {
-        return ResponseEntity.ok(service.findAll(inscricaoEquipeId, pageable).map(mapper::toResumo));
+    public ResponseEntity<Page<InscricaoAtletaResumoResponse>> findAll(@RequestParam(required = false) Long inscricaoEquipeId,
+                                                                       @RequestParam(required = false) StatusInscricao status,
+                                                                       Pageable pageable) {
+        return ResponseEntity.ok(service.findAll(inscricaoEquipeId, status, pageable).map(mapper::toResumo));
     }
 
     @GetMapping("/{id}")
@@ -51,6 +54,13 @@ public class InscricaoAtletaController {
     public ResponseEntity<InscricaoAtletaResponse> alterarStatus(@PathVariable @Positive Long id,
                                                                  @RequestBody @Valid InscricaoAtletaStatusRequest request) {
         InscricaoAtleta inscricao = service.alterarStatus(id, request.status());
+        return ResponseEntity.ok(mapper.toResponse(inscricao));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<InscricaoAtletaResponse> update(@PathVariable @Positive Long id,
+                                                         @RequestBody @Valid InscricaoAtletaUpdateRequest request) {
+        InscricaoAtleta inscricao = service.update(id, request.numeroCamisa());
         return ResponseEntity.ok(mapper.toResponse(inscricao));
     }
 }

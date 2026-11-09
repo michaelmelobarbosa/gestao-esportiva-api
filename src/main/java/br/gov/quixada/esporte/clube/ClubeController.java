@@ -18,7 +18,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 
 @RestController
-@RequestMapping("/v1/clubes")
+@RequestMapping(path = "/v{version}/clubes", version = "1.0")
 @RequiredArgsConstructor
 @Validated
 public class ClubeController {
@@ -27,8 +27,10 @@ public class ClubeController {
     private final ClubeMapper mapper;
 
     @GetMapping
-    public ResponseEntity<Page<ClubeResumoResponse>> findAll(@RequestParam(required = false) String nome, Pageable pageable) {
-        return ResponseEntity.ok(service.findAll(nome, pageable).map(mapper::toResumo));
+    public ResponseEntity<Page<ClubeResumoResponse>> findAll(@RequestParam(required = false) String nome,
+                                                             @RequestParam(required = false) StatusClube status,
+                                                             Pageable pageable) {
+        return ResponseEntity.ok(service.findAll(nome, status, pageable).map(mapper::toResumo));
     }
 
     @GetMapping("/{id}")

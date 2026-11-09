@@ -1,14 +1,16 @@
-package br.gov.quixada.esporte.security.config;
+package br.gov.quixada.esporte.security.jwt;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
@@ -27,8 +29,9 @@ class JwtServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new JwtService();
-        ReflectionTestUtils.setField(service, "secret", SECRET);
+        var properties = new TokenProperties(SECRET, ISSUER, Duration.ofHours(2));
+        var clock = Clock.fixed(Instant.now(), ZoneId.of("America/Fortaleza"));
+        service = new JwtService(properties, clock);
     }
 
     @Test

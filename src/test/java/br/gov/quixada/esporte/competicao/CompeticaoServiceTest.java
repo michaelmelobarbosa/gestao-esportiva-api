@@ -8,13 +8,21 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Optional;
 
 import br.gov.quixada.esporte.competicao.exception.CompeticaoNaoEditavelException;
 import br.gov.quixada.esporte.competicao.exception.CompeticaoNotFoundException;
 import br.gov.quixada.esporte.competicao.exception.PeriodoInvalidoException;
+import br.gov.quixada.esporte.competicao.exception.TransicaoStatusCompeticaoException;
+import br.gov.quixada.esporte.inscricao.InscricaoEquipeService;
+import br.gov.quixada.esporte.modalidade.StatusModalidade;
+import br.gov.quixada.esporte.modalidade.exception.ModalidadeInativaException;
 import br.gov.quixada.esporte.modalidade.Modalidade;
+import br.gov.quixada.esporte.partida.PartidaService;
 import br.gov.quixada.esporte.modalidade.ModalidadeRepository;
 import br.gov.quixada.esporte.modalidade.exception.ModalidadeNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,17 +48,26 @@ class CompeticaoServiceTest {
     @Mock
     private ModalidadeRepository modalidadeRepository;
 
+    @Mock
+    private InscricaoEquipeService inscricaoEquipeService;
+
+    @Mock
+    private PartidaService partidaService;
+
     private CompeticaoService service;
 
     @BeforeEach
     void setUp() {
-        service = new CompeticaoService(repository, modalidadeRepository);
+        var clock = Clock.fixed(Instant.parse("2026-06-15T12:00:00Z"), ZoneId.of("America/Fortaleza"));
+        service = new CompeticaoService(repository, modalidadeRepository, inscricaoEquipeService, partidaService, clock);
     }
 
     private Competicao umaCompeticao(StatusCompeticao status) {
         return Competicao.builder()
                 .nome("Copa Teste")
                 .ano(2026)
+                .dataInicioInscricao(LocalDate.of(2025, 11, 1))
+                .dataFimInscricao(LocalDate.of(2025, 12, 1))
                 .dataInicio(LocalDate.of(2026, 1, 1))
                 .dataFim(LocalDate.of(2026, 1, 31))
                 .status(status)
@@ -60,6 +77,7 @@ class CompeticaoServiceTest {
     private Modalidade umaModalidade() {
         return Modalidade.builder()
                 .nome("Futebol")
+                .status(br.gov.quixada.esporte.modalidade.StatusModalidade.ATIVO)
                 .build();
     }
 
@@ -73,7 +91,7 @@ class CompeticaoServiceTest {
             Page<Competicao> esperado = Page.empty();
             when(repository.findAll(PAGEABLE)).thenReturn(esperado);
 
-            Page<Competicao> resultado = service.findAll(null, PAGEABLE);
+            Page<Competicao> resultado = service.findAll(null, null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findAll(PAGEABLE);
@@ -86,7 +104,7 @@ class CompeticaoServiceTest {
             Page<Competicao> esperado = Page.empty();
             when(repository.findAll(PAGEABLE)).thenReturn(esperado);
 
-            Page<Competicao> resultado = service.findAll("   ", PAGEABLE);
+            Page<Competicao> resultado = service.findAll("   ", null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findAll(PAGEABLE);
@@ -99,7 +117,7 @@ class CompeticaoServiceTest {
             Page<Competicao> esperado = Page.empty();
             when(repository.findByNomeContainingIgnoreCase("copa", PAGEABLE)).thenReturn(esperado);
 
-            Page<Competicao> resultado = service.findAll("copa", PAGEABLE);
+            Page<Competicao> resultado = service.findAll("copa", null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findByNomeContainingIgnoreCase("copa", PAGEABLE);
@@ -182,33 +200,29 @@ class CompeticaoServiceTest {
     class AlterarStatus {
 
         @Test
-        @DisplayName("deve alterar o status e não chamar save")
-        void deveAlterarStatus() {
+        @DisplayName("deve cancelar e propagar o cancelamento para as inscrições")
+        void deveCancelarCompeticao() {
             Competicao competicao = umaCompeticao(StatusCompeticao.PLANEJAMENTO);
             when(repository.findById(1L)).thenReturn(Optional.of(competicao));
 
-            Competicao resultado = service.alterarStatus(1L, StatusCompeticao.INSCRICOES_ABERTAS);
+            Competicao resultado = service.alterarStatus(1L, StatusCompeticao.CANCELADA);
 
-            assertThat(resultado.getStatus()).isEqualTo(StatusCompeticao.INSCRICOES_ABERTAS);
-            verify(repository, never()).save(any(Competicao.class));
+            assertThat(resultado.getStatus()).isEqualTo(StatusCompeticao.CANCELADA);
+            verify(inscricaoEquipeService).cancelarPorCompeticao(1L);
+            verify(partidaService).cancelarPorCompeticao(1L);
         }
 
         @Test
-        @DisplayName("deve manter o status quando for o mesmo (idempotência)")
-        void deveManterStatusQuandoIgual() {
-            Competicao competicao = umaCompeticao(StatusCompeticao.EM_ANDAMENTO);
-            when(repository.findById(1L)).thenReturn(Optional.of(competicao));
-
-            Competicao resultado = service.alterarStatus(1L, StatusCompeticao.EM_ANDAMENTO);
-
-            assertThat(resultado.getStatus()).isEqualTo(StatusCompeticao.EM_ANDAMENTO);
-            verify(repository, never()).save(any(Competicao.class));
+        @DisplayName("deve proibir alteração manual de status que não seja CANCELADA")
+        void deveProibirStatusManual() {
+            assertThatThrownBy(() -> service.alterarStatus(1L, StatusCompeticao.INSCRICOES_ABERTAS))
+                    .isInstanceOf(TransicaoStatusCompeticaoException.class);
         }
 
         @Test
         @DisplayName("deve lançar CompeticaoNotFoundException quando o id não existir")
         void deveLancarNotFoundQuandoInexistente() {
-            assertThatThrownBy(() -> service.alterarStatus(1L, StatusCompeticao.EM_ANDAMENTO))
+            assertThatThrownBy(() -> service.alterarStatus(1L, StatusCompeticao.CANCELADA))
                     .isInstanceOf(CompeticaoNotFoundException.class)
                     .hasMessage("Competição não encontrada");
         }
@@ -222,6 +236,8 @@ class CompeticaoServiceTest {
             return Competicao.builder()
                     .nome("Copa Nova")
                     .ano(2027)
+                    .dataInicioInscricao(LocalDate.of(2026, 10, 1))
+                    .dataFimInscricao(LocalDate.of(2026, 11, 1))
                     .dataInicio(LocalDate.of(2027, 2, 1))
                     .dataFim(LocalDate.of(2027, 2, 28))
                     .build();
@@ -288,6 +304,35 @@ class CompeticaoServiceTest {
             assertThatThrownBy(() -> service.update(1L, novosDados()))
                     .isInstanceOf(CompeticaoNotFoundException.class)
                     .hasMessage("Competição não encontrada");
+        }
+    }
+
+    @Nested
+    @DisplayName("regras de negócio")
+    class RegrasDeNegocio {
+
+        @Test
+        @DisplayName("deve bloquear criação com modalidade inativa")
+        void deveBloquearModalidadeInativa() {
+            Modalidade modalidade = Modalidade.builder().id(1L).nome("Futebol")
+                    .status(StatusModalidade.INATIVO).build();
+            when(modalidadeRepository.findById(1L)).thenReturn(Optional.of(modalidade));
+
+            assertThatThrownBy(() -> service.save(umaCompeticao(StatusCompeticao.PLANEJAMENTO), 1L))
+                    .isInstanceOf(ModalidadeInativaException.class);
+        }
+
+        @Test
+        @DisplayName("deve recalcular o status ao criar com base nas datas")
+        void deveRecalcularStatusAoCriar() {
+            Modalidade modalidade = umaModalidade();
+            when(modalidadeRepository.findById(1L)).thenReturn(Optional.of(modalidade));
+            when(repository.save(any(Competicao.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            Competicao competicao = umaCompeticao(StatusCompeticao.PLANEJAMENTO);
+
+            Competicao salva = service.save(competicao, 1L);
+
+            assertThat(salva.getStatus()).isEqualTo(StatusCompeticao.FINALIZADA);
         }
     }
 }

@@ -6,7 +6,7 @@
 
 ## 1. `hardDelete(Long id)` — `AtletaService.java:50-55` comentado
 
-> **Status (2026-10-30):** o perfil `ADMIN` já existe (`SecurityConfig` + `UserRole.ADMIN`), então o bloqueio original deixou de existir. Falta implementar o endpoint e definir a regra de integridade referencial.
+> **Status (2026-11-05):** hard delete **adiado por decisão**; por enquanto o delete é sempre soft (`status`). Quando for implementado, a regra definida é: **só permitir hard delete de registro já `INATIVO`/`CANCELADO`** e apenas para `ADMIN`. O perfil `ADMIN` já existe (`SecurityConfig` + `UserRole.ADMIN`) e `DELETE /v1/**` já exige essa role.
 
 ```java
 // hard delete a ser implementado quando perfil admin for criado
@@ -17,7 +17,7 @@
 // }
 ```
 
-**Por que está comentado:** originalmente porque `hardDelete` só deveria existir com perfil `admin`, que não existia. Hoje o `inativar()` `AtletaService.java:64` é soft delete (status INATIVO). O perfil `ADMIN` já está disponível, mas hard delete físico continua perigoso e precisa de regra explícita + tratamento de FKs.
+**Status atual:** hard delete **adiado**. `inativar()` continua sendo o soft delete. Quando for implementado, só será permitido para registro já `INATIVO/CANCELADO`, por `ADMIN`, com regra explícita de FKs.
 
 **Para implementar no futuro:**
 - [x] Role `ADMIN` existe (`SecurityConfig` + `UserRole.ADMIN`); a autorização pode usar `@PreAuthorize` ou os matchers atuais.
@@ -30,7 +30,7 @@
       return ResponseEntity.noContent().build();
   }
   ```
-- [ ] Descomentar `AtletaService.java:50` e validar regra: bloquear `hardDelete` se `atleta.status == ATIVO` (?) ou permitir sempre?
+- [ ] Descomentar `AtletaService.java:50` e aplicar a regra: bloquear `hardDelete` se `atleta.status == ATIVO`; só permitir após `INATIVO`.
 - [ ] Considerar `ON DELETE` em `db/migration` para tabelas relacionadas (`inscricao`, `equipe`) — `Atleta.java:37` `@Table(name="db_atletas")`
 - [ ] Teste: `AtletaServiceTest#hardDelete_deveRemoverQuandoAdmin`
 
@@ -48,7 +48,7 @@
 //    }
 ```
 
-**Por que está comentado:** Método já correto (usa `CpfUtils.java:8` `normalize` + `AtletaRepository.java:18` `findByCpf`), mas `AtletaController.java:19` nunca expõe `GET /v1/atletas/cpf/{cpf}` — fica código morto.
+**Status (2026-11-09):** ✅ **feito**. O método foi reativado em `AtletaService` e o endpoint `GET /v1/atletas/cpf/{cpf}` foi exposto, com `@CPF` ativo no create.
 
 **Para implementar no futuro:**
 - [ ] Descomentar `AtletaService.java:32`
@@ -112,7 +112,7 @@
 
 > `Versionamento: /v1/atletas` OK, mas documente estratégia (URL vs header).
 
-**Status atual:** `AtletaController.java:20` `@RequestMapping("/v1/atletas")` usa versionamento via URL, correto (você fará na doc da API posteriormente). Sem OpenAPI (`springdoc` pendente) e sem doc da decisão URL vs header.
+**Status atual:** versionamento nativo do Spring (`/v{version}/...`, `version = "1.0"`) implementado. Falta apenas OpenAPI (`springdoc`) e README.
 
 **Para implementar futuramente (junto da doc da API):**
 - [ ] Adicionar `springdoc-openapi-starter-webmvc-ui` em `pom.xml`
@@ -180,12 +180,48 @@
 ## Checklist Geral
 
 - [ ] `hardDelete` — desbloqueado: `ADMIN` já existe; falta endpoint + regra de FKs
-- [ ] `findByCpfOrThrowNotFound` — aguardando decisão de exposição na API
+- [x] `findByCpfOrThrowNotFound` — ✅ feito: `GET /v1/atletas/cpf/{cpf}` + `@CPF` no create
 - [x] Busca por nome — ✅ feito: coluna `nome_completo_normalizado` + índice BTREE + busca por prefixo (`V10`); `FULLTEXT` descartado (item `3`)
 - [x] `ddl-auto` → `validate + Flyway` — ✅ feito: `V1__baseline.sql` + `spring-boot-starter-flyway`/`flyway-mysql` + `ddl-auto: validate` (item `4`)
-- [ ] `doc API + versionamento` — `6` `AtletaController.java:20` `/v1` OK, doc pendente (OpenAPI + README)
-- [ ] `Testes automatizados` — `8` `AtletaServiceTest`/`NomeCompletoUtilsTest`/`AtletaRepositoryTest` feitos; `AtletaControllerTest` + `AtletaMapperTest` pendentes
+- [ ] `doc API` — versionamento nativo ✅; falta OpenAPI + README
+- [ ] `Testes automatizados` — 251 testes; faltam controllers e mappers (fora do escopo imediato)
 - [x] `open-in-view=false` — `9` feito em `application.yaml:11`
 - [ ] `Infra ponto 9` — Java25/Boot4.1/MapStruct compat + separar `application-dev/prod.yaml` + OpenAPI (ver item `7`)
 
 > Ao implementar os itens `1`/`2`, descomentar o método correspondente em `AtletaService.java` e expor o endpoint em `AtletaController.java`.
+
+---
+
+## Governança de usuários
+
+- [x] Perfil `SUPERADMIN` + invariantes: `ADMIN` é somente leitura em `/v1/users`; mutações só `SUPERADMIN`; ninguém altera o próprio `role`/`status`; outro `SUPERADMIN` não é editável/inativável.
+- [x] Bootstrap: `V17__promote_seed_superadmin.sql` promove `admin@quixada.gov.br`.
+- [x] Auditoria: `V18__create_user_audit.sql` + `GET /v1/users/audit` (SUPERADMIN).
+- [ ] Criar novos `SUPERADMIN` (hoje só o seed) — decidir se haverá endpoint e regra de “último SUPERADMIN”.
+- [ ] Auditoria: filtros por ator/alvo/período, retenção/expurgo e exportação.
+
+---
+
+## Regras de negócio e core esportivo (2026-11-07)
+
+**Implementado:**
+- [x] Filtro `?status=` em todas as listagens (omitido = todos).
+- [x] Inscrição de equipe única por competição (somente service; sem unique no banco).
+- [x] `CANCELADA`/`REJEITADA` liberam vaga; `PENDENTE`/`APROVADA`/`INATIVA` ocupam.
+- [x] Máquina de estados de `StatusInscricao` e `StatusCompeticao`.
+- [x] Cascata: competição cancelada → inscrições/partidas; equipe cancelada/inativada → atletas/partidas.
+- [x] Bloqueio de inativação com vínculos ativos (atleta, equipe, categoria, clube, modalidade).
+- [x] Datas de inscrição + status automático da competição (`V19`, scheduler horário).
+- [x] Duplicidade de categoria por faixa etária idêntica entre categorias ativas.
+- [x] `@CPF` reativado e `GET /v1/atletas/cpf/{cpf}`.
+- [x] Partidas (`V20`), resultado e classificação 3/1/0.
+- [x] Validações finais: reativação de equipe, mínimo de atleta, último atleta, categoria/atleta ativos, modalidade ativa, filtros de partida e classificação com 0 jogos.
+- [x] Suíte com 251 testes.
+
+**Pendente:**
+- [ ] Geração automática de rodadas (turno único/returno).
+- [ ] Mínimo/máximo de elenco (decisão com equipe técnica).
+- [ ] Hard delete (somente após `INATIVO/CANCELADO`, ADMIN).
+- [ ] Criar novos `SUPERADMIN` pela API e regra de “último SUPERADMIN”.
+- [ ] Auditoria: filtros/retenção/exportação.
+- [ ] Testes de controller/mapper para os novos fluxos.

@@ -3,6 +3,8 @@ package br.gov.quixada.esporte.inscricao;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -18,12 +20,16 @@ import br.gov.quixada.esporte.atleta.AtletaRepository;
 import br.gov.quixada.esporte.atleta.exception.AtletaNotFoundException;
 import br.gov.quixada.esporte.categoria.Categoria;
 import br.gov.quixada.esporte.competicao.Competicao;
+import br.gov.quixada.esporte.competicao.StatusCompeticao;
 import br.gov.quixada.esporte.equipe.Equipe;
 import br.gov.quixada.esporte.inscricao.exception.AtletaForaDaCategoriaException;
 import br.gov.quixada.esporte.inscricao.exception.AtletaJaInscritoException;
 import br.gov.quixada.esporte.inscricao.exception.InscricaoAtletaNotFoundException;
+import br.gov.quixada.esporte.inscricao.exception.UltimoAtletaAtivoException;
+import br.gov.quixada.esporte.inscricao.exception.InscricaoInvalidaException;
 import br.gov.quixada.esporte.inscricao.exception.InscricaoEquipeNotFoundException;
 import br.gov.quixada.esporte.inscricao.exception.NumeroCamisaJaUtilizadoException;
+import br.gov.quixada.esporte.inscricao.exception.TransicaoStatusInvalidaException;
 import br.gov.quixada.esporte.modalidade.Modalidade;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -66,6 +72,7 @@ class InscricaoAtletaServiceTest {
         return Atleta.builder()
                 .nomeCompleto("Fulano de Tal")
                 .dataNascimento(dataNascimento)
+                .status(br.gov.quixada.esporte.atleta.StatusAtleta.ATIVO)
                 .build();
     }
 
@@ -78,20 +85,24 @@ class InscricaoAtletaServiceTest {
     }
 
     private Categoria umaCategoria(Long id, Integer idadeMinima, Integer idadeMaxima) {
-        Competicao competicao = Competicao.builder().id(1L).nome("Copa Teste").build();
+        Competicao competicao = Competicao.builder().id(1L).nome("Copa Teste")
+                .status(StatusCompeticao.INSCRICOES_ABERTAS).build();
         return Categoria.builder()
                 .id(id)
                 .nome("Sub-20")
                 .idadeMinima(idadeMinima)
                 .idadeMaxima(idadeMaxima)
                 .competicao(competicao)
+                .status(br.gov.quixada.esporte.categoria.StatusCategoria.ATIVO)
                 .build();
     }
 
     private InscricaoEquipe umaInscricaoEquipe(Categoria categoria) {
         return InscricaoEquipe.builder()
                 .id(1L)
-                .competicao(Competicao.builder().id(1L).nome("Copa Teste").build())
+                .competicao(Competicao.builder().id(1L).nome("Copa Teste")
+                        .status(StatusCompeticao.INSCRICOES_ABERTAS).build())
+                .status(StatusInscricao.PENDENTE)
                 .categoria(categoria)
                 .equipe(umaEquipe(3L, 10L))
                 .build();
@@ -107,7 +118,7 @@ class InscricaoAtletaServiceTest {
             Page<InscricaoAtleta> esperado = Page.empty();
             when(repository.findAll(PAGEABLE)).thenReturn(esperado);
 
-            Page<InscricaoAtleta> resultado = service.findAll(null, PAGEABLE);
+            Page<InscricaoAtleta> resultado = service.findAll(null, null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findAll(PAGEABLE);
@@ -119,7 +130,7 @@ class InscricaoAtletaServiceTest {
             Page<InscricaoAtleta> esperado = Page.empty();
             when(repository.findByInscricaoEquipeId(1L, PAGEABLE)).thenReturn(esperado);
 
-            Page<InscricaoAtleta> resultado = service.findAll(1L, PAGEABLE);
+            Page<InscricaoAtleta> resultado = service.findAll(1L, null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findByInscricaoEquipeId(1L, PAGEABLE);
@@ -204,7 +215,7 @@ class InscricaoAtletaServiceTest {
             Atleta atleta = umAtleta(LocalDate.of(2000, 6, 15));
             when(inscricaoEquipeRepository.findById(1L)).thenReturn(Optional.of(inscricaoEquipe));
             when(atletaRepository.findById(2L)).thenReturn(Optional.of(atleta));
-            when(repository.existsByInscricaoEquipeIdAndAtletaId(1L, 2L)).thenReturn(true);
+            when(repository.existsByInscricaoEquipeIdAndAtletaIdAndStatusIn(1L, 2L, StatusInscricao.OCUPAM_VAGA)).thenReturn(true);
             InscricaoAtleta inscricao = InscricaoAtleta.builder().numeroCamisa("10").build();
 
             assertThatThrownBy(() -> service.save(inscricao, 1L, 2L))
@@ -219,7 +230,7 @@ class InscricaoAtletaServiceTest {
             Atleta atleta = umAtleta(LocalDate.of(2000, 6, 15));
             when(inscricaoEquipeRepository.findById(1L)).thenReturn(Optional.of(inscricaoEquipe));
             when(atletaRepository.findById(2L)).thenReturn(Optional.of(atleta));
-            when(repository.existsByInscricaoEquipeCompeticaoIdAndAtletaId(1L, 2L)).thenReturn(true);
+            when(repository.existsByInscricaoEquipeCompeticaoIdAndAtletaIdAndStatusIn(1L, 2L, StatusInscricao.OCUPAM_VAGA)).thenReturn(true);
             InscricaoAtleta inscricao = InscricaoAtleta.builder().numeroCamisa("10").build();
 
             assertThatThrownBy(() -> service.save(inscricao, 1L, 2L))
@@ -234,7 +245,7 @@ class InscricaoAtletaServiceTest {
             Atleta atleta = umAtleta(LocalDate.of(2000, 6, 15));
             when(inscricaoEquipeRepository.findById(1L)).thenReturn(Optional.of(inscricaoEquipe));
             when(atletaRepository.findById(2L)).thenReturn(Optional.of(atleta));
-            when(repository.existsByInscricaoEquipeIdAndNumeroCamisa(1L, "10")).thenReturn(true);
+            when(repository.existsByInscricaoEquipeIdAndNumeroCamisaAndStatusIn(1L, "10", StatusInscricao.OCUPAM_VAGA)).thenReturn(true);
             InscricaoAtleta inscricao = InscricaoAtleta.builder().numeroCamisa("10").build();
 
             assertThatThrownBy(() -> service.save(inscricao, 1L, 2L))
@@ -303,11 +314,101 @@ class InscricaoAtletaServiceTest {
         }
 
         @Test
+        @DisplayName("deve bloquear transição a partir de CANCELADA")
+        void deveBloquearTransicaoDeCancelada() {
+            InscricaoAtleta inscricao = InscricaoAtleta.builder().status(StatusInscricao.CANCELADA).build();
+            when(repository.findById(1L)).thenReturn(Optional.of(inscricao));
+
+            assertThatThrownBy(() -> service.alterarStatus(1L, StatusInscricao.APROVADA))
+                    .isInstanceOf(TransicaoStatusInvalidaException.class);
+        }
+
+        @Test
         @DisplayName("deve lançar InscricaoAtletaNotFoundException quando o id não existir")
         void deveLancarNotFoundQuandoInexistente() {
             assertThatThrownBy(() -> service.alterarStatus(1L, StatusInscricao.APROVADA))
                     .isInstanceOf(InscricaoAtletaNotFoundException.class)
                     .hasMessage("Inscrição de atleta não encontrada");
+        }
+    }
+
+    @Nested
+    @DisplayName("regras de negócio")
+    class RegrasDeNegocio {
+
+        @Test
+        @DisplayName("deve bloquear inscrição de atleta inativo")
+        void deveBloquearAtletaInativo() {
+            InscricaoEquipe inscricaoEquipe = umaInscricaoEquipe(umaCategoria(2L, 18, 40));
+            Atleta atleta = Atleta.builder()
+                    .nomeCompleto("Fulano")
+                    .dataNascimento(LocalDate.of(2000, 6, 15))
+                    .status(br.gov.quixada.esporte.atleta.StatusAtleta.INATIVO)
+                    .build();
+            when(inscricaoEquipeRepository.findById(1L)).thenReturn(Optional.of(inscricaoEquipe));
+            when(atletaRepository.findById(2L)).thenReturn(Optional.of(atleta));
+
+            assertThatThrownBy(() -> service.save(InscricaoAtleta.builder().numeroCamisa("10").build(), 1L, 2L))
+                    .isInstanceOf(InscricaoInvalidaException.class)
+                    .hasMessage("Atleta inativo não pode ser inscrito");
+        }
+
+        @Test
+        @DisplayName("deve bloquear inscrição em categoria inativa")
+        void deveBloquearCategoriaInativa() {
+            Competicao competicao = Competicao.builder().id(1L).nome("Copa")
+                    .status(StatusCompeticao.INSCRICOES_ABERTAS).build();
+            Categoria categoria = Categoria.builder()
+                    .id(2L).nome("Sub-20").idadeMinima(18).idadeMaxima(40)
+                    .competicao(competicao)
+                    .status(br.gov.quixada.esporte.categoria.StatusCategoria.INATIVO)
+                    .build();
+            InscricaoEquipe inscricaoEquipe = InscricaoEquipe.builder()
+                    .id(1L).competicao(competicao).categoria(categoria)
+                    .equipe(umaEquipe(3L, 10L)).status(StatusInscricao.PENDENTE)
+                    .build();
+            Atleta atleta = umAtleta(LocalDate.of(2000, 6, 15));
+            when(inscricaoEquipeRepository.findById(1L)).thenReturn(Optional.of(inscricaoEquipe));
+            when(atletaRepository.findById(2L)).thenReturn(Optional.of(atleta));
+
+            assertThatThrownBy(() -> service.save(InscricaoAtleta.builder().numeroCamisa("10").build(), 1L, 2L))
+                    .isInstanceOf(InscricaoInvalidaException.class)
+                    .hasMessage("Categoria inativa não pode receber inscrições");
+        }
+
+        @Test
+        @DisplayName("não deve remover o último atleta ativo de equipe aprovada")
+        void naoDeveRemoverUltimoAtletaAtivo() {
+            InscricaoEquipe inscricaoEquipe = umaInscricaoEquipe(umaCategoria(2L, 18, 40));
+            inscricaoEquipe.alterarStatus(StatusInscricao.APROVADA);
+            Atleta atleta = umAtleta(LocalDate.of(2000, 6, 15));
+            InscricaoAtleta inscricao = InscricaoAtleta.builder()
+                    .id(10L).status(StatusInscricao.APROVADA)
+                    .inscricaoEquipe(inscricaoEquipe).atleta(atleta).numeroCamisa("10")
+                    .build();
+            when(repository.findById(10L)).thenReturn(Optional.of(inscricao));
+            when(repository.countByInscricaoEquipeIdAndStatusIn(eq(1L), anyCollection())).thenReturn(1L);
+
+            assertThatThrownBy(() -> service.alterarStatus(10L, StatusInscricao.CANCELADA))
+                    .isInstanceOf(UltimoAtletaAtivoException.class);
+        }
+
+        @Test
+        @DisplayName("deve permitir remover atleta quando há outro ativo na equipe")
+        void devePermitirRemoverQuandoHaOutroAtivo() {
+            InscricaoEquipe inscricaoEquipe = umaInscricaoEquipe(umaCategoria(2L, 18, 40));
+            inscricaoEquipe.alterarStatus(StatusInscricao.APROVADA);
+            Atleta atleta = umAtleta(LocalDate.of(2000, 6, 15));
+            InscricaoAtleta inscricao = InscricaoAtleta.builder()
+                    .id(10L).status(StatusInscricao.APROVADA)
+                    .inscricaoEquipe(inscricaoEquipe).atleta(atleta).numeroCamisa("10")
+                    .build();
+            when(repository.findById(10L)).thenReturn(Optional.of(inscricao));
+            when(repository.countByInscricaoEquipeIdAndStatusIn(eq(1L), anyCollection())).thenReturn(2L);
+
+            var resultado = service.alterarStatus(10L, StatusInscricao.CANCELADA);
+
+            assertThat(resultado.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
         }
     }
 }

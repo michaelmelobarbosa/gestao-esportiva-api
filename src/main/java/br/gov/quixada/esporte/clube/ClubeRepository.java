@@ -9,4 +9,8 @@ import org.springframework.stereotype.Repository;
 public interface ClubeRepository extends JpaRepository<Clube, Long> {
 
     Page<Clube> findByNomeContainingIgnoreCase(String nome, Pageable pageable);
+
+    Page<Clube> findByStatus(StatusClube status, Pageable pageable);
+
+    Page<Clube> findByNomeContainingIgnoreCaseAndStatus(String nome, StatusClube status, Pageable pageable);
 }

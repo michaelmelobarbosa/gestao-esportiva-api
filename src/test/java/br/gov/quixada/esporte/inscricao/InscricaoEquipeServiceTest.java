@@ -3,13 +3,20 @@ package br.gov.quixada.esporte.inscricao;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.List;
 import java.util.Optional;
 
 import br.gov.quixada.esporte.categoria.Categoria;
+import br.gov.quixada.esporte.categoria.StatusCategoria;
 import br.gov.quixada.esporte.categoria.CategoriaRepository;
 import br.gov.quixada.esporte.categoria.exception.CategoriaNotFoundException;
 import br.gov.quixada.esporte.competicao.Competicao;
@@ -21,10 +28,14 @@ import br.gov.quixada.esporte.equipe.EquipeRepository;
 import br.gov.quixada.esporte.equipe.StatusEquipe;
 import br.gov.quixada.esporte.equipe.exception.EquipeInativaException;
 import br.gov.quixada.esporte.equipe.exception.EquipeNotFoundException;
+import br.gov.quixada.esporte.inscricao.exception.EquipeJaInscritaException;
 import br.gov.quixada.esporte.inscricao.exception.InscricaoEquipeNotFoundException;
+import br.gov.quixada.esporte.inscricao.exception.InscricaoEquipeSemAtletasException;
 import br.gov.quixada.esporte.inscricao.exception.InscricaoInvalidaException;
 import br.gov.quixada.esporte.inscricao.exception.InscricoesEncerradasException;
+import br.gov.quixada.esporte.inscricao.exception.TransicaoStatusInvalidaException;
 import br.gov.quixada.esporte.modalidade.Modalidade;
+import br.gov.quixada.esporte.partida.PartidaService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -54,11 +65,19 @@ class InscricaoEquipeServiceTest {
     @Mock
     private EquipeRepository equipeRepository;
 
+    @Mock
+    private InscricaoAtletaRepository inscricaoAtletaRepository;
+
+    @Mock
+    private PartidaService partidaService;
+
     private InscricaoEquipeService service;
 
     @BeforeEach
     void setUp() {
-        service = new InscricaoEquipeService(repository, competicaoRepository, categoriaRepository, equipeRepository);
+        var clock = Clock.fixed(Instant.parse("2026-06-15T12:00:00Z"), ZoneId.of("America/Fortaleza"));
+        service = new InscricaoEquipeService(repository, inscricaoAtletaRepository, competicaoRepository,
+                categoriaRepository, equipeRepository, partidaService, clock);
     }
 
     private Modalidade umaModalidade(Long id) {
@@ -82,6 +101,7 @@ class InscricaoEquipeServiceTest {
                 .idadeMinima(13)
                 .idadeMaxima(15)
                 .competicao(competicao)
+                .status(br.gov.quixada.esporte.categoria.StatusCategoria.ATIVO)
                 .build();
     }
 
@@ -104,7 +124,7 @@ class InscricaoEquipeServiceTest {
             Page<InscricaoEquipe> esperado = Page.empty();
             when(repository.findAll(PAGEABLE)).thenReturn(esperado);
 
-            Page<InscricaoEquipe> resultado = service.findAll(null, PAGEABLE);
+            Page<InscricaoEquipe> resultado = service.findAll(null, null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findAll(PAGEABLE);
@@ -116,7 +136,7 @@ class InscricaoEquipeServiceTest {
             Page<InscricaoEquipe> esperado = Page.empty();
             when(repository.findByCompeticaoId(1L, PAGEABLE)).thenReturn(esperado);
 
-            Page<InscricaoEquipe> resultado = service.findAll(1L, PAGEABLE);
+            Page<InscricaoEquipe> resultado = service.findAll(1L, null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findByCompeticaoId(1L, PAGEABLE);
@@ -274,6 +294,23 @@ class InscricaoEquipeServiceTest {
                     .isInstanceOf(InscricaoInvalidaException.class)
                     .hasMessage("Modalidade da equipe difere da modalidade da competição");
         }
+
+        @Test
+        @DisplayName("deve bloquear inscrição duplicada da mesma equipe na competição")
+        void deveBloquearEquipeDuplicada() {
+            Competicao competicao = umaCompeticao(1L, 10L, StatusCompeticao.INSCRICOES_ABERTAS);
+            Categoria categoria = umaCategoria(2L, competicao);
+            Equipe equipe = umaEquipe(3L, 10L, StatusEquipe.ATIVO);
+            when(competicaoRepository.findById(1L)).thenReturn(Optional.of(competicao));
+            when(categoriaRepository.findById(2L)).thenReturn(Optional.of(categoria));
+            when(equipeRepository.findById(3L)).thenReturn(Optional.of(equipe));
+            when(repository.existsByCompeticaoIdAndEquipeIdAndStatusIn(1L, 3L, StatusInscricao.OCUPAM_VAGA))
+                    .thenReturn(true);
+
+            assertThatThrownBy(() -> service.save(InscricaoEquipe.builder().build(), 1L, 2L, 3L))
+                    .isInstanceOf(EquipeJaInscritaException.class)
+                    .hasMessage("Equipe já possui inscrição ativa nesta competição");
+        }
     }
 
     @Nested
@@ -283,8 +320,10 @@ class InscricaoEquipeServiceTest {
         @Test
         @DisplayName("deve alterar o status e não chamar save")
         void deveAlterarStatus() {
-            InscricaoEquipe inscricao = InscricaoEquipe.builder().status(StatusInscricao.PENDENTE).build();
+            InscricaoEquipe inscricao = InscricaoEquipe.builder().id(1L).status(StatusInscricao.PENDENTE).build();
             when(repository.findById(1L)).thenReturn(Optional.of(inscricao));
+            when(inscricaoAtletaRepository.countByInscricaoEquipeIdAndStatusIn(
+                    eq(1L), anyCollection())).thenReturn(1L);
 
             InscricaoEquipe resultado = service.alterarStatus(1L, StatusInscricao.APROVADA);
 
@@ -305,11 +344,165 @@ class InscricaoEquipeServiceTest {
         }
 
         @Test
+        @DisplayName("deve cancelar em cascata os atletas e as partidas")
+        void deveCancelarEmCascata() {
+            InscricaoEquipe inscricao = InscricaoEquipe.builder().id(1L).status(StatusInscricao.PENDENTE).build();
+            InscricaoAtleta atleta = InscricaoAtleta.builder().id(10L).status(StatusInscricao.PENDENTE).build();
+            when(repository.findById(1L)).thenReturn(Optional.of(inscricao));
+            when(inscricaoAtletaRepository.findByInscricaoEquipeId(1L)).thenReturn(java.util.List.of(atleta));
+
+            service.alterarStatus(1L, StatusInscricao.CANCELADA);
+
+            assertThat(atleta.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+            verify(partidaService).cancelarPorInscricao(1L);
+        }
+
+        @Test
+        @DisplayName("deve inativar em cascata os atletas")
+        void deveInativarEmCascata() {
+            InscricaoEquipe inscricao = InscricaoEquipe.builder().id(1L).status(StatusInscricao.APROVADA).build();
+            InscricaoAtleta atleta = InscricaoAtleta.builder().id(10L).status(StatusInscricao.PENDENTE).build();
+            when(repository.findById(1L)).thenReturn(Optional.of(inscricao));
+            when(inscricaoAtletaRepository.findByInscricaoEquipeId(1L)).thenReturn(java.util.List.of(atleta));
+
+            service.alterarStatus(1L, StatusInscricao.INATIVA);
+
+            assertThat(atleta.getStatus()).isEqualTo(StatusInscricao.INATIVA);
+            verify(partidaService).cancelarPorInscricao(1L);
+        }
+
+        @Test
+        @DisplayName("deve bloquear transição a partir de CANCELADA")
+        void deveBloquearTransicaoDeCancelada() {
+            InscricaoEquipe inscricao = InscricaoEquipe.builder().id(1L).status(StatusInscricao.CANCELADA).build();
+            when(repository.findById(1L)).thenReturn(Optional.of(inscricao));
+
+            assertThatThrownBy(() -> service.alterarStatus(1L, StatusInscricao.PENDENTE))
+                    .isInstanceOf(TransicaoStatusInvalidaException.class);
+        }
+
+        @Test
         @DisplayName("deve lançar InscricaoEquipeNotFoundException quando o id não existir")
         void deveLancarNotFoundQuandoInexistente() {
             assertThatThrownBy(() -> service.alterarStatus(1L, StatusInscricao.APROVADA))
                     .isInstanceOf(InscricaoEquipeNotFoundException.class)
                     .hasMessage("Inscrição de equipe não encontrada");
+        }
+    }
+
+    @Nested
+    @DisplayName("regras de negócio")
+    class RegrasDeNegocio {
+
+        private InscricaoEquipe inscricaoCompleta(StatusInscricao status, StatusCompeticao statusCompeticao,
+                                                  StatusCategoria statusCategoria, StatusEquipe statusEquipe) {
+            Competicao competicao = umaCompeticao(1L, 10L, statusCompeticao);
+            Categoria categoria = Categoria.builder()
+                    .id(2L)
+                    .nome("Sub-15")
+                    .idadeMinima(13)
+                    .idadeMaxima(15)
+                    .competicao(competicao)
+                    .status(statusCategoria)
+                    .build();
+            Equipe equipe = umaEquipe(3L, 10L, statusEquipe);
+            return InscricaoEquipe.builder()
+                    .id(1L)
+                    .status(status)
+                    .competicao(competicao)
+                    .categoria(categoria)
+                    .equipe(equipe)
+                    .build();
+        }
+
+        @Test
+        @DisplayName("deve rejeitar aprovação de equipe sem atletas")
+        void deveRejeitarAprovacaoSemAtletas() {
+            InscricaoEquipe inscricao = inscricaoCompleta(StatusInscricao.PENDENTE,
+                    StatusCompeticao.INSCRICOES_ABERTAS, StatusCategoria.ATIVO, StatusEquipe.ATIVO);
+            when(repository.findById(1L)).thenReturn(Optional.of(inscricao));
+            when(inscricaoAtletaRepository.countByInscricaoEquipeIdAndStatusIn(eq(1L), anyCollection()))
+                    .thenReturn(0L);
+
+            assertThatThrownBy(() -> service.alterarStatus(1L, StatusInscricao.APROVADA))
+                    .isInstanceOf(InscricaoEquipeSemAtletasException.class)
+                    .hasMessage("Inscrição de equipe precisa de ao menos um atleta para ser aprovada");
+        }
+
+        @Test
+        @DisplayName("deve rejeitar reativação com competição encerrada")
+        void deveRejeitarReativacaoComCompeticaoEncerrada() {
+            InscricaoEquipe inscricao = inscricaoCompleta(StatusInscricao.INATIVA,
+                    StatusCompeticao.PLANEJAMENTO, StatusCategoria.ATIVO, StatusEquipe.ATIVO);
+            when(repository.findById(1L)).thenReturn(Optional.of(inscricao));
+
+            assertThatThrownBy(() -> service.alterarStatus(1L, StatusInscricao.PENDENTE))
+                    .isInstanceOf(InscricoesEncerradasException.class);
+        }
+
+        @Test
+        @DisplayName("deve rejeitar reativação com equipe inativa")
+        void deveRejeitarReativacaoComEquipeInativa() {
+            InscricaoEquipe inscricao = inscricaoCompleta(StatusInscricao.INATIVA,
+                    StatusCompeticao.INSCRICOES_ABERTAS, StatusCategoria.ATIVO, StatusEquipe.INATIVO);
+            when(repository.findById(1L)).thenReturn(Optional.of(inscricao));
+
+            assertThatThrownBy(() -> service.alterarStatus(1L, StatusInscricao.PENDENTE))
+                    .isInstanceOf(EquipeInativaException.class);
+        }
+
+        @Test
+        @DisplayName("deve rejeitar reativação com categoria inativa")
+        void deveRejeitarReativacaoComCategoriaInativa() {
+            InscricaoEquipe inscricao = inscricaoCompleta(StatusInscricao.INATIVA,
+                    StatusCompeticao.INSCRICOES_ABERTAS, StatusCategoria.INATIVO, StatusEquipe.ATIVO);
+            when(repository.findById(1L)).thenReturn(Optional.of(inscricao));
+
+            assertThatThrownBy(() -> service.alterarStatus(1L, StatusInscricao.PENDENTE))
+                    .isInstanceOf(br.gov.quixada.esporte.categoria.exception.CategoriaInativaException.class);
+        }
+
+        @Test
+        @DisplayName("deve rejeitar reativação quando já existe outra inscrição ativa da equipe")
+        void deveRejeitarReativacaoComDuplicidade() {
+            InscricaoEquipe inscricao = inscricaoCompleta(StatusInscricao.INATIVA,
+                    StatusCompeticao.INSCRICOES_ABERTAS, StatusCategoria.ATIVO, StatusEquipe.ATIVO);
+            when(repository.findById(1L)).thenReturn(Optional.of(inscricao));
+            when(repository.existsByCompeticaoIdAndEquipeIdAndStatusInAndIdNot(
+                    1L, 3L, StatusInscricao.OCUPAM_VAGA, 1L)).thenReturn(true);
+
+            assertThatThrownBy(() -> service.alterarStatus(1L, StatusInscricao.PENDENTE))
+                    .isInstanceOf(EquipeJaInscritaException.class);
+        }
+
+        @Test
+        @DisplayName("não deve alterar atleta REJEITADA na cascata INATIVA")
+        void naoDeveAlterarRejeitadaNaCascataInativa() {
+            InscricaoEquipe inscricao = inscricaoCompleta(StatusInscricao.APROVADA,
+                    StatusCompeticao.INSCRICOES_ABERTAS, StatusCategoria.ATIVO, StatusEquipe.ATIVO);
+            InscricaoAtleta atleta = InscricaoAtleta.builder()
+                    .id(10L).status(StatusInscricao.REJEITADA).build();
+            when(repository.findById(1L)).thenReturn(Optional.of(inscricao));
+            when(inscricaoAtletaRepository.findByInscricaoEquipeId(1L)).thenReturn(List.of(atleta));
+
+            service.alterarStatus(1L, StatusInscricao.INATIVA);
+
+            assertThat(atleta.getStatus()).isEqualTo(StatusInscricao.REJEITADA);
+        }
+
+        @Test
+        @DisplayName("deve bloquear inscrição em categoria inativa")
+        void deveBloquearInscricaoEmCategoriaInativa() {
+            Competicao competicao = umaCompeticao(1L, 10L, StatusCompeticao.INSCRICOES_ABERTAS);
+            Categoria categoria = Categoria.builder().id(2L).nome("Sub-15").idadeMinima(13).idadeMaxima(15)
+                    .competicao(competicao).status(StatusCategoria.INATIVO).build();
+            Equipe equipe = umaEquipe(3L, 10L, StatusEquipe.ATIVO);
+            when(competicaoRepository.findById(1L)).thenReturn(Optional.of(competicao));
+            when(categoriaRepository.findById(2L)).thenReturn(Optional.of(categoria));
+            when(equipeRepository.findById(3L)).thenReturn(Optional.of(equipe));
+
+            assertThatThrownBy(() -> service.save(InscricaoEquipe.builder().build(), 1L, 2L, 3L))
+                    .isInstanceOf(br.gov.quixada.esporte.categoria.exception.CategoriaInativaException.class);
         }
     }
 }

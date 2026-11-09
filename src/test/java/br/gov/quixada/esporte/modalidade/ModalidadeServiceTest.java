@@ -3,6 +3,8 @@ package br.gov.quixada.esporte.modalidade;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -10,6 +12,10 @@ import static org.mockito.Mockito.when;
 
 import java.util.Optional;
 
+import br.gov.quixada.esporte.competicao.CompeticaoRepository;
+import br.gov.quixada.esporte.equipe.EquipeRepository;
+import br.gov.quixada.esporte.common.error.VinculoAtivoException;
+import br.gov.quixada.esporte.equipe.StatusEquipe;
 import br.gov.quixada.esporte.modalidade.exception.ModalidadeInativaException;
 import br.gov.quixada.esporte.modalidade.exception.ModalidadeNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,11 +38,17 @@ class ModalidadeServiceTest {
     @Mock
     private ModalidadeRepository repository;
 
+    @Mock
+    private EquipeRepository equipeRepository;
+
+    @Mock
+    private CompeticaoRepository competicaoRepository;
+
     private ModalidadeService service;
 
     @BeforeEach
     void setUp() {
-        service = new ModalidadeService(repository);
+        service = new ModalidadeService(repository, equipeRepository, competicaoRepository);
     }
 
     private Modalidade umaModalidade(StatusModalidade status) {
@@ -56,7 +68,7 @@ class ModalidadeServiceTest {
             Page<Modalidade> esperado = Page.empty();
             when(repository.findAll(PAGEABLE)).thenReturn(esperado);
 
-            Page<Modalidade> resultado = service.findAll(null, PAGEABLE);
+            Page<Modalidade> resultado = service.findAll(null, null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findAll(PAGEABLE);
@@ -69,7 +81,7 @@ class ModalidadeServiceTest {
             Page<Modalidade> esperado = Page.empty();
             when(repository.findAll(PAGEABLE)).thenReturn(esperado);
 
-            Page<Modalidade> resultado = service.findAll("   ", PAGEABLE);
+            Page<Modalidade> resultado = service.findAll("   ", null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findAll(PAGEABLE);
@@ -82,7 +94,7 @@ class ModalidadeServiceTest {
             Page<Modalidade> esperado = Page.empty();
             when(repository.findByNomeContainingIgnoreCase("futebol", PAGEABLE)).thenReturn(esperado);
 
-            Page<Modalidade> resultado = service.findAll("futebol", PAGEABLE);
+            Page<Modalidade> resultado = service.findAll("futebol", null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findByNomeContainingIgnoreCase("futebol", PAGEABLE);
@@ -236,6 +248,34 @@ class ModalidadeServiceTest {
             assertThatThrownBy(() -> service.update(1L, Modalidade.builder().nome("Basquete").build()))
                     .isInstanceOf(ModalidadeNotFoundException.class)
                     .hasMessage("Modalidade não encontrada");
+        }
+    }
+
+    @Nested
+    @DisplayName("regras de negócio")
+    class RegrasDeNegocio {
+
+        @Test
+        @DisplayName("não deve inativar modalidade com equipe ativa")
+        void naoDeveInativarComEquipeAtiva() {
+            Modalidade modalidade = Modalidade.builder().id(1L).status(StatusModalidade.ATIVO).build();
+            when(repository.findById(1L)).thenReturn(Optional.of(modalidade));
+            when(equipeRepository.existsByModalidadeIdAndStatus(1L, StatusEquipe.ATIVO)).thenReturn(true);
+
+            assertThatThrownBy(() -> service.inativar(1L))
+                    .isInstanceOf(VinculoAtivoException.class);
+        }
+
+        @Test
+        @DisplayName("não deve inativar modalidade com competição ativa")
+        void naoDeveInativarComCompeticaoAtiva() {
+            Modalidade modalidade = Modalidade.builder().id(1L).status(StatusModalidade.ATIVO).build();
+            when(repository.findById(1L)).thenReturn(Optional.of(modalidade));
+            when(equipeRepository.existsByModalidadeIdAndStatus(1L, StatusEquipe.ATIVO)).thenReturn(false);
+            when(competicaoRepository.existsByModalidadeIdAndStatusNotIn(eq(1L), anyCollection())).thenReturn(true);
+
+            assertThatThrownBy(() -> service.inativar(1L))
+                    .isInstanceOf(VinculoAtivoException.class);
         }
     }
 }

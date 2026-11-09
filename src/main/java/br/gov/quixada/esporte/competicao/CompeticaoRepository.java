@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.Optional;
 
 @Repository
@@ -18,7 +19,15 @@ public interface CompeticaoRepository extends JpaRepository<Competicao, Long> {
     @EntityGraph(attributePaths = "modalidade")
     Page<Competicao> findByNomeContainingIgnoreCase(String nome, Pageable pageable);
 
+    @EntityGraph(attributePaths = "modalidade")
+    Page<Competicao> findByStatus(StatusCompeticao status, Pageable pageable);
+
+    @EntityGraph(attributePaths = "modalidade")
+    Page<Competicao> findByNomeContainingIgnoreCaseAndStatus(String nome, StatusCompeticao status, Pageable pageable);
+
     @Override
     @EntityGraph(attributePaths = "modalidade")
     Optional<Competicao> findById(Long id);
+
+    boolean existsByModalidadeIdAndStatusNotIn(Long modalidadeId, Collection<StatusCompeticao> statuses);
 }

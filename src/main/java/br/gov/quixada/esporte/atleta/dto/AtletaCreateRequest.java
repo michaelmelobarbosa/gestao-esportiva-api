@@ -5,6 +5,8 @@ import br.gov.quixada.esporte.extras.Sexo;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 
+import org.hibernate.validator.constraints.br.CPF;
+
 import java.time.LocalDate;
 
 
@@ -14,7 +16,7 @@ public record AtletaCreateRequest(
         String nomeCompleto,
         @NotBlank(message = "Cpf é obrigatório")
         @Pattern(regexp = "\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}|\\d{11}", message = "CPF deve estar no formato 000.000.000-00 ou 00000000000")
-        //@CPF(message = "Cpf inválido") comentado para testes fake, posteriormente alterar.
+        @CPF(message = "CPF inválido")
         String cpf,
         @Past(message = "A data de nascimento deve ser no passado")
         @NotNull(message = "Data de nascimento é obrigatório")

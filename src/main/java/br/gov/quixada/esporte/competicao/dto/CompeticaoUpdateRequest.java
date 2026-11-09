@@ -16,6 +16,10 @@ public record CompeticaoUpdateRequest(
         @Positive(message = "Ano deve ser positivo")
         @Min(value = 1900, message = "Ano deve ser maior ou igual a 1900")
         Integer ano,
+        @NotNull(message = "Data de início das inscrições é obrigatória")
+        LocalDate dataInicioInscricao,
+        @NotNull(message = "Data de fim das inscrições é obrigatória")
+        LocalDate dataFimInscricao,
         @NotNull(message = "Data de início é obrigatória")
         LocalDate dataInicio,
         @NotNull(message = "Data de fim é obrigatória")

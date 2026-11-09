@@ -27,3 +27,5 @@ api:
   security:
     token:
       secret: ${API_SECURITY_TOKEN_SECRET}
+      issuer: gestao-esportiva-api
+      expiration: 2h

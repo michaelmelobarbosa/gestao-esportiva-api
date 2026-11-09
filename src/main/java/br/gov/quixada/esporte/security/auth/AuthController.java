@@ -1,7 +1,7 @@
 package br.gov.quixada.esporte.security.auth;
 
-import br.gov.quixada.esporte.security.config.JwtService;
-import br.gov.quixada.esporte.security.users.User;
+import br.gov.quixada.esporte.security.jwt.JwtService;
+import br.gov.quixada.esporte.security.users.UserDetailsAdapter;
 import br.gov.quixada.esporte.security.users.dto.LoginRequest;
 import br.gov.quixada.esporte.security.users.dto.LoginResponse;
 import br.gov.quixada.esporte.security.users.dto.RegisterRequest;
@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Objects;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping(path = "/v{version}/auth", version = "1.0")
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -31,7 +31,8 @@ public class AuthController {
         var usernamePassword = new UsernamePasswordAuthenticationToken(request.email(), request.password());
         var auth = authenticationManager.authenticate(usernamePassword);
 
-        var token = jwtService.generateToken((User) Objects.requireNonNull(auth.getPrincipal()));
+        var userDetails = (UserDetailsAdapter) Objects.requireNonNull(auth.getPrincipal());
+        var token = jwtService.generateToken(userDetails.user());
         return ResponseEntity.ok(new LoginResponse(token));
     }
 

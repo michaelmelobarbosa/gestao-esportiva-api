@@ -2,6 +2,8 @@ package br.gov.quixada.esporte.security.config;
 
 import br.gov.quixada.esporte.security.auth.UserRepository;
 import br.gov.quixada.esporte.security.auth.exception.TokenInvalidoException;
+import br.gov.quixada.esporte.security.jwt.JwtService;
+import br.gov.quixada.esporte.security.users.UserDetailsAdapter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -34,8 +36,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private void autenticar(String token) {
         try {
             var email = jwtService.extractEmail(token);
-            userRepository.findByEmail(email).ifPresent(user -> {
-                var authentication = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+            userRepository.findByEmail(email).map(UserDetailsAdapter::new)
+                    .filter(UserDetailsAdapter::isEnabled).ifPresent(userDetails -> {
+                var authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             });
         } catch (TokenInvalidoException e) {

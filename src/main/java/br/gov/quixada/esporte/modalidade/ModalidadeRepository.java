@@ -9,4 +9,8 @@ import org.springframework.stereotype.Repository;
 public interface ModalidadeRepository extends JpaRepository<Modalidade, Long> {
 
     Page<Modalidade> findByNomeContainingIgnoreCase(String nome, Pageable pageable);
+
+    Page<Modalidade> findByStatus(StatusModalidade status, Pageable pageable);
+
+    Page<Modalidade> findByNomeContainingIgnoreCaseAndStatus(String nome, StatusModalidade status, Pageable pageable);
 }

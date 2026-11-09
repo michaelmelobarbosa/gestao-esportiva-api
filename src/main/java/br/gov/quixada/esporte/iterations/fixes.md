@@ -1,6 +1,6 @@
 # Fixes — Segurança e Autenticação
 
-> **Documento de estudo.** Atualizado em 2026-11-01.
+> **Documento de estudo.** Atualizado em 2026-11-05.
 > Este arquivo consolida **o que já foi corrigido**, **o que ainda falta** e **por que cada decisão foi tomada**.
 > O checklist detalhado item por item continua em `securityfixes.md`; o roadmap de features em `futuras-iterações.md`.
 
@@ -15,9 +15,9 @@ O trabalho foi organizado em **batches** pequenos para facilitar revisão e apre
 | Batch | Escopo | Status |
 |---|---|---|
 | 1 | Segredo obrigatório + robustez do token (`A2`, `B1`, `B5`, `B6`) | ✅ Concluído |
-| 2 | Repositório e validação (`B7`, `B4`, `A4`); `B2` adiado | 🟡 Parcial |
-| 3 | Configuração e testabilidade do JWT (`C1`, `C2`, `C3`) | ⏳ Pendente |
-| 4 | Decisões maiores (rate limit, refresh/logout, CORS, versionamento) | ⏳ Pendente |
+| 2 | Repositório, validação e contrato HTTP (`B7`, `B4`, `A4`, `B2`) | ✅ Concluído |
+| 3 | Configuração e testabilidade do JWT (`C1`, `C2`, `C3`) | ✅ Concluído |
+| 4 | Decisões maiores (rate limit, refresh/logout, CORS); versionamento (`C10`) concluído | ⏳ Pendente |
 
 ---
 
@@ -26,7 +26,7 @@ O trabalho foi organizado em **batches** pequenos para facilitar revisão e apre
 ### Cadastro
 
 ```
-POST /auth/register { username, email, password }
+POST /v1/auth/register { username, email, password }
         │
         ▼
 AuthController  →  AuthService.register
@@ -39,7 +39,7 @@ AuthController  →  AuthService.register
 ### Login
 
 ```
-POST /auth/login { email, password }
+POST /v1/auth/login { email, password }
         │
         ▼
 AuthController → AuthenticationManager
@@ -89,7 +89,7 @@ SecurityConfig (authorizeHttpRequests) → controller
 | Item | Status | O que é |
 |---|---|---|
 | B1 | ✅ Feito | Token inválido lança `TokenInvalidoException`, não `RuntimeException`. |
-| B2 | ⏳ Adiado | EntryPoint/AccessDeniedHandler em JSON — decisão posterior. |
+| B2 | ✅ Feito | 401/403 em JSON via `AuthenticationEntryPoint`/`AccessDeniedHandler`. |
 | B3 | ✅ Feito | Matchers por método em `/v1/**` (GET `USER`/`ADMIN`; escrita `ADMIN`). |
 | B4 | ✅ Feito | `UsernameNotFoundException` quando o email não existe. |
 | B5 | ✅ Feito | Header só é aceito com o esquema `Bearer`. |
@@ -102,18 +102,18 @@ SecurityConfig (authorizeHttpRequests) → controller
 
 | Item | Status | O que é |
 |---|---|---|
-| C1 | ⏳ Pendente | Usar o `Clock` do projeto no `JwtService`. |
-| C2 | ⏳ Pendente | `@ConfigurationProperties` no lugar de `@Value`. |
-| C3 | ⏳ Pendente | Issuer/expiração configuráveis e sem duplicação. |
-| C4 | ⏳ Pendente | Avaliar separar `UserDetails` da entidade `User`. |
+| C1 | ✅ Feito | `JwtService` usa o `Clock` do projeto. |
+| C2 | ✅ Feito | `TokenProperties` com `@ConfigurationProperties` e validação. |
+| C3 | ✅ Feito | `issuer` e `expiration` configuráveis, sem duplicação. |
+| C4 | ✅ Feito | `UserDetailsAdapter` separa `UserDetails` da entidade `User`. |
 | C5 | ✅ Feito | Email usado, validado, `NOT NULL` e `UNIQUE`. |
 | C6 | ⏳ Pendente | Refresh token / logout / revogação. |
 | C7 | ⏳ Pendente | (Opcional) roles como claim do JWT. |
 | C8 | ⏳ Pendente | CORS (quando houver front-end). |
 | C9 | ✅ Feito | Testes de auth (service, controller, JWT e filtro). |
-| C10 | ⏳ Pendente | Versionar `/auth` como `/v1/auth`. |
-| C11 | ⏳ Pendente | `JwtService` não é configuração; reavaliar pacote. |
-| C12 | ⏳ Pendente | Renomear `authenticationManagerBean`. |
+| C10 | ✅ Feito | `/auth` está em `/v1/auth` com versionamento nativo do Spring. |
+| C11 | ✅ Feito | `JwtService` e `TokenProperties` movidos para `security/jwt`. |
+| C12 | ✅ Feito | `authenticationManagerBean` renomeado para `authenticationManager`. |
 
 ---
 
@@ -138,7 +138,7 @@ SecurityConfig (authorizeHttpRequests) → controller
 
 ### 4.3 Senha: BCrypt e o limite de 72 bytes
 
-**Decisão:** política **mínimo 8 / máximo 72 caracteres** (aplicação no DTO pendente).
+**Decisão:** política **mínimo 8 / máximo 72 caracteres** (aplicação no DTO feita).
 
 **Por quê:** o BCrypt ignora bytes além de 72. Aceitar uma senha de 200 caracteres dá uma falsa sensação de segurança: os últimos 128 não contam. O mínimo 8 evita senhas triviais. O hash gerado tem ~60 caracteres, por isso a coluna do banco é `varchar(255)`.
 
@@ -256,7 +256,7 @@ public record LoginRequest(
 
 - `GET /v1/**` → `USER` ou `ADMIN`;
 - `POST`, `PATCH`, `PUT`, `DELETE /v1/**` → `ADMIN`;
-- `/auth/**` → público;
+- `/v1/auth/**` → público;
 - restante → `USER`.
 
 **Conceito:** a ordem importa. Regras mais específicas vêm antes do `anyRequest()`, que é o fallback.
@@ -335,7 +335,7 @@ Antes o `email` existia no banco, mas o registro não o preenchia. Agora ele é 
 | `JwtServiceTest` | token válido, assinatura errada, expirado, malformado. |
 | `JwtAuthenticationFilterTest` | token válido autentica; inválido/sem Bearer/usuário ausente seguem anônimos. |
 
-Total atual: **156 testes**.
+Total atual: **251 testes**.
 
 ### 5.13 B7 — `findByEmail` com `Optional`
 
@@ -365,54 +365,91 @@ return userRepository.findByEmail(email)
 
 **Detalhe:** o `DaoAuthenticationProvider` converte essa exceção em `BadCredentialsException` por padrão, então o login continua respondendo 401 genérico — sem revelar se o email existe.
 
+### 5.15 B2 — 401/403 em JSON
+
+**Problema:** o Spring Security respondia no formato padrão dele, fora do contrato `ApiError`.
+
+**Correção:** `RestAuthenticationEntryPoint` (401) e `RestAccessDeniedHandler` (403), ambos usando `ApiErrorResponseWriter` com o `ObjectMapper` do Jackson 3 (`tools.jackson.databind.ObjectMapper`). O `SecurityConfig` registra os dois em `exceptionHandling(...)`.
+
+**Conceito:** o `@RestControllerAdvice` não captura exceções de filtros. O `ExceptionTranslationFilter` decide entre entry point (anônimo → 401) e access denied handler (autenticado sem role → 403).
+
+**Verificação:** sem token → `401 {"message":"Não autenticado",...}`; token de `USER` em `POST /v1/**` → `403 {"message":"Acesso negado",...}`. Os testes dos handlers ficaram para a iteração de testes.
+
+### 5.16 C1/C2/C3 — `Clock` e configuração do token
+
+**Problema:** o `JwtService` usava `LocalDateTime.now()` com offset fixo `-03:00`, `@Value` sem validação e issuer/expiração repetidos/no código.
+
+**Correção:**
+- `TokenProperties` (`@ConfigurationProperties(prefix = "api.security.token")`, `@Validated`) com `secret` (`@NotBlank @Size(min = 32)`), `issuer` e `expiration` (`Duration`).
+- `JwtService` recebe `TokenProperties` e `Clock` por construtor; `expirationDate()` = `clock.instant().plus(properties.expiration())`.
+- `application.yaml` e `application-test.yaml` definem `issuer` e `expiration: 2h`.
+
+**Conceitos:** `Clock` abstrai o “agora” (permite `Clock.fixed` nos testes); `@ConfigurationProperties` agrupa e valida a configuração; `Duration` converte `2h` automaticamente.
+
+**Verificação:** token emitido com `iss=gestao-esportiva-api` e `exp` exatamente 2h à frente; acesso continua 200.
+
+### 5.17 C4 — `UserDetailsAdapter`
+
+**Problema:** `User implements UserDetails` acoplava a entidade JPA ao Spring Security e herdava os setters de `password`/`role` na camada de segurança.
+
+**Correção:**
+- `User` voltou a ser uma entidade pura (sem imports de `org.springframework.security`).
+- `UserDetailsAdapter` (record em `security/users`) embrulha `User` e implementa `UserDetails`: `getAuthorities`, `getPassword`, `getUsername` (agora devolve o **email**), `isEnabled`, etc.
+- `CustomUserDetailsService` e `JwtAuthenticationFilter` passaram a usar `.map(UserDetailsAdapter::new)`.
+- `AuthController` obtém a entidade via `userDetails.user()` para gerar o token.
+
+**Conceito:** adapter traduz um objeto de um mundo (domínio/persistência) para a interface que outro mundo (segurança) entende. A entidade deixa de depender do framework e os setters perigosos saem da superfície de autenticação.
+
+**Efeito colateral positivo:** `Authentication.getName()` passa a devolver o **email** (antes devolvia `username`), alinhado à decisão de identidade por email.
+
+**Teste:** `UserDetailsAdapterTest` cobre email como username, delegação da senha, authorities de `USER`/`ADMIN` e flags de conta. Total: **251 testes**.
+
+### 5.18 C10 — Versionamento nativo do Spring (`/v1/auth`)
+
+**Problema:** `/auth/**` era o único recurso fora de `/v1`; o versionamento era só convenção de path, sem validação.
+
+**Correção:**
+- `config/ApiVersioningConfig` (`WebMvcConfigurer.configureApiVersioning`) usa `usePathSegment(0, predicate)`, suporta `1.0` e define `1.0` como default. O predicate só considera versionados paths `/vN/...`, então `/error` continua fora.
+- Todos os controllers passaram de `@RequestMapping("/v1/recurso")` para `@RequestMapping(path = "/v{version}/recurso", version = "1.0")` — inclusive `AuthController` (`/v1/auth`).
+- `SecurityConfig` libera `/v1/auth/**`; as demais regras `/v1/**` seguem iguais.
+- Versão não suportada (ex.: `/v9/...`) → **400** (`InvalidApiVersionException`), antes de chegar ao controller.
+
+**Conceito:** o Spring 7 tem três peças — resolver (de onde vem a versão), parser (`SemanticApiVersionParser`, aceita `v1`) e mapping (`version` no `@RequestMapping`). Antes disso, versionar era só nome de URL sem garantia.
+
+**Teste:** `AuthControllerTest` cobre `/v1/auth/*` e rejeição de `/v9/auth/login`; `ApiVersioningConfigTest` cobre o predicate de paths versionados. Total: **251 testes**.
+
+### 5.19 C11 — `JwtService` e `TokenProperties` em `security/jwt`
+
+**Problema:** `JwtService` é um serviço (comportamento), mas morava em `security/config` junto de `SecurityConfig` (wiring). `TokenProperties` só existe para o JWT e também estava em `config`.
+
+**Correção:** criado o pacote `security/jwt`, que agora concentra `JwtService` e `TokenProperties`. `security/config` ficou com `SecurityConfig`, `JwtAuthenticationFilter` e os handlers `Rest*`. Imports atualizados em `AuthController`, `JwtAuthenticationFilter`, `SecurityConfig` e nos testes.
+
+**Conceito:** pacote deve refletir responsabilidade. `config` = montagem/wiring; `jwt` = tudo relacionado a token (serviço + propriedades). Isso prepara o terreno para refresh token (C6).
+
+### 5.20 C12 — `authenticationManagerBean` → `authenticationManager`
+
+**Problema:** o método `@Bean` tinha o sufixo redundante `Bean`; o nome do método é o nome do bean e a injeção no projeto é por tipo.
+
+**Correção:** `SecurityConfig.authenticationManagerBean(...)` renomeado para `authenticationManager(...)`. Nenhum `@Qualifier`/lookup por nome usava o nome antigo, então a mudança é segura.
+
+**Conceito:** em `@Bean`, o nome do método vira o nome do bean. O sufixo `Bean` é estilo antigo; o padrão atual é usar o nome do tipo.
+
 ---
 
 ## 6. O que ainda falta (com o porquê)
 
-### 6.1 A4 (resto) — Aplicar a política de senha
-
-Trocar `@Size(max = 20)` por `@Size(min = 8, max = 72)` em `RegisterRequest`. Sem isso, uma senha de 2 caracteres passa.
-
-### 6.2 A5 — Rate limiting / lockout
+### 6.1 A5 — Rate limiting / lockout
 
 Hoje dá para tentar senhas infinitamente. Opções: bucket4j/Resilience4j (limite por IP/usuário) ou campos de tentativas/bloqueio no `User` + `isAccountNonLocked()`. É a defesa contra força bruta.
 
-### 6.3 B2 — 401/403 em JSON (adiado)
-
-**Status:** adiado por decisão do projeto; será retomado numa iteração posterior.
-
-Hoje, quando o Spring Security barra, a resposta é o formato padrão dele. `401` e `403` devem usar `ApiError`, como o resto da API. Isso também transforma o atual **403** de token inválido no **401** correto. O desenho planejado é `AuthenticationEntryPoint` (401) + `AccessDeniedHandler` (403) + um `ApiErrorResponseWriter` compartilhado.
-
-### 6.4 B4/B7 — concluídos
-
-Esses dois itens foram implementados no Batch 2 (seções 5.13 e 5.14). O restante desta lista começa em C1.
-
-### 6.6 C1 — `Clock` no `JwtService`
-
-Usar o bean `Clock` (`America/Fortaleza`) em vez de `LocalDateTime.now()` com offset fixo `-03:00`. Facilita testes com tempo congelado e evita erro em mudanças de fuso.
-
-### 6.7 C2/C3 — Configuração do token
-
-Trocar `@Value` por `@ConfigurationProperties` validado, extrair o issuer duplicado para constante e tornar a expiração (`2h`) configurável.
-
-### 6.8 C4 — `User` implementando `UserDetails`
-
-Acopla a entidade ao Spring Security e expõe setters de `password`/`role`. Em projetos maiores, um adapter `UserDetails` separado é mais limpo. Decisão de arquitetura, não urgente.
-
-### 6.9 C6 — Refresh token / logout
+### 6.2 C6 — Refresh token / logout
 
 O token dura 2h e não há revogação. Se for preciso invalidar antes do vencimento (troca de senha, logout), JWT puro não basta: precisa de refresh token + blacklist/allowlist.
 
-### 6.10 C7/C8 — Roles no token e CORS
+### 6.3 C7/C8 — Roles no token e CORS
 
 - **C7:** colocar roles no JWT evita um SELECT por request, mas perde revogação imediata. Trade-off performance × revogação.
 - **C8:** configurar origens permitidas quando existir front-end.
-
-### 6.11 C10/C11/C12 — Organização
-
-- `C10`: `/auth/**` é o único recurso fora de `/v1`.
-- `C11`: `JwtService` é serviço, mas mora em `config`.
-- `C12`: renomear `authenticationManagerBean` para `authenticationManager`.
 
 ---
 
@@ -421,7 +458,7 @@ O token dura 2h e não há revogação. Se for preciso invalidar antes do vencim
 Itens já mapeados em `futuras-iterações.md`:
 
 - **`hardDelete` de atleta** — desbloqueado, pois o perfil `ADMIN` existe; falta endpoint + regra de FKs.
-- **`GET /v1/atletas/cpf/{cpf}`** — método já existe comentado; falta expor.
+- **`GET /v1/atletas/cpf/{cpf}`** — ✅ feito.
 - **OpenAPI/springdoc + README** — documentar a API e a estratégia de versionamento.
 - **Separar `application-dev`/`application-prod`** — `show-sql` ligado globalmente hoje.
 - **`AtletaControllerTest` + `AtletaMapperTest`** — lacunas de teste no domínio.
@@ -454,15 +491,15 @@ Itens já mapeados em `futuras-iterações.md`:
 ./mvnw spring-boot:run
 
 # login
-curl -X POST http://localhost:8080/auth/login \
+curl -X POST http://localhost:8080/v1/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"admin@quixada.gov.br","password":"admin@123"}'
 
 # acesso com token
 curl http://localhost:8080/v1/atletas -H "Authorization: Bearer <token>"
 
-# token inválido (hoje 403; vira 401 JSON com o B2)
+# token inválido -> 401 JSON
 curl http://localhost:8080/v1/atletas -H "Authorization: Bearer lixo"
 ```
 
-**Estado atual:** 156 testes, 0 falhas; boot falha sem o segredo; token inválido não gera mais 500.
+**Estado atual:** 251 testes, 0 falhas; boot falha sem o segredo; sem token/token inválido → 401 JSON; role insuficiente → 403 JSON.

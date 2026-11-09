@@ -186,3 +186,6 @@ Exemplo: `POST /v1/atletas` com body `{ "cpf": "1" }`.
 - Spring DAO — `DataIntegrityViolationException`
 - HTTP — RFC 9110 (status `400`/`404`/`409`)
 - RFC 7807 — `ProblemDetail` (evolução futura)
+
+
+> **Atualização (2026-11-09):** documento revisado após implementação das regras de inscrição, status por datas, partidas e classificação. A suíte atual tem 251 testes.

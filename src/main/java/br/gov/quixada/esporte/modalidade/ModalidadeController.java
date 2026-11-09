@@ -18,7 +18,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 
 @RestController
-@RequestMapping("/v1/modalidades")
+@RequestMapping(path = "/v{version}/modalidades", version = "1.0")
 @RequiredArgsConstructor
 @Validated
 public class ModalidadeController {
@@ -27,8 +27,10 @@ public class ModalidadeController {
     private final ModalidadeMapper mapper;
 
     @GetMapping
-    public ResponseEntity<Page<ModalidadeResumoResponse>> findAll(@RequestParam(required = false) String nome, Pageable pageable) {
-        return ResponseEntity.ok(service.findAll(nome, pageable).map(mapper::toResumo));
+    public ResponseEntity<Page<ModalidadeResumoResponse>> findAll(@RequestParam(required = false) String nome,
+                                                                  @RequestParam(required = false) StatusModalidade status,
+                                                                  Pageable pageable) {
+        return ResponseEntity.ok(service.findAll(nome, status, pageable).map(mapper::toResumo));
     }
 
     @GetMapping("/{id}")

@@ -8,14 +8,23 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Optional;
 
 import br.gov.quixada.esporte.categoria.exception.CategoriaInativaException;
 import br.gov.quixada.esporte.categoria.exception.CategoriaNotFoundException;
 import br.gov.quixada.esporte.categoria.exception.IdadeInvalidaException;
+import br.gov.quixada.esporte.categoria.exception.CategoriaDuplicadaException;
+import br.gov.quixada.esporte.common.error.VinculoAtivoException;
+import br.gov.quixada.esporte.inscricao.StatusInscricao;
 import br.gov.quixada.esporte.competicao.Competicao;
+import br.gov.quixada.esporte.competicao.StatusCompeticao;
 import br.gov.quixada.esporte.competicao.CompeticaoRepository;
+import br.gov.quixada.esporte.competicao.exception.CompeticaoNaoEditavelException;
 import br.gov.quixada.esporte.competicao.exception.CompeticaoNotFoundException;
+import br.gov.quixada.esporte.inscricao.InscricaoEquipeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -39,11 +48,15 @@ class CategoriaServiceTest {
     @Mock
     private CompeticaoRepository competicaoRepository;
 
+    @Mock
+    private InscricaoEquipeRepository inscricaoEquipeRepository;
+
     private CategoriaService service;
 
     @BeforeEach
     void setUp() {
-        service = new CategoriaService(repository, competicaoRepository);
+        var clock = Clock.fixed(Instant.parse("2026-06-15T12:00:00Z"), ZoneId.of("America/Fortaleza"));
+        service = new CategoriaService(repository, competicaoRepository, inscricaoEquipeRepository, clock);
     }
 
     private Categoria umaCategoria(StatusCategoria status) {
@@ -72,7 +85,7 @@ class CategoriaServiceTest {
             Page<Categoria> esperado = Page.empty();
             when(repository.findAll(PAGEABLE)).thenReturn(esperado);
 
-            Page<Categoria> resultado = service.findAll(null, PAGEABLE);
+            Page<Categoria> resultado = service.findAll(null, null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findAll(PAGEABLE);
@@ -85,7 +98,7 @@ class CategoriaServiceTest {
             Page<Categoria> esperado = Page.empty();
             when(repository.findAll(PAGEABLE)).thenReturn(esperado);
 
-            Page<Categoria> resultado = service.findAll("   ", PAGEABLE);
+            Page<Categoria> resultado = service.findAll("   ", null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findAll(PAGEABLE);
@@ -98,7 +111,7 @@ class CategoriaServiceTest {
             Page<Categoria> esperado = Page.empty();
             when(repository.findByNomeContainingIgnoreCase("sub", PAGEABLE)).thenReturn(esperado);
 
-            Page<Categoria> resultado = service.findAll("sub", PAGEABLE);
+            Page<Categoria> resultado = service.findAll("sub", null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findByNomeContainingIgnoreCase("sub", PAGEABLE);
@@ -305,6 +318,73 @@ class CategoriaServiceTest {
             assertThatThrownBy(() -> service.update(1L, novosDados()))
                     .isInstanceOf(CategoriaNotFoundException.class)
                     .hasMessage("Categoria não encontrada");
+        }
+    }
+
+    @Nested
+    @DisplayName("regras de negócio")
+    class RegrasDeNegocio {
+
+        private Competicao competicaoComStatus(StatusCompeticao status) {
+            return Competicao.builder().id(1L).nome("Copa").ano(2026).status(status).build();
+        }
+
+        @Test
+        @DisplayName("deve bloquear faixa duplicada ao criar")
+        void deveBloquearFaixaDuplicadaAoCriar() {
+            when(competicaoRepository.findById(1L)).thenReturn(Optional.of(competicaoComStatus(StatusCompeticao.INSCRICOES_ABERTAS)));
+            when(repository.existsByCompeticaoIdAndIdadeMinimaAndIdadeMaximaAndStatus(
+                    1L, 13, 15, StatusCategoria.ATIVO)).thenReturn(true);
+
+            assertThatThrownBy(() -> service.save(umaCategoria(StatusCategoria.ATIVO), 1L))
+                    .isInstanceOf(CategoriaDuplicadaException.class);
+        }
+
+        @Test
+        @DisplayName("deve bloquear faixa duplicada ao atualizar")
+        void deveBloquearFaixaDuplicadaAoAtualizar() {
+            Categoria existente = Categoria.builder().id(2L).nome("Sub-15").idadeMinima(13).idadeMaxima(15)
+                    .status(StatusCategoria.ATIVO).competicao(competicaoComStatus(StatusCompeticao.INSCRICOES_ABERTAS)).build();
+            when(repository.findById(2L)).thenReturn(Optional.of(existente));
+            when(repository.existsByCompeticaoIdAndIdadeMinimaAndIdadeMaximaAndStatusAndIdNot(
+                    1L, 13, 15, StatusCategoria.ATIVO, 2L)).thenReturn(true);
+
+            assertThatThrownBy(() -> service.update(2L, umaCategoria(StatusCategoria.ATIVO)))
+                    .isInstanceOf(CategoriaDuplicadaException.class);
+        }
+
+        @Test
+        @DisplayName("deve bloquear faixa duplicada ao ativar")
+        void deveBloquearFaixaDuplicadaAoAtivar() {
+            Categoria existente = Categoria.builder().id(2L).nome("Sub-15").idadeMinima(13).idadeMaxima(15)
+                    .status(StatusCategoria.INATIVO).competicao(competicaoComStatus(StatusCompeticao.INSCRICOES_ABERTAS)).build();
+            when(repository.findById(2L)).thenReturn(Optional.of(existente));
+            when(repository.existsByCompeticaoIdAndIdadeMinimaAndIdadeMaximaAndStatusAndIdNot(
+                    1L, 13, 15, StatusCategoria.ATIVO, 2L)).thenReturn(true);
+
+            assertThatThrownBy(() -> service.ativar(2L))
+                    .isInstanceOf(CategoriaDuplicadaException.class);
+        }
+
+        @Test
+        @DisplayName("não deve inativar categoria com inscrição ativa")
+        void naoDeveInativarComInscricaoAtiva() {
+            Categoria existente = Categoria.builder().id(2L).status(StatusCategoria.ATIVO).build();
+            when(repository.findById(2L)).thenReturn(Optional.of(existente));
+            when(inscricaoEquipeRepository.existsByCategoriaIdAndStatusIn(2L, StatusInscricao.OCUPAM_VAGA))
+                    .thenReturn(true);
+
+            assertThatThrownBy(() -> service.inativar(2L))
+                    .isInstanceOf(VinculoAtivoException.class);
+        }
+
+        @Test
+        @DisplayName("deve bloquear criação em competição finalizada")
+        void deveBloquearCriacaoEmCompeticaoFinalizada() {
+            when(competicaoRepository.findById(1L)).thenReturn(Optional.of(competicaoComStatus(StatusCompeticao.FINALIZADA)));
+
+            assertThatThrownBy(() -> service.save(umaCategoria(StatusCategoria.ATIVO), 1L))
+                    .isInstanceOf(CompeticaoNaoEditavelException.class);
         }
     }
 }

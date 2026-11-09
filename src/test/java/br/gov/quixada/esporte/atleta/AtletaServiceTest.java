@@ -16,8 +16,11 @@ import java.util.Optional;
 import br.gov.quixada.esporte.atleta.exception.AtletaInativoException;
 import br.gov.quixada.esporte.atleta.exception.AtletaNotFoundException;
 import br.gov.quixada.esporte.atleta.exception.CpfJaCadastradoException;
+import br.gov.quixada.esporte.common.error.VinculoAtivoException;
+import br.gov.quixada.esporte.inscricao.StatusInscricao;
 import br.gov.quixada.esporte.extras.Endereco;
 import br.gov.quixada.esporte.extras.Sexo;
+import br.gov.quixada.esporte.inscricao.InscricaoAtletaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
@@ -44,11 +47,14 @@ class AtletaServiceTest {
     @Mock
     private AtletaRepository repository;
 
+    @Mock
+    private InscricaoAtletaRepository inscricaoAtletaRepository;
+
     private AtletaService service;
 
     @BeforeEach
     void setUp() {
-        service = new AtletaService(repository);
+        service = new AtletaService(repository, inscricaoAtletaRepository);
     }
 
     private Atleta umAtleta(StatusAtleta status) {
@@ -74,7 +80,7 @@ class AtletaServiceTest {
             Page<Atleta> esperado = Page.empty();
             when(repository.findAll(PAGEABLE)).thenReturn(esperado);
 
-            Page<Atleta> resultado = service.findAll(null, PAGEABLE);
+            Page<Atleta> resultado = service.findAll(null, null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findAll(PAGEABLE);
@@ -88,7 +94,7 @@ class AtletaServiceTest {
             Page<Atleta> esperado = Page.empty();
             when(repository.findAll(PAGEABLE)).thenReturn(esperado);
 
-            Page<Atleta> resultado = service.findAll("   ", PAGEABLE);
+            Page<Atleta> resultado = service.findAll("   ", null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findAll(PAGEABLE);
@@ -102,7 +108,7 @@ class AtletaServiceTest {
             Page<Atleta> esperado = new PageImpl<>(List.of(umAtleta(StatusAtleta.ATIVO)));
             when(repository.findByNomeCompletoNormalizadoStartingWith("joao", PAGEABLE)).thenReturn(esperado);
 
-            Page<Atleta> resultado = service.findAll("joao", PAGEABLE);
+            Page<Atleta> resultado = service.findAll("joao", null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findByNomeCompletoNormalizadoStartingWith("joao", PAGEABLE);
@@ -116,7 +122,7 @@ class AtletaServiceTest {
             Page<Atleta> esperado = Page.empty();
             when(repository.findByNomeCompletoNormalizadoStartingWith("joaosilva", PAGEABLE)).thenReturn(esperado);
 
-            Page<Atleta> resultado = service.findAll("João Silva", PAGEABLE);
+            Page<Atleta> resultado = service.findAll("João Silva", null, PAGEABLE);
 
             assertThat(resultado).isSameAs(esperado);
             verify(repository).findByNomeCompletoNormalizadoStartingWith("joaosilva", PAGEABLE);
@@ -384,6 +390,53 @@ class AtletaServiceTest {
 
             assertThatThrownBy(() -> service.update(1L, novosDados()))
                     .isInstanceOf(AtletaNotFoundException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("regras de negócio")
+    class RegrasDeNegocio {
+
+        @Test
+        @DisplayName("deve buscar atleta por CPF normalizado")
+        void deveBuscarPorCpfNormalizado() {
+            Atleta atleta = umAtleta(StatusAtleta.ATIVO);
+            when(repository.findByCpf("52998224725")).thenReturn(Optional.of(atleta));
+
+            var resultado = service.findByCpfOrThrowNotFound("529.982.247-25");
+
+            assertThat(resultado).isSameAs(atleta);
+        }
+
+        @Test
+        @DisplayName("deve lançar AtletaNotFoundException quando CPF não existir")
+        void deveLancarNotFoundQuandoCpfNaoExistir() {
+            when(repository.findByCpf("52998224725")).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.findByCpfOrThrowNotFound("52998224725"))
+                    .isInstanceOf(AtletaNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("não deve inativar atleta com inscrição ativa")
+        void naoDeveInativarComInscricaoAtiva() {
+            Atleta atleta = umAtleta(StatusAtleta.ATIVO);
+            atleta = Atleta.builder()
+                    .id(1L)
+                    .nomeCompleto("Francisco")
+                    .cpf("52998224725")
+                    .dataNascimento(LocalDate.of(2000, 1, 1))
+                    .endereco(new Endereco("Rua A", "10", "Centro", "Quixadá", "63900-000"))
+                    .telefone("88999999999")
+                    .sexo(Sexo.MASCULINO)
+                    .status(StatusAtleta.ATIVO)
+                    .build();
+            when(repository.findById(1L)).thenReturn(Optional.of(atleta));
+            when(inscricaoAtletaRepository.existsByAtletaIdAndStatusIn(1L, StatusInscricao.OCUPAM_VAGA))
+                    .thenReturn(true);
+
+            assertThatThrownBy(() -> service.inativar(1L))
+                    .isInstanceOf(VinculoAtivoException.class);
         }
     }
 }

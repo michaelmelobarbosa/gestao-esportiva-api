@@ -40,6 +40,12 @@ public class Competicao {
     private Modalidade modalidade;
 
     @Column(nullable = false)
+    private LocalDate dataInicioInscricao;
+
+    @Column(nullable = false)
+    private LocalDate dataFimInscricao;
+
+    @Column(nullable = false)
     private LocalDate dataInicio;
 
     @Column(nullable = false)
@@ -49,28 +55,62 @@ public class Competicao {
     @Column(nullable = false, length = 20)
     private StatusCompeticao status;
 
-    /** Altera o status do ciclo de vida. */
-    public void alterarStatus(StatusCompeticao novoStatus) {
-        if (this.status == novoStatus) return;
-        this.status = novoStatus;
+    /** Cancelamento manual (terminal). */
+    public void cancelar() {
+        this.status = StatusCompeticao.CANCELADA;
+    }
+
+    /** Recalcula o status com base nas datas; CANCELADA é terminal. */
+    public void sincronizarStatus(LocalDate hoje) {
+        if (this.status == StatusCompeticao.CANCELADA) {
+            return;
+        }
+        this.status = calcularStatus(hoje);
+    }
+
+    public StatusCompeticao calcularStatus(LocalDate hoje) {
+        if (this.status == StatusCompeticao.CANCELADA) {
+            return StatusCompeticao.CANCELADA;
+        }
+        if (dataInicioInscricao == null || dataFimInscricao == null || dataInicio == null || dataFim == null) {
+            return this.status != null ? this.status : StatusCompeticao.PLANEJAMENTO;
+        }
+        if (hoje.isAfter(this.dataFim)) {
+            return StatusCompeticao.FINALIZADA;
+        }
+        if (!hoje.isBefore(this.dataInicio)) {
+            return StatusCompeticao.EM_ANDAMENTO;
+        }
+        if (hoje.isAfter(this.dataFimInscricao)) {
+            return StatusCompeticao.INSCRICOES_ENCERRADAS;
+        }
+        if (!hoje.isBefore(this.dataInicioInscricao)) {
+            return StatusCompeticao.INSCRICOES_ABERTAS;
+        }
+        return StatusCompeticao.PLANEJAMENTO;
     }
 
     /**
      * Atualiza dados mutáveis. Modalidade imutável após a criação;
      * bloqueia edição se FINALIZADA ou CANCELADA.
      */
-    public void atualizarDados(String nome, Integer ano, LocalDate dataInicio, LocalDate dataFim) {
+    public void atualizarDados(String nome, Integer ano, LocalDate dataInicioInscricao,
+                               LocalDate dataFimInscricao, LocalDate dataInicio, LocalDate dataFim) {
         if (this.status == StatusCompeticao.FINALIZADA || this.status == StatusCompeticao.CANCELADA) {
             throw new CompeticaoNaoEditavelException("Competição finalizada ou cancelada não pode ser editada");
         }
+        validarPeriodo(dataInicioInscricao, dataFimInscricao);
         validarPeriodo(dataInicio, dataFim);
         this.nome = nome;
         this.ano = ano;
+        this.dataInicioInscricao = dataInicioInscricao;
+        this.dataFimInscricao = dataFimInscricao;
         this.dataInicio = dataInicio;
         this.dataFim = dataFim;
     }
 
     public void validar() {
+        validarPeriodo(this.dataInicioInscricao, this.dataFimInscricao);
         validarPeriodo(this.dataInicio, this.dataFim);
     }
 

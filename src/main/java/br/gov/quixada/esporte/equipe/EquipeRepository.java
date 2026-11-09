@@ -18,7 +18,17 @@ public interface EquipeRepository extends JpaRepository<Equipe, Long> {
     @EntityGraph(attributePaths = {"clube", "modalidade"})
     Page<Equipe> findByNomeContainingIgnoreCase(String nome, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"clube", "modalidade"})
+    Page<Equipe> findByStatus(StatusEquipe status, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"clube", "modalidade"})
+    Page<Equipe> findByNomeContainingIgnoreCaseAndStatus(String nome, StatusEquipe status, Pageable pageable);
+
     @Override
     @EntityGraph(attributePaths = {"clube", "modalidade"})
     Optional<Equipe> findById(Long id);
+
+    boolean existsByClubeIdAndStatus(Long clubeId, StatusEquipe status);
+
+    boolean existsByModalidadeIdAndStatus(Long modalidadeId, StatusEquipe status);
 }

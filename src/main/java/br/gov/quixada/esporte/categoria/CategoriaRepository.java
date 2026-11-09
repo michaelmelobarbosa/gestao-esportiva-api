@@ -18,7 +18,20 @@ public interface CategoriaRepository extends JpaRepository<Categoria, Long> {
     @EntityGraph(attributePaths = "competicao")
     Page<Categoria> findByNomeContainingIgnoreCase(String nome, Pageable pageable);
 
+    @EntityGraph(attributePaths = "competicao")
+    Page<Categoria> findByStatus(StatusCategoria status, Pageable pageable);
+
+    @EntityGraph(attributePaths = "competicao")
+    Page<Categoria> findByNomeContainingIgnoreCaseAndStatus(String nome, StatusCategoria status, Pageable pageable);
+
     @Override
     @EntityGraph(attributePaths = "competicao")
     Optional<Categoria> findById(Long id);
+
+    boolean existsByCompeticaoIdAndIdadeMinimaAndIdadeMaximaAndStatus(Long competicaoId, Integer idadeMinima,
+                                                                      Integer idadeMaxima, StatusCategoria status);
+
+    boolean existsByCompeticaoIdAndIdadeMinimaAndIdadeMaximaAndStatusAndIdNot(Long competicaoId, Integer idadeMinima,
+                                                                             Integer idadeMaxima, StatusCategoria status,
+                                                                             Long id);
 }

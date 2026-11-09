@@ -22,7 +22,9 @@ import java.util.Optional;
 
 import br.gov.quixada.esporte.security.auth.UserRepository;
 import br.gov.quixada.esporte.security.auth.exception.TokenInvalidoException;
+import br.gov.quixada.esporte.security.jwt.JwtService;
 import br.gov.quixada.esporte.security.users.User;
+import br.gov.quixada.esporte.security.users.UserDetailsAdapter;
 import br.gov.quixada.esporte.security.users.UserRole;
 
 @ExtendWith(MockitoExtension.class)
@@ -63,7 +65,8 @@ class JwtAuthenticationFilterTest {
 
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         assertThat(authentication).isNotNull();
-        assertThat(authentication.getPrincipal()).isSameAs(user);
+        assertThat(authentication.getPrincipal()).isInstanceOf(UserDetailsAdapter.class);
+        assertThat(((UserDetailsAdapter) authentication.getPrincipal()).user()).isSameAs(user);
         assertThat(chain.getRequest()).isSameAs(request);
     }
 
@@ -110,5 +113,22 @@ class JwtAuthenticationFilterTest {
 
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         assertThat(chain.getRequest()).isSameAs(request);
+    }
+
+    @Test
+    @DisplayName("não deve autenticar usuário inativo")
+    void naoDeveAutenticarUsuarioInativo() throws Exception {
+        var user = new User("fulano", "fulano@example.com", "hash", UserRole.USER);
+        user.setStatus(br.gov.quixada.esporte.security.users.UserStatus.INATIVO);
+        when(jwtService.extractEmail("token")).thenReturn("fulano@example.com");
+        when(userRepository.findByEmail("fulano@example.com")).thenReturn(Optional.of(user));
+
+        var request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer token");
+        var chain = new MockFilterChain();
+
+        filter.doFilter(request, new MockHttpServletResponse(), chain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 }

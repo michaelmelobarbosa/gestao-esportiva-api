@@ -17,7 +17,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 
 @RestController
-@RequestMapping("/v1/inscricoes-equipes")
+@RequestMapping(path = "/v{version}/inscricoes-equipes", version = "1.0")
 @RequiredArgsConstructor
 @Validated
 public class InscricaoEquipeController {
@@ -26,8 +26,10 @@ public class InscricaoEquipeController {
     private final InscricaoEquipeMapper mapper;
 
     @GetMapping
-    public ResponseEntity<Page<InscricaoEquipeResumoResponse>> findAll(@RequestParam(required = false) Long competicaoId, Pageable pageable) {
-        return ResponseEntity.ok(service.findAll(competicaoId, pageable).map(mapper::toResumo));
+    public ResponseEntity<Page<InscricaoEquipeResumoResponse>> findAll(@RequestParam(required = false) Long competicaoId,
+                                                                       @RequestParam(required = false) StatusInscricao status,
+                                                                       Pageable pageable) {
+        return ResponseEntity.ok(service.findAll(competicaoId, status, pageable).map(mapper::toResumo));
     }
 
     @GetMapping("/{id}")
