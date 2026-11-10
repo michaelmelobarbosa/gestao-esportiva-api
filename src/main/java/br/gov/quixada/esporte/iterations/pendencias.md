@@ -1,8 +1,8 @@
 # Pendências — Gestão Esportiva API
 
-> Arquivo consolidado em 2026-11-09. Reúne **tudo que ainda não foi implementado ou está pendente** no projeto, extraído de `decisoes.md`, `estudos.md`, `fixes.md`, `futuras-iterações.md` e `securityfixes.md` (removidos após a consolidação).
+> Arquivo consolidado em 2026-11-09; atualizado em 2026-11-10 para marcar itens concluídos. Reúne **tudo que ainda não foi implementado ou está pendente** no projeto, extraído de `decisoes.md`, `estudos.md`, `fixes.md`, `futuras-iterações.md` e `securityfixes.md` (removidos após a consolidação).
 >
-> Itens já concluídos foram descartados; aqui ficam apenas as lacunas reais, verificadas contra o código.
+> Itens concluídos permanecem marcados com `[x]` para rastreabilidade; os pendentes ficam com `[ ]`.
 >
 > Prioridades: **P0** crítico/explorável · **P1** importante · **P2** melhoria/boa prática.
 
@@ -18,7 +18,7 @@
 
 ### Usuários / Governança
 - [x] Decisão: exatamente **1 SUPERADMIN**, sem criação/promoção pela API (bloqueios já existentes em `UserService`)
-- [ ] Recuperação de senha do SUPERADMIN via CLI (P1)
+- [x] Recuperação de senha do SUPERADMIN via CLI (P1)
 - [ ] Auditoria: filtros por ator/alvo/período, retenção/expurgo e exportação (P2)
 
 ### Atleta
@@ -36,7 +36,7 @@
 
 ### Infra / Documentação
 - [ ] OpenAPI/springdoc + `@Tag`/`@Operation` (P2)
-- [ ] README + documentação da estratégia de versionamento (P2)
+- [x] README + documentação da estratégia de versionamento (P2)
 - [ ] `application-prod.yaml` + separar config dev/prod (P2)
 - [ ] Verificar compatibilidade Java 25 + Spring Boot 4.1.0 + MapStruct 1.6.3 (P2)
 - [ ] CI (GitHub Actions) rodando `./mvnw test` (P2)
@@ -74,7 +74,8 @@
 - **Por quê:** sem CORS, um front-end em outro domínio/porta será bloqueado pelo navegador.
 - **Como implementar:** definir origens permitidas conforme ambiente (dev/prod) via `CorsConfigurationSource` no `SecurityConfig`.
 
-### Recuperação de senha do SUPERADMIN via CLI (P1)
+### Recuperação de senha do SUPERADMIN via CLI (P1) — Concluído
+- **Status:** implementado no commit `f97544d`. Runbook em `docs/operacao/recuperacao-superadmin.md`.
 - **Decisão:** o sistema mantém **exatamente 1 SUPERADMIN**, responsável por gerir os `ADMIN`. A API continua bloqueando criar/promover `SUPERADMIN` (`UserService`) e não há endpoint de recuperação exposto na rede.
 - **Onde:** `security/users/SuperadminPasswordResetService`, `security/users/cli/SuperadminPasswordResetRunner`, profile `superadmin-reset` (`application-superadmin-reset.yaml`).
 - **Por quê:** sem e-mail/MFA, o risco real é perder a senha do único SUPERADMIN. A recuperação exige acesso ao shell do servidor — mesmo nível de privilégio que já permitiria alterar o banco — então não adiciona superfície de ataque remota.
@@ -132,10 +133,9 @@
 - **Como implementar:** adicionar a dependência, anotar controllers com `@Tag`/`@Operation`, expor `swagger-ui.html` e validar `GET /v1/atletas?nome=&page=0` e `POST` com `Location`.
 - **Atenção:** `spring.jpa.open-in-view=false` já está ligado — mapear DTOs dentro do `@Transactional` ou usar `@EntityGraph`/`JOIN FETCH`.
 
-### README + documentação da estratégia de versionamento (P2)
-- **Onde:** não há `README.md`.
-- **Situação:** versionamento nativo do Spring já implementado (`/v{version}/...`, `version = "1.0"`), mas não documentado.
-- **Como implementar:** README com setup, endpoints e decisão de versionamento (URL `/v1`; alternativa descartada: header `Accept: application/vnd...+json`; política de evolução/deprecação).
+### README + documentação da estratégia de versionamento (P2) — Concluído
+- **Status:** `README.md` criado, com setup, autenticação/papéis, tabela de endpoints, testes e a decisão de versionamento (URL `/v1`; alternativa por header descartada; política de deprecação).
+- **Observação:** o versionamento nativo já estava implementado (`/v{version}/...`, `version = "1.0"`); faltava apenas a documentação, agora publicada.
 
 ### `application-prod.yaml` + separar config dev/prod (P2)
 - **Onde:** `src/main/resources/` (existem `application.yaml`, `application-dev.yaml`, `application-test.yaml`; falta `application-prod.yaml`).

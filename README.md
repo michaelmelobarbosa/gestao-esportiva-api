@@ -101,6 +101,8 @@ Versionamento nativo do Spring pelo primeiro segmento do path. Todos os recursos
 
 Versão não suportada (ex.: `/v9/...`) responde `400`. Paths fora do padrão `/vN/...` (ex.: `/error`) não são versionados.
 
+Decisão: versionamento por **URL** (`/v1`), escolhido por simplicidade e compatibilidade com navegador. A alternativa por header (`Accept: application/vnd.gestao.v1+json`) foi descartada. Evolução: uma eventual `/v2` deve manter `/v1` disponível por um período de deprecação antes da remoção.
+
 ## Documentação operacional
 
 - [Recuperação de senha do SUPERADMIN](docs/operacao/recuperacao-superadmin.md) — procedimento de servidor (CLI).
