@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Optional;
 
@@ -380,7 +381,7 @@ class InscricaoAtletaServiceTest {
         @DisplayName("não deve remover o último atleta ativo de equipe aprovada")
         void naoDeveRemoverUltimoAtletaAtivo() {
             InscricaoEquipe inscricaoEquipe = umaInscricaoEquipe(umaCategoria(2L, 18, 40));
-            inscricaoEquipe.alterarStatus(StatusInscricao.APROVADA);
+            inscricaoEquipe.alterarStatus(StatusInscricao.APROVADA, LocalDateTime.now());
             Atleta atleta = umAtleta(LocalDate.of(2000, 6, 15));
             InscricaoAtleta inscricao = InscricaoAtleta.builder()
                     .id(10L).status(StatusInscricao.APROVADA)
@@ -397,7 +398,7 @@ class InscricaoAtletaServiceTest {
         @DisplayName("deve permitir remover atleta quando há outro ativo na equipe")
         void devePermitirRemoverQuandoHaOutroAtivo() {
             InscricaoEquipe inscricaoEquipe = umaInscricaoEquipe(umaCategoria(2L, 18, 40));
-            inscricaoEquipe.alterarStatus(StatusInscricao.APROVADA);
+            inscricaoEquipe.alterarStatus(StatusInscricao.APROVADA, LocalDateTime.now());
             Atleta atleta = umAtleta(LocalDate.of(2000, 6, 15));
             InscricaoAtleta inscricao = InscricaoAtleta.builder()
                     .id(10L).status(StatusInscricao.APROVADA)
@@ -409,6 +410,65 @@ class InscricaoAtletaServiceTest {
             var resultado = service.alterarStatus(10L, StatusInscricao.CANCELADA);
 
             assertThat(resultado.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+        }
+    }
+
+    @Nested
+    @DisplayName("atualizarObservacao")
+    class AtualizarObservacao {
+
+        @Test
+        @DisplayName("deve gravar a observação livre")
+        void deveGravarObservacao() {
+            InscricaoAtleta inscricao = InscricaoAtleta.builder()
+                    .id(10L).status(StatusInscricao.APROVADA).numeroCamisa("10")
+                    .build();
+            when(repository.findById(10L)).thenReturn(Optional.of(inscricao));
+
+            InscricaoAtleta resultado = service.atualizarObservacao(10L, "Documentação pendente");
+
+            assertThat(resultado.getObservacao()).isEqualTo("Documentação pendente");
+        }
+
+        @Test
+        @DisplayName("deve limpar a observação quando vier nula")
+        void deveLimparObservacao() {
+            InscricaoAtleta inscricao = InscricaoAtleta.builder()
+                    .id(10L).status(StatusInscricao.CANCELADA).numeroCamisa("10")
+                    .observacao("texto antigo")
+                    .build();
+            when(repository.findById(10L)).thenReturn(Optional.of(inscricao));
+
+            InscricaoAtleta resultado = service.atualizarObservacao(10L, null);
+
+            assertThat(resultado.getObservacao()).isNull();
+        }
+
+        @Test
+        @DisplayName("deve lançar not found quando a inscrição não existir")
+        void deveLancarNotFound() {
+            when(repository.findById(99L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.atualizarObservacao(99L, "x"))
+                    .isInstanceOf(br.gov.quixada.esporte.inscricao.exception.InscricaoAtletaNotFoundException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("dataCancelamento")
+    class DataCancelamento {
+
+        @Test
+        @DisplayName("deve registrar a data ao cancelar")
+        void deveRegistrarDataAoCancelar() {
+            InscricaoAtleta inscricao = InscricaoAtleta.builder()
+                    .id(10L).status(StatusInscricao.APROVADA).numeroCamisa("10")
+                    .build();
+            when(repository.findById(10L)).thenReturn(Optional.of(inscricao));
+
+            InscricaoAtleta resultado = service.alterarStatus(10L, StatusInscricao.CANCELADA);
+
+            assertThat(resultado.getDataCancelamento()).isNotNull();
         }
     }
 }

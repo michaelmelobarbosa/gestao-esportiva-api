@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Period;
 import java.util.List;
 
@@ -86,7 +87,18 @@ public class InscricaoAtletaService {
             revalidarReativacao(inscricao);
         }
 
-        inscricao.alterarStatus(status);
+        inscricao.alterarStatus(status, LocalDateTime.now(clock));
+        return inscricao;
+    }
+
+    /**
+     * Campo livre de comunicação: pode ser criado, alterado ou limpo em qualquer
+     * status, sem checagens de negócio.
+     */
+    @Transactional
+    public InscricaoAtleta atualizarObservacao(Long id, String observacao) {
+        InscricaoAtleta inscricao = findByIdOrThrowNotFound(id);
+        inscricao.atualizarObservacao(observacao);
         return inscricao;
     }
 

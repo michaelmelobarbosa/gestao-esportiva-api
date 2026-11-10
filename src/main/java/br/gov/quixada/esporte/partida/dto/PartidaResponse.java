@@ -21,6 +21,8 @@ public record PartidaResponse(
         String mandanteEquipeNome,
         Long inscricaoVisitanteId,
         Long visitanteEquipeId,
-        String visitanteEquipeNome
+        String visitanteEquipeNome,
+        String observacao,
+        LocalDateTime dataCancelamento
 ) {
 }

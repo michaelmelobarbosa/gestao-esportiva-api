@@ -1,6 +1,7 @@
 package br.gov.quixada.esporte.competicao;
 
 import br.gov.quixada.esporte.competicao.dto.CompeticaoCreateRequest;
+import br.gov.quixada.esporte.competicao.dto.CompeticaoObservacaoRequest;
 import br.gov.quixada.esporte.competicao.dto.CompeticaoResponse;
 import br.gov.quixada.esporte.competicao.dto.CompeticaoResumoResponse;
 import br.gov.quixada.esporte.competicao.dto.CompeticaoStatusRequest;
@@ -54,6 +55,18 @@ public class CompeticaoController {
     public ResponseEntity<CompeticaoResponse> alterarStatus(@PathVariable @Positive Long id,
                                                             @RequestBody @Valid CompeticaoStatusRequest request) {
         Competicao competicao = service.alterarStatus(id, request.status());
+        return ResponseEntity.ok(mapper.toResponse(competicao));
+    }
+
+    /**
+     * Anotação livre: independe do status e pode ser criada, alterada ou limpa a
+     * qualquer momento. Texto em branco/ausente limpa o valor.
+     */
+    @PatchMapping("/{id}/observacao")
+    public ResponseEntity<CompeticaoResponse> atualizarObservacao(
+            @PathVariable @Positive Long id,
+            @RequestBody @Valid CompeticaoObservacaoRequest request) {
+        Competicao competicao = service.atualizarObservacao(id, request.observacao());
         return ResponseEntity.ok(mapper.toResponse(competicao));
     }
 

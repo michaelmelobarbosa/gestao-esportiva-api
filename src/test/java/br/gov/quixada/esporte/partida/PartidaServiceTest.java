@@ -105,7 +105,7 @@ class PartidaServiceTest {
         when(inscricaoEquipeRepository.findById(2L)).thenReturn(Optional.of(visitante));
         stubCriacaoSemConflito();
 
-        var partida = service.create(new PartidaCreateRequest(1L, 2L, 1, DATA_HORA, "Ginásio"));
+        var partida = service.create(new PartidaCreateRequest(1L, 2L, 1, DATA_HORA, "Ginásio", null));
 
         assertThat(partida.getStatus()).isEqualTo(StatusPartida.AGENDADA);
         assertThat(partida.getInscricaoMandante()).isSameAs(mandante);
@@ -120,7 +120,7 @@ class PartidaServiceTest {
         when(inscricaoEquipeRepository.findById(1L)).thenReturn(Optional.of(mandante));
         when(inscricaoEquipeRepository.findById(2L)).thenReturn(Optional.of(visitante));
 
-        assertThatThrownBy(() -> service.create(new PartidaCreateRequest(1L, 2L, 1, DATA_HORA, null)))
+        assertThatThrownBy(() -> service.create(new PartidaCreateRequest(1L, 2L, 1, DATA_HORA, null, null)))
                 .isInstanceOf(PartidaInvalidaException.class)
                 .hasMessage("As duas equipes precisam ter inscrição APROVADA");
 
@@ -133,7 +133,7 @@ class PartidaServiceTest {
         var mandante = inscricao(1L, StatusInscricao.APROVADA, 10L, "Equipe A");
         when(inscricaoEquipeRepository.findById(1L)).thenReturn(Optional.of(mandante));
 
-        assertThatThrownBy(() -> service.create(new PartidaCreateRequest(1L, 1L, 1, DATA_HORA, null)))
+        assertThatThrownBy(() -> service.create(new PartidaCreateRequest(1L, 1L, 1, DATA_HORA, null, null)))
                 .isInstanceOf(PartidaInvalidaException.class)
                 .hasMessage("Mandante e visitante devem ser diferentes");
     }
@@ -193,7 +193,7 @@ class PartidaServiceTest {
         when(repository.existsConfrontoNaRodada(anyLong(), anyLong(), any(), anyLong(), any())).thenReturn(false);
         when(repository.existsEquipeNaRodada(any(), any(), anyLong(), any())).thenReturn(true);
 
-        assertThatThrownBy(() -> service.create(new PartidaCreateRequest(1L, 2L, 1, DATA_HORA, null)))
+        assertThatThrownBy(() -> service.create(new PartidaCreateRequest(1L, 2L, 1, DATA_HORA, null, null)))
                 .isInstanceOf(PartidaInvalidaException.class)
                 .hasMessage("Uma das equipes já tem partida nesta rodada");
     }
@@ -207,7 +207,7 @@ class PartidaServiceTest {
         when(inscricaoEquipeRepository.findById(2L)).thenReturn(Optional.of(visitante));
         stubCriacaoSemConflito();
 
-        var partida = service.create(new PartidaCreateRequest(1L, 2L, 1, DATA_HORA, null));
+        var partida = service.create(new PartidaCreateRequest(1L, 2L, 1, DATA_HORA, null, null));
 
         assertThat(partida.getStatus()).isEqualTo(StatusPartida.CANCELADA);
     }
@@ -221,7 +221,7 @@ class PartidaServiceTest {
         when(inscricaoEquipeRepository.findById(2L)).thenReturn(Optional.of(visitante));
         stubCriacaoSemConflito();
 
-        var partida = service.create(new PartidaCreateRequest(1L, 2L, 1, DATA_HORA, null));
+        var partida = service.create(new PartidaCreateRequest(1L, 2L, 1, DATA_HORA, null, null));
 
         assertThat(partida.getStatus()).isEqualTo(StatusPartida.AGENDADA);
     }
@@ -245,5 +245,65 @@ class PartidaServiceTest {
 
         assertThatThrownBy(() -> service.registrarResultado(1L, new PartidaResultadoRequest(null, 1)))
                 .isInstanceOf(PartidaInvalidaException.class);
+    }
+
+    @Test
+    @DisplayName("deve gravar a observação informada na criação")
+    void deveGravarObservacaoNaCriacao() {
+        var mandante = inscricao(1L, StatusInscricao.APROVADA, 10L, "Equipe A");
+        var visitante = inscricao(2L, StatusInscricao.APROVADA, 10L, "Equipe B");
+        when(inscricaoEquipeRepository.findById(1L)).thenReturn(Optional.of(mandante));
+        when(inscricaoEquipeRepository.findById(2L)).thenReturn(Optional.of(visitante));
+        stubCriacaoSemConflito();
+
+        var partida = service.create(new PartidaCreateRequest(1L, 2L, 1, DATA_HORA, "Ginásio",
+                "Jogo de abertura"));
+
+        assertThat(partida.getObservacao()).isEqualTo("Jogo de abertura");
+    }
+
+    @Test
+    @DisplayName("deve atualizar a observação livre em partida CANCELADA")
+    void deveAtualizarObservacaoEmPartidaCancelada() {
+        var partida = Partida.builder().id(1L).status(StatusPartida.CANCELADA).build();
+        when(repository.findById(1L)).thenReturn(Optional.of(partida));
+
+        var resultado = service.atualizarObservacao(1L, "Adiada por falta de arbitragem");
+
+        assertThat(resultado.getObservacao()).isEqualTo("Adiada por falta de arbitragem");
+        verify(repository, never()).save(any(Partida.class));
+    }
+
+    @Test
+    @DisplayName("deve limpar a observação quando vier nula")
+    void deveLimparObservacao() {
+        var partida = Partida.builder().id(1L).status(StatusPartida.AGENDADA)
+                .observacao("texto antigo").build();
+        when(repository.findById(1L)).thenReturn(Optional.of(partida));
+
+        var resultado = service.atualizarObservacao(1L, null);
+
+        assertThat(resultado.getObservacao()).isNull();
+    }
+
+    @Test
+    @DisplayName("deve lançar not found ao atualizar observação inexistente")
+    void deveLancarNotFoundAoAtualizarObservacao() {
+        when(repository.findById(9L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.atualizarObservacao(9L, "x"))
+                .isInstanceOf(br.gov.quixada.esporte.partida.exception.PartidaNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("deve registrar a data de cancelamento ao cancelar partida")
+    void deveRegistrarDataDeCancelamento() {
+        var partida = Partida.builder().id(1L).status(StatusPartida.AGENDADA).build();
+        when(repository.findById(1L)).thenReturn(Optional.of(partida));
+
+        var resultado = service.alterarStatus(1L, StatusPartida.CANCELADA);
+
+        assertThat(resultado.getStatus()).isEqualTo(StatusPartida.CANCELADA);
+        assertThat(resultado.getDataCancelamento()).isNotNull();
     }
 }

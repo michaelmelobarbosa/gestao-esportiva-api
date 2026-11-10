@@ -1,6 +1,7 @@
 package br.gov.quixada.esporte.inscricao;
 
 import br.gov.quixada.esporte.inscricao.dto.InscricaoEquipeCreateRequest;
+import br.gov.quixada.esporte.inscricao.dto.InscricaoEquipeObservacaoRequest;
 import br.gov.quixada.esporte.inscricao.dto.InscricaoEquipeResponse;
 import br.gov.quixada.esporte.inscricao.dto.InscricaoEquipeResumoResponse;
 import br.gov.quixada.esporte.inscricao.dto.InscricaoEquipeStatusRequest;
@@ -53,6 +54,18 @@ public class InscricaoEquipeController {
     public ResponseEntity<InscricaoEquipeResponse> alterarStatus(@PathVariable @Positive Long id,
                                                                  @RequestBody @Valid InscricaoEquipeStatusRequest request) {
         InscricaoEquipe inscricao = service.alterarStatus(id, request.status());
+        return ResponseEntity.ok(mapper.toResponse(inscricao));
+    }
+
+    /**
+     * Anotação livre: independe do status e pode ser criada, alterada ou limpa a
+     * qualquer momento. Texto em branco/ausente limpa o valor.
+     */
+    @PatchMapping("/{id}/observacao")
+    public ResponseEntity<InscricaoEquipeResponse> atualizarObservacao(
+            @PathVariable @Positive Long id,
+            @RequestBody @Valid InscricaoEquipeObservacaoRequest request) {
+        InscricaoEquipe inscricao = service.atualizarObservacao(id, request.observacao());
         return ResponseEntity.ok(mapper.toResponse(inscricao));
     }
 }
