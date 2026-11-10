@@ -19,12 +19,14 @@ public interface AtletaMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "dataCadastro", ignore = true)
     @Mapping(target = "status", ignore = true)
+    @Mapping(target = "nomeCompletoNormalizado", ignore = true)
     Atleta toEntity(@Valid AtletaCreateRequest postRequest);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "dataCadastro", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "cpf", ignore = true)
+    @Mapping(target = "nomeCompletoNormalizado", ignore = true)
     Atleta toEntity(@Valid AtletaUpdateRequest request);
 
     @Mapping(target = "idade", expression = "java(calcularIdade(atleta.getDataNascimento(), clock))")
