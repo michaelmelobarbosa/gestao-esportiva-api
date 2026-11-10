@@ -11,12 +11,14 @@ public enum StatusInscricao {
 
     public static final List<StatusInscricao> OCUPAM_VAGA = List.of(PENDENTE, APROVADA, INATIVA);
 
+    public static final List<StatusInscricao> LIBERAM_VAGA = List.of(CANCELADA, REJEITADA);
+
     public boolean ocupaVaga() {
         return OCUPAM_VAGA.contains(this);
     }
 
     public boolean liberaVaga() {
-        return this == CANCELADA || this == REJEITADA;
+        return LIBERAM_VAGA.contains(this);
     }
 
     public boolean podeTransicionarPara(StatusInscricao novo) {

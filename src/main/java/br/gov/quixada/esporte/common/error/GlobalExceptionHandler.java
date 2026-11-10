@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import br.gov.quixada.esporte.atleta.exception.AtletaInativoException;
+import br.gov.quixada.esporte.atleta.exception.AtletaNaoExcluivelException;
 import br.gov.quixada.esporte.atleta.exception.AtletaNotFoundException;
 import br.gov.quixada.esporte.atleta.exception.CpfJaCadastradoException;
 import br.gov.quixada.esporte.categoria.exception.CategoriaDuplicadaException;
@@ -89,6 +90,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AtletaInativoException.class)
     public ResponseEntity<ApiError> handleInativo(AtletaInativoException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(AtletaNaoExcluivelException.class)
+    public ResponseEntity<ApiError> handleAtletaNaoExcluivel(AtletaNaoExcluivelException ex,
+                                                             HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 

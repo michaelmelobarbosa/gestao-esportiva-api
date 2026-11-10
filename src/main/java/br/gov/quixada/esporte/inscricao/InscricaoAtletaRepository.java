@@ -35,6 +35,12 @@ public interface InscricaoAtletaRepository extends JpaRepository<InscricaoAtleta
 
     boolean existsByAtletaIdAndStatusIn(Long atletaId, Collection<StatusInscricao> statuses);
 
+    /**
+     * Remove fisicamente as inscrições do atleta nos status informados. Usado pelo
+     * hard delete, que só apaga inscrições que já liberam vaga (CANCELADA/REJEITADA).
+     */
+    long deleteByAtletaIdAndStatusIn(Long atletaId, Collection<StatusInscricao> statuses);
+
     boolean existsByInscricaoEquipeIdAndAtletaIdAndStatusIn(Long inscricaoEquipeId, Long atletaId,
                                                             Collection<StatusInscricao> statuses);
 

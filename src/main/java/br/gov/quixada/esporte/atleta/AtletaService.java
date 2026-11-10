@@ -2,6 +2,7 @@ package br.gov.quixada.esporte.atleta;
 
 import java.sql.SQLIntegrityConstraintViolationException;
 
+import br.gov.quixada.esporte.atleta.exception.AtletaNaoExcluivelException;
 import br.gov.quixada.esporte.atleta.exception.AtletaNotFoundException;
 import br.gov.quixada.esporte.atleta.exception.CpfJaCadastradoException;
 import br.gov.quixada.esporte.common.error.VinculoAtivoException;
@@ -66,12 +67,26 @@ public class AtletaService {
         }
     }
 
-    // hard delete a ser implementado quando perfil admin for criado
-    // @Transactional
-    // public void hardDelete(Long id) {
-    // Atleta atleta = findByIdOrThrowNotFound(id);
-    // repository.delete(atleta);
-    // }
+    /**
+     * Exclusão física do atleta. Só permitida para registro INATIVO e sem
+     * inscrições que ainda ocupam vaga; as inscrições que já liberam vaga
+     * (CANCELADA/REJEITADA) são removidas junto.
+     */
+    @Transactional
+    public void hardDelete(Long id) {
+        Atleta atleta = findByIdOrThrowNotFound(id);
+
+        if (atleta.getStatus() != StatusAtleta.INATIVO) {
+            throw new AtletaNaoExcluivelException("Atleta ativo não pode ser excluído; inative antes de excluir");
+        }
+        if (inscricaoAtletaRepository.existsByAtletaIdAndStatusIn(id, StatusInscricao.OCUPAM_VAGA)) {
+            throw new AtletaNaoExcluivelException(
+                    "Atleta possui inscrições ativas e não pode ser excluído");
+        }
+
+        inscricaoAtletaRepository.deleteByAtletaIdAndStatusIn(id, StatusInscricao.LIBERAM_VAGA);
+        repository.delete(atleta);
+    }
 
     @Transactional
     public Atleta ativar(Long id) {
