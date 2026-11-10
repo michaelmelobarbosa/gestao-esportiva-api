@@ -1,0 +1,44 @@
+# =============================================================================
+# Perfil de produção.
+#
+# Variáveis obrigatórias (o boot falha se faltarem):
+#   API_SECURITY_TOKEN_SECRET  segredo do JWT (min. 32 caracteres)
+#   API_CORS_ALLOWED_ORIGINS   origens do front-end, separadas por vírgula
+#   DB_URL / DB_USER / DB_PASSWORD  conexão MySQL
+#
+# O schema é responsabilidade do Flyway; Hibernate apenas valida (ddl-auto: validate).
+# =============================================================================
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+
+  flyway:
+    enabled: true
+
+  docker:
+    compose:
+      enabled: false
+
+server:
+  port: ${SERVER_PORT:8080}
+
+api:
+  cors:
+    allowed-origins: ${API_CORS_ALLOWED_ORIGINS}
+
+logging:
+  level:
+    root: INFO
+    br.gov.quixada.esporte: INFO
+    org.hibernate.SQL: WARN
+    org.springframework.web: WARN
