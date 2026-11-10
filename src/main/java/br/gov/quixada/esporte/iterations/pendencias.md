@@ -17,7 +17,8 @@
 - [ ] **C8** — Configurar CORS (P2)
 
 ### Usuários / Governança
-- [ ] Criar novos `SUPERADMIN` pela API + regra de "último SUPERADMIN" (P1)
+- [x] Decisão: exatamente **1 SUPERADMIN**, sem criação/promoção pela API (bloqueios já existentes em `UserService`)
+- [ ] Recuperação de senha do SUPERADMIN via CLI (P1)
 - [ ] Auditoria: filtros por ator/alvo/período, retenção/expurgo e exportação (P2)
 
 ### Atleta
@@ -73,12 +74,13 @@
 - **Por quê:** sem CORS, um front-end em outro domínio/porta será bloqueado pelo navegador.
 - **Como implementar:** definir origens permitidas conforme ambiente (dev/prod) via `CorsConfigurationSource` no `SecurityConfig`.
 
-### Criar novos `SUPERADMIN` pela API + regra de "último SUPERADMIN" (P1)
-- **Onde:** `security/users/UserService` (`create`/`update`), `security/users/UserController`.
-- **Situação:** hoje a API **bloqueia** criação e promoção de `SUPERADMIN` (`UserService.java:42-43,73-74`); o único `SUPERADMIN` é o seed da migration `V17`.
-- **Por quê:** a governança atual exige apenas o seed; se for necessário criar mais, é preciso um endpoint protegido e a regra de não remover/desativar o último `SUPERADMIN` do sistema.
-- **Como implementar:** endpoint `SUPERADMIN`-only, validação do invariante "pelo menos um `SUPERADMIN` ativo" e auditoria da ação.
-- **Como testar:** tentar inativar/rebaixar o último `SUPERADMIN` → `409`; criar/promover com token `SUPERADMIN` → sucesso.
+### Recuperação de senha do SUPERADMIN via CLI (P1)
+- **Decisão:** o sistema mantém **exatamente 1 SUPERADMIN**, responsável por gerir os `ADMIN`. A API continua bloqueando criar/promover `SUPERADMIN` (`UserService`) e não há endpoint de recuperação exposto na rede.
+- **Onde:** `security/users/SuperadminPasswordResetService`, `security/users/cli/SuperadminPasswordResetRunner`, profile `superadmin-reset` (`application-superadmin-reset.yaml`).
+- **Por quê:** sem e-mail/MFA, o risco real é perder a senha do único SUPERADMIN. A recuperação exige acesso ao shell do servidor — mesmo nível de privilégio que já permitiria alterar o banco — então não adiciona superfície de ataque remota.
+- **Como funciona:** `java -jar app.jar --spring.profiles.active=dev,superadmin-reset` (ou `prod,superadmin-reset`); o runner lê o e-mail (`--reset.email`/`SUPERADMIN_EMAIL`, default `admin@quixada.gov.br`) e a senha (console interativo ou `SUPERADMIN_NEW_PASSWORD`), re-hasheia com BCrypt, reativa a conta e audita `PASSWORD_RESET`, então encerra.
+- **Limitação:** JWT é stateless — tokens emitidos antes do reset seguem válidos até expirar (2h); revogação imediata depende do item C6.
+- **Como testar:** `SuperadminPasswordResetServiceTest` cobre sucesso, e-mail inexistente, usuário não-SUPERADMIN e senha fora do intervalo.
 
 ### Auditoria de usuários: filtros, retenção/expurgo e exportação (P2)
 - **Onde:** `security/users/UserController#findAudit` (`GET /v1/users/audit`), `security/users/UserAuditService#findAll`, `UserAuditRepository`, tabela `db_user_audit` (`V18`).
@@ -157,5 +159,5 @@
 
 ## Bloqueios / decisões necessárias antes de implementar
 - **Mínimo/máximo de elenco:** depende da equipe técnica (limites por modalidade/categoria).
-- **Criação de `SUPERADMIN` pela API:** definir se haverá endpoint e a regra do "último SUPERADMIN".
+- **Criação de `SUPERADMIN` pela API:** decidido — exatamente 1 SUPERADMIN, sem endpoint de criação/promoção; recuperação de senha via CLI.
 - **C6/C7:** definir trade-off entre revogação imediata e desempenho (SELECT por request × roles no token).
