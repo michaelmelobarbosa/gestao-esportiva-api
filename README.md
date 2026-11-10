@@ -103,6 +103,13 @@ Versão não suportada (ex.: `/v9/...`) responde `400`. Paths fora do padrão `/
 
 Decisão: versionamento por **URL** (`/v1`), escolhido por simplicidade e compatibilidade com navegador. A alternativa por header (`Accept: application/vnd.gestao.v1+json`) foi descartada. Evolução: uma eventual `/v2` deve manter `/v1` disponível por um período de deprecação antes da remoção.
 
+## Exclusão e anotações
+
+- `DELETE /v1/atletas/{id}` é a **única exclusão física** da API. Exige atleta `INATIVO` e sem inscrições que ocupem vaga (`PENDENTE`/`APROVADA`/`INATIVA`); inscrições `CANCELADA`/`REJEITADA` são removidas junto. Responde `204`, `404` ou `409`.
+- Os demais recursos não têm exclusão física: o descarte é lógico, por `status` (`INATIVO`/`CANCELADA`).
+- Competições, inscrições de equipe, inscrições de atleta e partidas possuem **`observacao`** — texto livre (até 500 caracteres), opcional e **sem vínculo com o status**. Serve para comunicar qualquer informação (motivo de cancelamento, prorrogação de datas, avisos). Pode ser criada no `POST`, alterada ou limpa a qualquer momento via `PATCH .../observacao` (corpo `{"observacao":"..."}`; ausente ou em branco limpa o campo).
+- Os mesmos recursos expõem **`dataCancelamento`**, preenchida automaticamente e apenas na transição para `CANCELADA` (informativa).
+
 ## Documentação operacional
 
 - [Recuperação de senha do SUPERADMIN](docs/operacao/recuperacao-superadmin.md) — procedimento de servidor (CLI).

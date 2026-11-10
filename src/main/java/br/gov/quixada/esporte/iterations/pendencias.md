@@ -22,7 +22,7 @@
 - [ ] Auditoria: filtros por ator/alvo/período, retenção/expurgo e exportação (P2)
 
 ### Atleta
-- [ ] `hardDelete` + endpoint `DELETE /v1/atletas/{id}` (P1)
+- [x] `hardDelete` + endpoint `DELETE /v1/atletas/{id}` (P1)
 - [ ] `AtletaControllerTest` (P1)
 - [ ] `AtletaMapperTest` (P1)
 - [ ] Configurar `MockMvc` + `Clock` fixo nos testes de controller (P1)
@@ -89,15 +89,18 @@
 - **Como implementar:** filtros por ator/alvo/ação e intervalo de datas (Specifications), endpoint de exportação (CSV/JSON) e rotina/job de retenção.
 - **Como testar:** `GET /v1/users/audit?actorEmail=...&from=...&to=...`; expurgo remove registros fora da janela.
 
-### `hardDelete` de atleta + endpoint (P1)
-- **Onde:** `AtletaService.java:70-75` (método comentado) e `AtletaController` (não há `@DeleteMapping`).
-- **Situação:** o delete atual é sempre soft (`status`); `hardDelete` está adiado por decisão.
-- **Regra definida:** só permitir hard delete de registro já `INATIVO`/`CANCELADO`, e apenas para `ADMIN` (a role já existe; `DELETE /v1/**` já exige `ADMIN`).
-- **Como implementar:**
-  - Descomentar/implementar `AtletaService#hardDelete(Long id)`, bloqueando se `status == ATIVO`.
-  - Adicionar `@DeleteMapping("/{id}")` no `AtletaController`.
-  - Avaliar `ON DELETE` nas tabelas relacionadas (`inscricao`, `equipe`) via nova migration.
-- **Como testar:** `hardDelete` de atleta `ATIVO` → erro/`409`; de `INATIVO` por `ADMIN` → `204`.
+### `hardDelete` de atleta + endpoint (P1) — Concluído
+- **Status:** implementado. `AtletaService#hardDelete` + `DELETE /v1/atletas/{id}`.
+- **Decisão da equipe:** exclusão física **somente no atleta**. Os demais domínios não são apagados: usam `status` (`INATIVO`/`CANCELADA`) + campo `observacao` livre para registrar qualquer informação (motivo de cancelamento, prorrogação de datas, avisos).
+- **Regra:** exige atleta `INATIVO` (senão `409`) e nenhuma inscrição em `OCUPAM_VAGA` (`PENDENTE`/`APROVADA`/`INATIVA`). As inscrições em `LIBERAM_VAGA` (`CANCELADA`/`REJEITADA`) são apagadas junto. Retorna `204`; `404` se não existir.
+- **Impacto verificado:** `db_atletas` só é referenciado por `db_inscricao_atleta`; classificação não usa inscrição de atleta e não há auditoria de atleta. Efeito colateral assumido: o `unique` de CPF é liberado.
+- **Testes:** `AtletaServiceTest` (nested `hardDelete`) e `AtletaHardDeleteRepositoryTest` (FK bloqueia delete com inscrição; `deleteByAtletaIdAndStatusIn` libera o caminho).
+
+### Campo `observacao` + `data_cancelamento` (V21) — Concluído
+- **Decisão da equipe:** em vez de excluir fisicamente competição/inscrição/partida, registrar o motivo/contexto em um campo livre.
+- **`observacao`:** texto livre (`varchar(500)`, opcional) em `Competicao`, `InscricaoEquipe`, `InscricaoAtleta` e `Partida`. **Sem vínculo com status** — pode ser criada no `POST`, editada ou limpa a qualquer momento via `PATCH /v1/{recurso}/{id}/observacao`, inclusive em registros `CANCELADA`/`FINALIZADA`/`INATIVO`. Ausente/em branco ⇒ `null`. Não é propagada em cascata.
+- **`dataCancelamento`:** informativa, gravada apenas na transição para `CANCELADA` (inclui o bulk update de partidas).
+- **Fora das listagens:** os `*ResumoResponse` não expõem `observacao`.
 
 ### `AtletaControllerTest` (P1)
 - **Onde:** `src/test/java/.../atleta/` (não existe).
