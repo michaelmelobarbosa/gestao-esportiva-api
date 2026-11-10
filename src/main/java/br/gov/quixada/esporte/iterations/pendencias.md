@@ -14,7 +14,7 @@
 - [ ] **A5** — Rate limiting / lockout no login (P0)
 - [ ] **C6** — Refresh token / logout / revogação (P2)
 - [ ] **C7** — (Opcional) roles como claim do JWT (P2)
-- [ ] **C8** — Configurar CORS (P2)
+- [x] **C8** — Configurar CORS (P2)
 
 ### Usuários / Governança
 - [x] Decisão: exatamente **1 SUPERADMIN**, sem criação/promoção pela API (bloqueios já existentes em `UserService`)
@@ -24,7 +24,7 @@
 ### Atleta
 - [x] `hardDelete` + endpoint `DELETE /v1/atletas/{id}` (P1)
 - [ ] `AtletaControllerTest` (P1)
-- [ ] `AtletaMapperTest` (P1)
+- [x] `AtletaMapperTest` (P1)
 - [ ] Configurar `MockMvc` + `Clock` fixo nos testes de controller (P1)
 
 ### Testes dos novos fluxos
@@ -37,8 +37,8 @@
 ### Infra / Documentação
 - [ ] OpenAPI/springdoc + `@Tag`/`@Operation` (P2)
 - [x] README + documentação da estratégia de versionamento (P2)
-- [ ] `application-prod.yaml` + separar config dev/prod (P2)
-- [ ] Verificar compatibilidade Java 25 + Spring Boot 4.1.0 + MapStruct 1.6.3 (P2)
+- [x] `application-prod.yaml` + separar config dev/prod (P2)
+- [x] Verificar compatibilidade Java 25 + Spring Boot 4.1.0 + MapStruct 1.6.3 (P2)
 - [ ] CI (GitHub Actions) rodando `./mvnw test` (P2)
 - [ ] Testcontainers (opcional) (P2)
 
@@ -68,11 +68,12 @@
 - **Situação:** o filtro faz **um SELECT no banco por request** para carregar o usuário e suas authorities.
 - **Trade-off:** colocar as roles no token evita a consulta, mas perde a revogação imediata (token antigo mantém a role velha até expirar). Desempenho × revogação — decidir.
 
-### C8 — Configurar CORS (P2)
-- **Onde:** `security/config/SecurityConfig`.
-- **Situação:** não há nenhuma configuração de CORS.
-- **Por quê:** sem CORS, um front-end em outro domínio/porta será bloqueado pelo navegador.
-- **Como implementar:** definir origens permitidas conforme ambiente (dev/prod) via `CorsConfigurationSource` no `SecurityConfig`.
+### C8 — Configurar CORS (P2) — Concluído
+- **Onde:** `security/config/CorsProperties`, `SecurityConfig`, `application.yaml` / `application-prod.yaml`.
+- **Como ficou:** `api.cors.allowed-origins` (lista, via `API_CORS_ALLOWED_ORIGINS`) → bean `CorsConfigurationSource` registrado em `/**` e aplicado por `.cors(...)` no `SecurityFilterChain`. Métodos `GET/POST/PUT/PATCH/DELETE/OPTIONS`; headers `Authorization` e `Content-Type`; `Location` exposto; `maxAge` 1h.
+- **Comportamento:** preflight de origem não listada → `403`; origem listada → `200` com `Access-Control-Allow-Origin`.
+- **Testes:** `CorsConfigTest` (`@SpringBootTest` + `@AutoConfigureMockMvc`) cobre origem permitida e origem invasora.
+- **Atenção em prod:** o boot falha se `API_CORS_ALLOWED_ORIGINS` não for informada.
 
 ### Recuperação de senha do SUPERADMIN via CLI (P1) — Concluído
 - **Status:** implementado no commit `f97544d`. Runbook em `docs/operacao/recuperacao-superadmin.md`.
@@ -107,16 +108,16 @@
 - **Cenários mínimos:** `POST /v1/atletas` válido → `201` + header `Location`; `POST` inválido → `400` com `errors[].field`; `PATCH /{id}/status` → `200`; `GET /v1/atletas/-1` → `400`; `PUT /{id}` em atleta inativo → `409`.
 - **Atenção:** controller versionado exige `ApiVersionStrategy` no MockMvc standalone (ver `AuthControllerTest`), senão lança `IllegalStateException`.
 
-### `AtletaMapperTest` (P1)
-- **Onde:** `src/test/java/.../atleta/` (não existe).
-- **Cenários:** `calcularIdade` com `Clock.fixed(...)`; `toEntity(AtletaUpdateRequest)` não mapear `cpf`; `toGetResponse`/`toResumo` com `dataNascimento == null` → `idade == null`.
+### `AtletaMapperTest` (P1) — Concluído
+- **Onde:** `src/test/java/.../atleta/AtletaMapperTest.java`.
+- **Como ficou:** instancia `AtletaMapperImpl` diretamente e injeta `EnderecoMapperImpl` via `ReflectionTestUtils` (o impl gerado usa field injection). 9 casos: `calcularIdade` com `Clock.fixed` (incluindo véspera de aniversário e data nula); `toEntity(AtletaUpdateRequest)` não mapeia `cpf`, `id`, `dataCadastro` nem `status`; `toGetResponse`/`toResumo` calculam idade e devolvem `null` quando `dataNascimento` é nulo.
 
 ### Configurar `MockMvc` + `Clock` fixo nos testes de controller (P1)
 - **Onde:** testes de controller.
 - **Como:** `@Import(ClockConfig.class)` com `@TestConfiguration` sobrescrevendo o bean `Clock` por um `Clock.fixed(...)`.
 
 ### Testes de controller/mapper dos novos fluxos (P1)
-- **Onde:** `src/test/java/.../` — hoje só existe `AuthControllerTest`.
+- **Onde:** `src/test/java/.../` — hoje existem `AuthControllerTest`, `CompeticaoControllerTest` (observação) e `AtletaMapperTest`.
 - **Escopo faltante:** competição, inscrição (`InscricaoAtleta`/`InscricaoEquipe`), partida e classificação — controllers e mappers.
 
 ### Geração automática de rodadas (turno único / returno) (P1)
@@ -140,15 +141,13 @@
 - **Status:** `README.md` criado, com setup, autenticação/papéis, tabela de endpoints, testes e a decisão de versionamento (URL `/v1`; alternativa por header descartada; política de deprecação).
 - **Observação:** o versionamento nativo já estava implementado (`/v{version}/...`, `version = "1.0"`); faltava apenas a documentação, agora publicada.
 
-### `application-prod.yaml` + separar config dev/prod (P2)
-- **Onde:** `src/main/resources/` (existem `application.yaml`, `application-dev.yaml`, `application-test.yaml`; falta `application-prod.yaml`).
-- **Situação:** `show-sql`/`format_sql` ficam ligados no default. `application-dev.yaml` já existe; falta o perfil de produção.
-- **Como implementar:** `application-prod.yaml` com `show-sql:false`, `format_sql:false`, `ddl-auto: validate` e `logging.level` adequado.
+### `application-prod.yaml` + separar config dev/prod (P2) — Concluído
+- **Como ficou:** `application.yaml` deixou de ligar `show-sql`/`format_sql` (agora só em `dev`); `application-dev.yaml` ganhou `show-sql: true`, `format_sql` e `spring.docker.compose.enabled: true`; `application-prod.yaml` traz `show-sql: false`, `format_sql: false`, `ddl-auto: validate`, Flyway on, Docker Compose off, `server.port` configurável e níveis de log.
+- **Variáveis exigidas em prod:** `DB_URL`, `DB_USER`, `DB_PASSWORD`, `API_CORS_ALLOWED_ORIGINS`, `API_SECURITY_TOKEN_SECRET` (boot falha sem elas).
 
-### Verificar compatibilidade Java 25 + Boot 4.1.0 + MapStruct 1.6.3 (P2)
-- **Onde:** `pom.xml:16,89-99`.
-- **Situação:** combinação recente (2026); precisa confirmação contínua.
-- **Como verificar:** `./mvnw clean compile` deve gerar `*MapperImpl` sem warnings de `annotationProcessor`; testar upgrade de MapStruct se surgir problema com Java 25.
+### Verificar compatibilidade Java 25 + Boot 4.1.0 + MapStruct 1.6.3 (P2) — Concluído
+- **Resultado:** `./mvnw clean compile` com JDK 25.0.4.1 gera todos os `*MapperImpl` normalmente. A verificação **achou e corrigiu** dois warnings de `Unmapped target property: "nomeCompletoNormalizado"` em `AtletaMapper` (adicionado `@Mapping(ignore = true)` nos dois `toEntity`). Hoje o build não emite nenhum `[WARNING]` do compilador.
+- **Pendência residual:** o JDK 25 imprime o aviso `sun.misc.Unsafe::objectFieldOffset ... terminally deprecated` disparado pelo `lombok.permit.Permit` (Lombok 1.18.46, já a versão mais recente). É inofensivo e não tem correção do lado do projeto; acompanhar quando o Lombok lançar uma implementação sem `Unsafe`.
 
 ### CI (GitHub Actions) (P2)
 - **Onde:** sem `.github/`.

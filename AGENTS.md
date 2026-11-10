@@ -7,10 +7,12 @@
 - MapStruct 1.6.3 + Lombok. Both must stay in `pom.xml:103-113` `maven-compiler-plugin.annotationProcessorPaths` — removing either breaks generated mappers.
 
 ## Environments / Profiles
-Two Spring profiles; default is `dev` (`application.yaml:8-9`, overridable via `SPRING_PROFILES_ACTIVE`).
-- **dev** (`application-dev.yaml`): MySQL `localhost:3306/gestao_esportiva`, credentials from `.env`, Flyway on, `ddl-auto: validate`.
-- **test** (`application-test.yaml`): H2 in-memory `jdbc:h2:mem:gestao_esportiva_test;MODE=MySQL`, Flyway off, `ddl-auto: create-drop`, Spring Docker Compose off. Surefire forces it — `pom.xml:125-127` sets `spring.profiles.active=test`.
+Three Spring profiles; default is `dev` (`application.yaml:8-9`, overridable via `SPRING_PROFILES_ACTIVE`).
+- **dev** (`application-dev.yaml`): MySQL `localhost:3306/gestao_esportiva`, credentials from `.env`, Flyway on, `ddl-auto: validate`, `show-sql: true` (SQL logging lives here, not in the default file).
+- **test** (`application-test.yaml`): H2 in-memory `jdbc:h2:mem:gestao_esportiva_test;MODE=MySQL`, Flyway off, `ddl-auto: create-drop`, Spring Docker Compose off, `show-sql: false`. Surefire forces it — `pom.xml:125-127` sets `spring.profiles.active=test`.
+- **prod** (`application-prod.yaml`): `show-sql`/`format_sql` off, Flyway on, `ddl-auto: validate`, Docker Compose off. Requires `DB_URL`, `DB_USER`, `DB_PASSWORD`, `API_CORS_ALLOWED_ORIGINS` and `API_SECURITY_TOKEN_SECRET` (boot fails without them).
 - H2 is test-scoped only. Tests no longer need Docker/MySQL: service tests are pure Mockito; `AtletaRepositoryTest` uses `@DataJpaTest` and `contextLoads` boots the full context (both on H2).
+- **CORS**: `api.cors.allowed-origins` (`CorsProperties`) → `CorsConfigurationSource` bean in `SecurityConfig`. Unknown origins get `403` on preflight; covered by `CorsConfigTest`.
 
 ## Commands
 ```bash

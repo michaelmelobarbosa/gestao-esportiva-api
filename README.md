@@ -33,6 +33,7 @@ API REST para gestão de competições esportivas: atletas, clubes, equipes, mod
    | `MYSQL_DATABASE` | nome do banco |
    | `MYSQL_ROOT_PASSWORD` | senha do root do container |
    | `API_SECURITY_TOKEN_SECRET` | segredo do JWT (mínimo 32 caracteres) |
+   | `API_CORS_ALLOWED_ORIGINS` | opcional em dev; origens do front-end separadas por vírgula (default `http://localhost:3000,http://localhost:5173`) |
 
    > Nunca comite o `.env` nem segredos reais.
 
@@ -49,6 +50,20 @@ API REST para gestão de competições esportivas: atletas, clubes, equipes, mod
    ```
 
    A API fica em `http://localhost:8080`.
+
+### Profiles
+
+| Profile | Arquivo | Uso |
+|---|---|---|
+| `dev` (default) | `application-dev.yaml` | MySQL local, Docker Compose, `show-sql: true`, `ddl-auto: validate` |
+| `test` | `application-test.yaml` | H2 em memória, Flyway off, `create-drop` (forçado pelo Surefire) |
+| `prod` | `application-prod.yaml` | `SPRING_PROFILES_ACTIVE=prod`; `show-sql: false`, Flyway on, `validate` |
+
+Em `prod` o boot **falha** se faltarem `API_SECURITY_TOKEN_SECRET`, `API_CORS_ALLOWED_ORIGINS`, `DB_URL`, `DB_USER` ou `DB_PASSWORD`. O schema é aplicado pelo Flyway; o Hibernate apenas valida.
+
+### CORS
+
+As origens permitidas vêm de `api.cors.allowed-origins` (`API_CORS_ALLOWED_ORIGINS`). Preflight de origem não listada recebe `403`. Métodos permitidos: `GET, POST, PUT, PATCH, DELETE, OPTIONS`; headers: `Authorization`, `Content-Type`; `Location` é exposto.
 
 ## Testes
 
