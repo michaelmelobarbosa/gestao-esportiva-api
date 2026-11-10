@@ -335,4 +335,68 @@ class CompeticaoServiceTest {
             assertThat(salva.getStatus()).isEqualTo(StatusCompeticao.FINALIZADA);
         }
     }
+
+    @Nested
+    @DisplayName("dataCancelamento")
+    class DataCancelamento {
+
+        @Test
+        @DisplayName("deve registrar a data ao cancelar")
+        void deveRegistrarDataAoCancelar() {
+            Competicao competicao = umaCompeticao(StatusCompeticao.PLANEJAMENTO);
+            when(repository.findById(1L)).thenReturn(Optional.of(competicao));
+
+            Competicao resultado = service.alterarStatus(1L, StatusCompeticao.CANCELADA);
+
+            assertThat(resultado.getDataCancelamento()).isNotNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("atualizarObservacao")
+    class AtualizarObservacao {
+
+        @Test
+        @DisplayName("deve gravar a observação livre")
+        void deveGravarObservacao() {
+            Competicao competicao = umaCompeticao(StatusCompeticao.EM_ANDAMENTO);
+            when(repository.findById(1L)).thenReturn(Optional.of(competicao));
+
+            Competicao resultado = service.atualizarObservacao(1L, "Fim prorrogado por chuva");
+
+            assertThat(resultado.getObservacao()).isEqualTo("Fim prorrogado por chuva");
+        }
+
+        @Test
+        @DisplayName("deve permitir observação em competição CANCELADA")
+        void devePermitirEmCompeticaoCancelada() {
+            Competicao competicao = umaCompeticao(StatusCompeticao.CANCELADA);
+            when(repository.findById(1L)).thenReturn(Optional.of(competicao));
+
+            Competicao resultado = service.atualizarObservacao(1L, "Cancelada por falta de equipes");
+
+            assertThat(resultado.getObservacao()).isEqualTo("Cancelada por falta de equipes");
+        }
+
+        @Test
+        @DisplayName("deve limpar a observação quando vier nula")
+        void deveLimparObservacao() {
+            Competicao competicao = umaCompeticao(StatusCompeticao.PLANEJAMENTO);
+            competicao.atualizarObservacao("texto antigo");
+            when(repository.findById(1L)).thenReturn(Optional.of(competicao));
+
+            Competicao resultado = service.atualizarObservacao(1L, null);
+
+            assertThat(resultado.getObservacao()).isNull();
+        }
+
+        @Test
+        @DisplayName("deve lançar not found quando a competição não existir")
+        void deveLancarNotFound() {
+            when(repository.findById(9L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.atualizarObservacao(9L, "x"))
+                    .isInstanceOf(CompeticaoNotFoundException.class);
+        }
+    }
 }

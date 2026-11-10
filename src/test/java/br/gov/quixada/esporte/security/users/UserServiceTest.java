@@ -167,6 +167,22 @@ class UserServiceTest {
         }
 
         @Test
+        @DisplayName("deve proibir promover usuário para SUPERADMIN")
+        void deveProibirPromoverParaSuperadmin() {
+            var actor = user(1L, UserRole.SUPERADMIN, UserStatus.ATIVO);
+            var target = user(2L, UserRole.ADMIN, UserStatus.ATIVO);
+            when(repository.findById(2L)).thenReturn(Optional.of(target));
+
+            var request = updateRequest(target.getEmail(), null, UserRole.SUPERADMIN);
+
+            assertThatThrownBy(() -> service.update(actor, 2L, request))
+                    .isInstanceOf(OperacaoNaoPermitidaException.class)
+                    .hasMessage("Não é permitido promover usuário para SUPERADMIN");
+
+            verify(repository, never()).saveAndFlush(any(User.class));
+        }
+
+        @Test
         @DisplayName("deve proibir ADMIN de editar usuários")
         void deveProibirAdminEditar() {
             var actor = user(1L, UserRole.ADMIN, UserStatus.ATIVO);

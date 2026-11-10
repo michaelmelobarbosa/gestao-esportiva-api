@@ -30,6 +30,20 @@ public class UserAuditService {
         repository.save(audit);
     }
 
+    @Transactional
+    public void recordSystem(User target, UserAuditAction action, String changes) {
+        var audit = UserAudit.builder()
+                .occurredAt(LocalDateTime.now(clock))
+                .actorId(0L)
+                .actorEmail("system:cli")
+                .action(action)
+                .targetId(target.getId())
+                .targetEmail(target.getEmail())
+                .changes(changes)
+                .build();
+        repository.save(audit);
+    }
+
     @Transactional(readOnly = true)
     public Page<UserAudit> findAll(Pageable pageable) {
         return repository.findAll(pageable);

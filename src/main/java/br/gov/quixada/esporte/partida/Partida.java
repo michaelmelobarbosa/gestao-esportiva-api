@@ -55,6 +55,13 @@ public class Partida {
 
     private Integer golsVisitante;
 
+    /** Texto livre: comunicação ad hoc, sem vínculo com status. */
+    @Column(length = 500)
+    private String observacao;
+
+    /** Informativa: preenchida apenas na transição para CANCELADA. */
+    private LocalDateTime dataCancelamento;
+
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "id_inscricao_mandante", nullable = false)
     private InscricaoEquipe inscricaoMandante;
@@ -77,11 +84,26 @@ public class Partida {
         this.inscricaoVisitante = visitante;
     }
 
-    public void alterarStatus(StatusPartida novoStatus) {
+    public void alterarStatus(StatusPartida novoStatus, LocalDateTime agora) {
         if (this.status == novoStatus) {
             return;
         }
         this.status = novoStatus;
+        if (novoStatus == StatusPartida.CANCELADA) {
+            this.dataCancelamento = agora;
+        }
+    }
+
+    /**
+     * Campo livre: pode ser criado, alterado ou limpo em qualquer status.
+     * Texto em branco é normalizado para null.
+     */
+    public void atualizarObservacao(String observacao) {
+        this.observacao = normalizarObservacao(observacao);
+    }
+
+    private static String normalizarObservacao(String observacao) {
+        return (observacao == null || observacao.isBlank()) ? null : observacao.trim();
     }
 
     public void registrarResultado(Integer golsMandante, Integer golsVisitante) {
@@ -95,5 +117,6 @@ public class Partida {
         if (this.status == null) {
             this.status = StatusPartida.AGENDADA;
         }
+        this.observacao = normalizarObservacao(this.observacao);
     }
 }

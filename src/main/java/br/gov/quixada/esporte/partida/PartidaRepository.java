@@ -139,22 +139,24 @@ public interface PartidaRepository extends JpaRepository<Partida, Long> {
 
     @Modifying(clearAutomatically = true)
     @Query("""
-            update Partida p set p.status = :cancelada
+            update Partida p set p.status = :cancelada, p.dataCancelamento = :dataCancelamento
             where p.status in :statuses
               and (p.inscricaoMandante.competicao.id = :competicaoId
                 or p.inscricaoVisitante.competicao.id = :competicaoId)
             """)
     int cancelarPorCompeticao(@Param("competicaoId") Long competicaoId,
                               @Param("statuses") Collection<StatusPartida> statuses,
-                              @Param("cancelada") StatusPartida cancelada);
+                              @Param("cancelada") StatusPartida cancelada,
+                              @Param("dataCancelamento") LocalDateTime dataCancelamento);
 
     @Modifying(clearAutomatically = true)
     @Query("""
-            update Partida p set p.status = :cancelada
+            update Partida p set p.status = :cancelada, p.dataCancelamento = :dataCancelamento
             where p.status in :statuses
               and (p.inscricaoMandante.id = :inscricaoId or p.inscricaoVisitante.id = :inscricaoId)
             """)
     int cancelarPorInscricao(@Param("inscricaoId") Long inscricaoId,
                              @Param("statuses") Collection<StatusPartida> statuses,
-                             @Param("cancelada") StatusPartida cancelada);
+                             @Param("cancelada") StatusPartida cancelada,
+                             @Param("dataCancelamento") LocalDateTime dataCancelamento);
 }

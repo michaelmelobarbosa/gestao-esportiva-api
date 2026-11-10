@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -59,10 +60,11 @@ public class PartidaService {
                 .rodada(request.rodada())
                 .dataHora(request.dataHora())
                 .local(request.local())
+                .observacao(request.observacao())
                 .inscricaoMandante(mandante)
                 .inscricaoVisitante(visitante)
-                .status(statusInicial)
                 .build();
+        partida.alterarStatus(statusInicial, LocalDateTime.now(clock));
         return repository.save(partida);
     }
 
@@ -93,7 +95,18 @@ public class PartidaService {
                     "Transição de status inválida: " + partida.getStatus() + " -> " + status);
         }
 
-        partida.alterarStatus(status);
+        partida.alterarStatus(status, LocalDateTime.now(clock));
+        return partida;
+    }
+
+    /**
+     * Campo livre de comunicação: pode ser criado, alterado ou limpo em qualquer
+     * status, sem checagens de negócio.
+     */
+    @Transactional
+    public Partida atualizarObservacao(Long id, String observacao) {
+        Partida partida = findByIdOrThrowNotFound(id);
+        partida.atualizarObservacao(observacao);
         return partida;
     }
 
@@ -114,15 +127,17 @@ public class PartidaService {
 
     @Transactional
     public void cancelarPorCompeticao(Long competicaoId) {
-        repository.cancelarPorCompeticao(competicaoId, STATUS_CANCELAVEIS, StatusPartida.CANCELADA);
+        repository.cancelarPorCompeticao(competicaoId, STATUS_CANCELAVEIS, StatusPartida.CANCELADA,
+                LocalDateTime.now(clock));
     }
 
     @Transactional
     public void cancelarPorInscricao(Long inscricaoId) {
-        repository.cancelarPorInscricao(inscricaoId, STATUS_CANCELAVEIS, StatusPartida.CANCELADA);
+        repository.cancelarPorInscricao(inscricaoId, STATUS_CANCELAVEIS, StatusPartida.CANCELADA,
+                LocalDateTime.now(clock));
     }
 
-    private void validarDados(Integer rodada, java.time.LocalDateTime dataHora,
+    private void validarDados(Integer rodada, LocalDateTime dataHora,
                               InscricaoEquipe mandante, InscricaoEquipe visitante, Long idIgnorado) {
         if (mandante.getId().equals(visitante.getId())) {
             throw new PartidaInvalidaException("Mandante e visitante devem ser diferentes");

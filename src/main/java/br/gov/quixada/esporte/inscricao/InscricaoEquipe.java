@@ -61,10 +61,32 @@ public class InscricaoEquipe {
     @Column(nullable = false, length = 20)
     private StatusInscricao status;
 
+    /** Texto livre: comunicação ad hoc, sem vínculo com status. */
+    @Column(length = 500)
+    private String observacao;
+
+    /** Informativa: preenchida apenas na transição para CANCELADA. */
+    private LocalDateTime dataCancelamento;
+
     /** Altera o status do ciclo de vida, idempotente quando igual. */
-    public void alterarStatus(StatusInscricao novoStatus) {
+    public void alterarStatus(StatusInscricao novoStatus, LocalDateTime agora) {
         if (this.status == novoStatus) return;
         this.status = novoStatus;
+        if (novoStatus == StatusInscricao.CANCELADA) {
+            this.dataCancelamento = agora;
+        }
+    }
+
+    /**
+     * Campo livre: pode ser criado, alterado ou limpo em qualquer status.
+     * Texto em branco é normalizado para null.
+     */
+    public void atualizarObservacao(String observacao) {
+        this.observacao = normalizarObservacao(observacao);
+    }
+
+    private static String normalizarObservacao(String observacao) {
+        return (observacao == null || observacao.isBlank()) ? null : observacao.trim();
     }
 
     void definirCompeticao(Competicao competicao) {
@@ -88,5 +110,6 @@ public class InscricaoEquipe {
         if (this.status == null) {
             this.status = StatusInscricao.PENDENTE;
         }
+        this.observacao = normalizarObservacao(this.observacao);
     }
 }

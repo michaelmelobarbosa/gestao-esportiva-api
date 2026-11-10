@@ -18,6 +18,7 @@ public interface InscricaoEquipeMapper {
     @Mapping(target = "equipe", ignore = true)
     @Mapping(target = "dataInscricao", ignore = true)
     @Mapping(target = "status", ignore = true)
+    @Mapping(target = "dataCancelamento", ignore = true)
     InscricaoEquipe toEntity(@Valid InscricaoEquipeCreateRequest request);
 
     @Mapping(target = "competicaoId", source = "competicao.id")

@@ -505,4 +505,72 @@ class InscricaoEquipeServiceTest {
                     .isInstanceOf(br.gov.quixada.esporte.categoria.exception.CategoriaInativaException.class);
         }
     }
+
+    @Nested
+    @DisplayName("atualizarObservacao")
+    class AtualizarObservacao {
+
+        @Test
+        @DisplayName("deve gravar a observação livre em inscrição CANCELADA")
+        void deveGravarObservacao() {
+            InscricaoEquipe inscricao = InscricaoEquipe.builder().id(1L).status(StatusInscricao.CANCELADA).build();
+            when(repository.findById(1L)).thenReturn(Optional.of(inscricao));
+
+            InscricaoEquipe resultado = service.atualizarObservacao(1L, "Equipe desistiu");
+
+            assertThat(resultado.getObservacao()).isEqualTo("Equipe desistiu");
+            verify(repository, never()).save(any(InscricaoEquipe.class));
+        }
+
+        @Test
+        @DisplayName("deve limpar a observação quando vier em branco")
+        void deveLimparObservacaoEmBranco() {
+            InscricaoEquipe inscricao = InscricaoEquipe.builder().id(1L).status(StatusInscricao.PENDENTE)
+                    .observacao("texto antigo").build();
+            when(repository.findById(1L)).thenReturn(Optional.of(inscricao));
+
+            InscricaoEquipe resultado = service.atualizarObservacao(1L, "   ");
+
+            assertThat(resultado.getObservacao()).isNull();
+        }
+
+        @Test
+        @DisplayName("deve lançar not found quando a inscrição não existir")
+        void deveLancarNotFound() {
+            when(repository.findById(9L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.atualizarObservacao(9L, "x"))
+                    .isInstanceOf(InscricaoEquipeNotFoundException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("dataCancelamento")
+    class DataCancelamento {
+
+        @Test
+        @DisplayName("deve registrar a data ao cancelar")
+        void deveRegistrarDataAoCancelar() {
+            InscricaoEquipe inscricao = InscricaoEquipe.builder().id(1L).status(StatusInscricao.APROVADA).build();
+            when(repository.findById(1L)).thenReturn(Optional.of(inscricao));
+            when(inscricaoAtletaRepository.findByInscricaoEquipeId(1L)).thenReturn(List.of());
+
+            InscricaoEquipe resultado = service.alterarStatus(1L, StatusInscricao.CANCELADA);
+
+            assertThat(resultado.getDataCancelamento()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("não deve registrar a data em transição que não seja CANCELADA")
+        void naoDeveRegistrarEmOutraTransicao() {
+            InscricaoEquipe inscricao = InscricaoEquipe.builder().id(1L).status(StatusInscricao.PENDENTE).build();
+            when(repository.findById(1L)).thenReturn(Optional.of(inscricao));
+            when(inscricaoAtletaRepository.countByInscricaoEquipeIdAndStatusIn(
+                    eq(1L), anyCollection())).thenReturn(1L);
+
+            InscricaoEquipe resultado = service.alterarStatus(1L, StatusInscricao.APROVADA);
+
+            assertThat(resultado.getDataCancelamento()).isNull();
+        }
+    }
 }

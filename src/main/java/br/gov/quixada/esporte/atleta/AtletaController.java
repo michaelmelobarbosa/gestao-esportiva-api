@@ -81,4 +81,14 @@ public class AtletaController {
 
         return ResponseEntity.ok(getResponse);
     }
+
+    /**
+     * Exclusão física: exige atleta INATIVO e sem inscrições que ocupem vaga.
+     * Inscrições CANCELADA/REJEITADA são removidas junto.
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> hardDelete(@PathVariable @Positive Long id) {
+        service.hardDelete(id);
+        return ResponseEntity.noContent().build();
+    }
 }

@@ -16,11 +16,14 @@ public interface CompeticaoMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "modalidade", ignore = true)
     @Mapping(target = "status", ignore = true)
+    @Mapping(target = "dataCancelamento", ignore = true)
     Competicao toEntity(@Valid CompeticaoCreateRequest request);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "modalidade", ignore = true)
     @Mapping(target = "status", ignore = true)
+    @Mapping(target = "observacao", ignore = true)
+    @Mapping(target = "dataCancelamento", ignore = true)
     Competicao toEntity(@Valid CompeticaoUpdateRequest request);
 
     @Mapping(target = "modalidadeId", source = "modalidade.id")

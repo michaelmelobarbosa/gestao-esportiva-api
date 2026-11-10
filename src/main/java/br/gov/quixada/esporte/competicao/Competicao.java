@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -55,9 +56,29 @@ public class Competicao {
     @Column(nullable = false, length = 20)
     private StatusCompeticao status;
 
+    /** Texto livre: comunicação ad hoc (motivo de cancelamento, prorrogação, etc.). */
+    @Column(length = 500)
+    private String observacao;
+
+    /** Informativa: preenchida apenas na transição para CANCELADA. */
+    private LocalDateTime dataCancelamento;
+
     /** Cancelamento manual (terminal). */
-    public void cancelar() {
+    public void cancelar(LocalDateTime agora) {
         this.status = StatusCompeticao.CANCELADA;
+        this.dataCancelamento = agora;
+    }
+
+    /**
+     * Campo livre: pode ser criado, alterado ou limpo em qualquer status.
+     * Texto em branco é normalizado para null.
+     */
+    public void atualizarObservacao(String observacao) {
+        this.observacao = normalizarObservacao(observacao);
+    }
+
+    private static String normalizarObservacao(String observacao) {
+        return (observacao == null || observacao.isBlank()) ? null : observacao.trim();
     }
 
     /** Recalcula o status com base nas datas; CANCELADA é terminal. */
@@ -123,6 +144,7 @@ public class Competicao {
         if (this.status == null) {
             this.status = StatusCompeticao.PLANEJAMENTO;
         }
+        this.observacao = normalizarObservacao(this.observacao);
     }
 
     private void validarPeriodo(LocalDate dataInicio, LocalDate dataFim) {

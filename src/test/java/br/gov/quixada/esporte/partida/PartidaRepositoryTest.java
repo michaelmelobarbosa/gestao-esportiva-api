@@ -140,12 +140,14 @@ class PartidaRepositoryTest {
     @DisplayName("deve cancelar partidas em cascata pela competição e pela inscrição")
     void deveCancelarPartidasEmCascata() {
         var cenario = cenario();
+        var agora = LocalDateTime.of(2026, 3, 10, 9, 0);
 
         repository.cancelarPorInscricao(cenario.inscricao().getId(),
-                List.of(StatusPartida.AGENDADA, StatusPartida.EM_ANDAMENTO), StatusPartida.CANCELADA);
+                List.of(StatusPartida.AGENDADA, StatusPartida.EM_ANDAMENTO), StatusPartida.CANCELADA, agora);
         entityManager.clear();
 
-        assertThat(repository.findById(cenario.partida().getId()).orElseThrow().getStatus())
-                .isEqualTo(StatusPartida.CANCELADA);
+        var cancelada = repository.findById(cenario.partida().getId()).orElseThrow();
+        assertThat(cancelada.getStatus()).isEqualTo(StatusPartida.CANCELADA);
+        assertThat(cancelada.getDataCancelamento()).isEqualTo(agora);
     }
 }

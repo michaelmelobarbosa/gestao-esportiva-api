@@ -13,6 +13,8 @@ public record InscricaoAtletaCreateRequest(
         @NotBlank(message = "Número da camisa é obrigatório")
         @Size(max = 3, message = "Número da camisa deve ter no máximo 3 caracteres")
         @Pattern(regexp = "\\d{1,3}", message = "Número da camisa deve conter apenas números")
-        String numeroCamisa
+        String numeroCamisa,
+        @Size(max = 500, message = "Observação deve ter no máximo 500 caracteres")
+        String observacao
 ) {
 }

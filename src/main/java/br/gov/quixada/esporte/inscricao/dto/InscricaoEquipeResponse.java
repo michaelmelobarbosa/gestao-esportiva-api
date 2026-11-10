@@ -15,6 +15,9 @@ public record InscricaoEquipeResponse(
         String equipeNome,
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
         LocalDateTime dataInscricao,
-        StatusInscricao status
+        StatusInscricao status,
+        String observacao,
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+        LocalDateTime dataCancelamento
 ) {
 }

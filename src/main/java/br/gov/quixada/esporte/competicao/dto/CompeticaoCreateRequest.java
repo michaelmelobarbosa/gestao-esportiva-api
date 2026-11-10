@@ -25,6 +25,8 @@ public record CompeticaoCreateRequest(
         @NotNull(message = "Data de início é obrigatória")
         LocalDate dataInicio,
         @NotNull(message = "Data de fim é obrigatória")
-        LocalDate dataFim
+        LocalDate dataFim,
+        @Size(max = 500, message = "Observação deve ter no máximo 500 caracteres")
+        String observacao
 ) {
 }

@@ -1,6 +1,7 @@
 package br.gov.quixada.esporte.partida;
 
 import br.gov.quixada.esporte.partida.dto.PartidaCreateRequest;
+import br.gov.quixada.esporte.partida.dto.PartidaObservacaoRequest;
 import br.gov.quixada.esporte.partida.dto.PartidaResponse;
 import br.gov.quixada.esporte.partida.dto.PartidaResultadoRequest;
 import br.gov.quixada.esporte.partida.dto.PartidaResumoResponse;
@@ -67,5 +68,16 @@ public class PartidaController {
     public ResponseEntity<PartidaResponse> registrarResultado(@PathVariable @Positive Long id,
                                                               @RequestBody @Valid PartidaResultadoRequest request) {
         return ResponseEntity.ok(mapper.toResponse(service.registrarResultado(id, request)));
+    }
+
+    /**
+     * Anotação livre: independe do status e pode ser criada, alterada ou limpa a
+     * qualquer momento. Texto em branco/ausente limpa o valor.
+     */
+    @PatchMapping("/{id}/observacao")
+    public ResponseEntity<PartidaResponse> atualizarObservacao(
+            @PathVariable @Positive Long id,
+            @RequestBody @Valid PartidaObservacaoRequest request) {
+        return ResponseEntity.ok(mapper.toResponse(service.atualizarObservacao(id, request.observacao())));
     }
 }

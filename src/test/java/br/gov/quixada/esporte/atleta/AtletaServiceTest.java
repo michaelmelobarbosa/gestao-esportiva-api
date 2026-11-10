@@ -3,6 +3,7 @@ package br.gov.quixada.esporte.atleta;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Optional;
 
 import br.gov.quixada.esporte.atleta.exception.AtletaInativoException;
+import br.gov.quixada.esporte.atleta.exception.AtletaNaoExcluivelException;
 import br.gov.quixada.esporte.atleta.exception.AtletaNotFoundException;
 import br.gov.quixada.esporte.atleta.exception.CpfJaCadastradoException;
 import br.gov.quixada.esporte.common.error.VinculoAtivoException;
@@ -437,6 +439,88 @@ class AtletaServiceTest {
 
             assertThatThrownBy(() -> service.inativar(1L))
                     .isInstanceOf(VinculoAtivoException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("hardDelete")
+    class HardDelete {
+
+        private Atleta atletaComId(Long id, StatusAtleta status) {
+            return Atleta.builder()
+                    .id(id)
+                    .nomeCompleto("Francisco")
+                    .cpf("52998224725")
+                    .dataNascimento(LocalDate.of(2000, 1, 1))
+                    .endereco(new Endereco("Rua A", "10", "Centro", "Quixadá", "63900-000"))
+                    .telefone("88999999999")
+                    .sexo(Sexo.MASCULINO)
+                    .status(status)
+                    .build();
+        }
+
+        @Test
+        @DisplayName("deve recusar exclusão de atleta ativo")
+        void naoDeveExcluirAtletaAtivo() {
+            when(repository.findById(1L)).thenReturn(Optional.of(atletaComId(1L, StatusAtleta.ATIVO)));
+
+            assertThatThrownBy(() -> service.hardDelete(1L))
+                    .isInstanceOf(AtletaNaoExcluivelException.class)
+                    .hasMessageContaining("inative");
+
+            verify(repository, never()).delete(any(Atleta.class));
+            verify(inscricaoAtletaRepository, never()).deleteByAtletaIdAndStatusIn(any(), anyCollection());
+        }
+
+        @Test
+        @DisplayName("deve recusar exclusão quando há inscrição que ocupa vaga")
+        void naoDeveExcluirComInscricaoQueOcupaVaga() {
+            Atleta atleta = atletaComId(1L, StatusAtleta.INATIVO);
+            when(repository.findById(1L)).thenReturn(Optional.of(atleta));
+            when(inscricaoAtletaRepository.existsByAtletaIdAndStatusIn(1L, StatusInscricao.OCUPAM_VAGA))
+                    .thenReturn(true);
+
+            assertThatThrownBy(() -> service.hardDelete(1L))
+                    .isInstanceOf(AtletaNaoExcluivelException.class);
+
+            verify(repository, never()).delete(any(Atleta.class));
+            verify(inscricaoAtletaRepository, never()).deleteByAtletaIdAndStatusIn(any(), anyCollection());
+        }
+
+        @Test
+        @DisplayName("deve apagar inscrições que liberam vaga e depois o atleta")
+        void deveApagarInscricoesLiberadasEDepoisOAtleta() {
+            Atleta atleta = atletaComId(1L, StatusAtleta.INATIVO);
+            when(repository.findById(1L)).thenReturn(Optional.of(atleta));
+            when(inscricaoAtletaRepository.existsByAtletaIdAndStatusIn(1L, StatusInscricao.OCUPAM_VAGA))
+                    .thenReturn(false);
+
+            service.hardDelete(1L);
+
+            verify(inscricaoAtletaRepository).deleteByAtletaIdAndStatusIn(1L, StatusInscricao.LIBERAM_VAGA);
+            verify(repository).delete(atleta);
+        }
+
+        @Test
+        @DisplayName("deve apagar atleta inativo sem nenhuma inscrição")
+        void deveApagarAtletaSemInscricao() {
+            Atleta atleta = atletaComId(2L, StatusAtleta.INATIVO);
+            when(repository.findById(2L)).thenReturn(Optional.of(atleta));
+            when(inscricaoAtletaRepository.existsByAtletaIdAndStatusIn(2L, StatusInscricao.OCUPAM_VAGA))
+                    .thenReturn(false);
+
+            service.hardDelete(2L);
+
+            verify(repository).delete(atleta);
+        }
+
+        @Test
+        @DisplayName("deve lançar not found quando o atleta não existir")
+        void deveLancarNotFoundQuandoNaoExistir() {
+            when(repository.findById(99L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.hardDelete(99L))
+                    .isInstanceOf(AtletaNotFoundException.class);
         }
     }
 }

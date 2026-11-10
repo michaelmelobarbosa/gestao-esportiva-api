@@ -17,6 +17,8 @@ public record PartidaCreateRequest(
         @NotNull(message = "Data e hora são obrigatórias")
         LocalDateTime dataHora,
         @Size(max = 150, message = "Local deve ter no máximo 150 caracteres")
-        String local
+        String local,
+        @Size(max = 500, message = "Observação deve ter no máximo 500 caracteres")
+        String observacao
 ) {
 }

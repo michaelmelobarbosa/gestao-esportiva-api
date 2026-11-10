@@ -3,6 +3,7 @@ package br.gov.quixada.esporte.competicao.dto;
 import br.gov.quixada.esporte.competicao.StatusCompeticao;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public record CompeticaoResponse(
         Long id,
@@ -14,6 +15,8 @@ public record CompeticaoResponse(
         LocalDate dataFimInscricao,
         LocalDate dataInicio,
         LocalDate dataFim,
-        StatusCompeticao status
+        StatusCompeticao status,
+        String observacao,
+        LocalDateTime dataCancelamento
 ) {
 }

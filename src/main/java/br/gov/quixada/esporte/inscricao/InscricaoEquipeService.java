@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -111,13 +112,24 @@ public class InscricaoEquipeService {
             validarMinimoAtletas(inscricao);
         }
 
-        inscricao.alterarStatus(status);
+        inscricao.alterarStatus(status, LocalDateTime.now(clock));
 
         if (status == StatusInscricao.CANCELADA || status == StatusInscricao.INATIVA) {
             cascatearStatusAtletas(inscricao.getId(), status);
             partidaService.cancelarPorInscricao(inscricao.getId());
         }
 
+        return inscricao;
+    }
+
+    /**
+     * Campo livre de comunicação: pode ser criado, alterado ou limpo em qualquer
+     * status, sem checagens de negócio.
+     */
+    @Transactional
+    public InscricaoEquipe atualizarObservacao(Long id, String observacao) {
+        InscricaoEquipe inscricao = findByIdOrThrowNotFound(id);
+        inscricao.atualizarObservacao(observacao);
         return inscricao;
     }
 
@@ -128,7 +140,7 @@ public class InscricaoEquipeService {
             if (inscricao.getStatus() == StatusInscricao.CANCELADA) {
                 continue;
             }
-            inscricao.alterarStatus(StatusInscricao.CANCELADA);
+            inscricao.alterarStatus(StatusInscricao.CANCELADA, LocalDateTime.now(clock));
             cascatearStatusAtletas(inscricao.getId(), StatusInscricao.CANCELADA);
         }
     }
@@ -180,7 +192,7 @@ public class InscricaoEquipeService {
                 continue;
             }
 
-            inscricaoAtleta.alterarStatus(status);
+            inscricaoAtleta.alterarStatus(status, LocalDateTime.now(clock));
         }
     }
 

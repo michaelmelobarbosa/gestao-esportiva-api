@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -64,9 +65,20 @@ public class CompeticaoService {
             return competicao;
         }
 
-        competicao.cancelar();
+        competicao.cancelar(LocalDateTime.now(clock));
         inscricaoEquipeService.cancelarPorCompeticao(id);
         partidaService.cancelarPorCompeticao(id);
+        return competicao;
+    }
+
+    /**
+     * Campo livre de comunicação: pode ser criado, alterado ou limpo em qualquer
+     * status (inclusive CANCELADA/FINALIZADA), sem checagens de negócio.
+     */
+    @Transactional
+    public Competicao atualizarObservacao(Long id, String observacao) {
+        Competicao competicao = findByIdOrThrowNotFound(id);
+        competicao.atualizarObservacao(observacao);
         return competicao;
     }
 
