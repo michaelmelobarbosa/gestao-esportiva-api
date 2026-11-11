@@ -25,7 +25,7 @@
 - [x] `hardDelete` + endpoint `DELETE /v1/atletas/{id}` (P1)
 - [ ] `AtletaControllerTest` (P1)
 - [x] `AtletaMapperTest` (P1)
-- [ ] Configurar `MockMvc` + `Clock` fixo nos testes de controller (P1)
+- [x] Configurar `MockMvc` + `Clock` fixo nos testes de controller (P1)
 
 ### Testes dos novos fluxos
 - [ ] Testes de controller/mapper para competição, inscrição, partida e classificação (P1)
@@ -39,7 +39,7 @@
 - [x] README + documentação da estratégia de versionamento (P2)
 - [x] `application-prod.yaml` + separar config dev/prod (P2)
 - [x] Verificar compatibilidade Java 25 + Spring Boot 4.1.0 + MapStruct 1.6.3 (P2)
-- [ ] CI (GitHub Actions) rodando `./mvnw test` (P2)
+- [x] CI (GitHub Actions) rodando `./mvnw verify` (P2)
 - [ ] Testcontainers (opcional) (P2)
 
 ---
@@ -112,9 +112,10 @@
 - **Onde:** `src/test/java/.../atleta/AtletaMapperTest.java`.
 - **Como ficou:** instancia `AtletaMapperImpl` diretamente e injeta `EnderecoMapperImpl` via `ReflectionTestUtils` (o impl gerado usa field injection). 9 casos: `calcularIdade` com `Clock.fixed` (incluindo véspera de aniversário e data nula); `toEntity(AtletaUpdateRequest)` não mapeia `cpf`, `id`, `dataCadastro` nem `status`; `toGetResponse`/`toResumo` calculam idade e devolvem `null` quando `dataNascimento` é nulo.
 
-### Configurar `MockMvc` + `Clock` fixo nos testes de controller (P1)
-- **Onde:** testes de controller.
-- **Como:** `@Import(ClockConfig.class)` com `@TestConfiguration` sobrescrevendo o bean `Clock` por um `Clock.fixed(...)`.
+### Configurar `MockMvc` + `Clock` fixo nos testes de controller (P1) — Concluído
+- **Onde:** `src/test/java/br/gov/quixada/esporte/support/ControllerTestSupport.java`, `config/ClockTestConfig.java`.
+- **Como ficou:** `ControllerTestSupport` centraliza o MockMvc standalone (com `GlobalExceptionHandler` + `ApiVersionStrategy`) e expõe `FIXED_CLOCK` (`2026-06-15T12:00:00Z`, `America/Fortaleza`). `ClockTestConfig` é um `@TestConfiguration` com `@Primary` para sobrescrever o bean `Clock` em testes que sobem o contexto (`@Import(ClockTestConfig.class)`).
+- **Adoção:** `AuthControllerTest` e `CompeticaoControllerTest` passaram a usar `ControllerTestSupport.mockMvc(...)`, removendo a duplicação da estratégia de versionamento. `AtletaControllerClockTest` valida a idade calculada com o clock fixo em `GET` e `POST`; `ClockTestConfigTest` garante que o bean fixo tem prioridade.
 
 ### Testes de controller/mapper dos novos fluxos (P1)
 - **Onde:** `src/test/java/.../` — hoje existem `AuthControllerTest`, `CompeticaoControllerTest` (observação) e `AtletaMapperTest`.
@@ -149,9 +150,9 @@
 - **Resultado:** `./mvnw clean compile` com JDK 25.0.4.1 gera todos os `*MapperImpl` normalmente. A verificação **achou e corrigiu** dois warnings de `Unmapped target property: "nomeCompletoNormalizado"` em `AtletaMapper` (adicionado `@Mapping(ignore = true)` nos dois `toEntity`). Hoje o build não emite nenhum `[WARNING]` do compilador.
 - **Pendência residual:** o JDK 25 imprime o aviso `sun.misc.Unsafe::objectFieldOffset ... terminally deprecated` disparado pelo `lombok.permit.Permit` (Lombok 1.18.46, já a versão mais recente). É inofensivo e não tem correção do lado do projeto; acompanhar quando o Lombok lançar uma implementação sem `Unsafe`.
 
-### CI (GitHub Actions) (P2)
-- **Onde:** sem `.github/`.
-- **Como implementar:** workflow rodando `./mvnw verify` (perfil `test`/H2, sem MySQL) a cada PR.
+### CI (GitHub Actions) (P2) — Concluído
+- **Onde:** `.github/workflows/ci.yml`.
+- **Como ficou:** workflow disparado em `push`/`pull_request` para `dev` e `main`, com JDK 25 (Temurin), cache Maven e `./mvnw --batch-mode --no-transfer-progress verify` (perfil `test`/H2, sem MySQL). `permissions: contents: read` e `concurrency` por ref.
 
 ### Testcontainers (opcional) (P2)
 - **Onde:** testes de integração.

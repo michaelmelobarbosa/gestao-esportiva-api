@@ -9,8 +9,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.util.List;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -24,19 +22,14 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.accept.DefaultApiVersionStrategy;
-import org.springframework.web.accept.PathApiVersionResolver;
-import org.springframework.web.accept.SemanticApiVersionParser;
 
-import br.gov.quixada.esporte.common.error.GlobalExceptionHandler;
-import br.gov.quixada.esporte.config.ApiVersioningConfig;
 import br.gov.quixada.esporte.security.auth.exception.EmailJaCadastradoException;
 import br.gov.quixada.esporte.security.jwt.JwtService;
 import br.gov.quixada.esporte.security.users.User;
 import br.gov.quixada.esporte.security.users.UserDetailsAdapter;
 import br.gov.quixada.esporte.security.users.UserRole;
 import br.gov.quixada.esporte.security.users.dto.RegisterRequest;
+import br.gov.quixada.esporte.support.ControllerTestSupport;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("AuthController")
@@ -64,23 +57,7 @@ class AuthControllerTest {
     @BeforeEach
     void setUp() {
         var controller = new AuthController(authService, authenticationManager, jwtService);
-        mockMvc = MockMvcBuilders.standaloneSetup(controller)
-                .setControllerAdvice(new GlobalExceptionHandler())
-                .setApiVersionStrategy(apiVersionStrategy())
-                .build();
-    }
-
-    private static DefaultApiVersionStrategy apiVersionStrategy() {
-        var strategy = new DefaultApiVersionStrategy(
-                List.of(new PathApiVersionResolver(0, ApiVersioningConfig.versionedPath())),
-                new SemanticApiVersionParser(),
-                false,
-                ApiVersioningConfig.CURRENT_VERSION,
-                true,
-                null,
-                null);
-        strategy.addSupportedVersion(ApiVersioningConfig.CURRENT_VERSION);
-        return strategy;
+        mockMvc = ControllerTestSupport.mockMvc(controller);
     }
 
     @Nested

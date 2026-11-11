@@ -8,11 +8,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDate;
-import java.util.List;
 
-import br.gov.quixada.esporte.common.error.GlobalExceptionHandler;
 import br.gov.quixada.esporte.competicao.dto.CompeticaoResponse;
-import br.gov.quixada.esporte.config.ApiVersioningConfig;
+import br.gov.quixada.esporte.support.ControllerTestSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,10 +19,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.accept.DefaultApiVersionStrategy;
-import org.springframework.web.accept.PathApiVersionResolver;
-import org.springframework.web.accept.SemanticApiVersionParser;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("CompeticaoController — observação livre")
@@ -41,23 +35,7 @@ class CompeticaoControllerTest {
     @BeforeEach
     void setUp() {
         var controller = new CompeticaoController(service, mapper);
-        mockMvc = MockMvcBuilders.standaloneSetup(controller)
-                .setControllerAdvice(new GlobalExceptionHandler())
-                .setApiVersionStrategy(apiVersionStrategy())
-                .build();
-    }
-
-    private static DefaultApiVersionStrategy apiVersionStrategy() {
-        var strategy = new DefaultApiVersionStrategy(
-                List.of(new PathApiVersionResolver(0, ApiVersioningConfig.versionedPath())),
-                new SemanticApiVersionParser(),
-                false,
-                ApiVersioningConfig.CURRENT_VERSION,
-                true,
-                null,
-                null);
-        strategy.addSupportedVersion(ApiVersioningConfig.CURRENT_VERSION);
-        return strategy;
+        mockMvc = ControllerTestSupport.mockMvc(controller);
     }
 
     private Competicao umaCompeticao() {
