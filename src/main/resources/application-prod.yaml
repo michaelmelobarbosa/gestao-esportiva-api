@@ -1,0 +1,54 @@
+# =============================================================================
+# Production profile.
+#
+# Required variables (boot fails when they are missing):
+#   API_SECURITY_TOKEN_SECRET  JWT secret (min. 32 characters)
+#   API_CORS_ALLOWED_ORIGINS   front-end origins, comma-separated
+#   DB_URL / DB_USER / DB_PASSWORD  MySQL connection
+#
+# The schema is owned by Flyway; Hibernate only validates it (ddl-auto: validate).
+# =============================================================================
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+
+  flyway:
+    enabled: true
+
+  docker:
+    compose:
+      enabled: false
+
+server:
+  port: ${SERVER_PORT:8080}
+
+api:
+  cors:
+    allowed-origins: ${API_CORS_ALLOWED_ORIGINS}
+
+  security:
+    login-rate-limit:
+      # The IP comes from request.getRemoteAddr(). If the API runs behind a proxy/LB,
+      # enable server.forward-headers-strategy=framework and ensure the proxy
+      # is the only entry point (otherwise X-Forwarded-For can be spoofed).
+      max-per-ip: ${API_LOGIN_RATE_LIMIT_MAX_PER_IP:100}
+      max-per-ip-email: ${API_LOGIN_RATE_LIMIT_MAX_PER_IP_EMAIL:5}
+      window: ${API_LOGIN_RATE_LIMIT_WINDOW:15m}
+      max-keys: ${API_LOGIN_RATE_LIMIT_MAX_KEYS:100000}
+
+logging:
+  level:
+    root: INFO
+    br.gov.quixada.sports: INFO
+    org.hibernate.SQL: WARN
+    org.springframework.web: WARN

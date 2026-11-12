@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:gestao_esportiva_test;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    url: jdbc:h2:mem:sports_management_test;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
     password: ""
@@ -21,5 +21,11 @@ api:
   security:
     token:
       secret: segredo-de-teste-nao-usar-em-producao
-      issuer: gestao-esportiva-api
+      issuer: sports-management-api
       expiration: 2h
+
+    login-rate-limit:
+      max-per-ip: 100
+      max-per-ip-email: 5
+      window: 15m
+      max-keys: 1000
