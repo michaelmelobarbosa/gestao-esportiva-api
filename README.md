@@ -1,142 +1,142 @@
-# Gestão Esportiva API
+# Sports Management API
 
-API REST para gestão de competições esportivas: atletas, clubes, equipes, modalidades, categorias, competições, inscrições, partidas e classificação, com autenticação JWT e controle de acesso por papéis.
+REST API for managing sports competitions: athletes, clubs, teams, modalities, categories, competitions, registrations, matches and standings, with JWT authentication and role-based access control.
 
 ## Stack
 
 - **Java 25** + **Spring Boot 4.1.0** (Maven Wrapper)
-- **Spring Data JPA** + **MySQL 8.4** (dev) / **H2** (testes)
-- **Flyway** como fonte de verdade do schema
+- **Spring Data JPA** + **MySQL 8.4** (dev) / **H2** (tests)
+- **Flyway** as the source of truth for the schema
 - **Spring Security + JWT**
 - **MapStruct** + **Lombok**
 
-## Requisitos
+## Requirements
 
 - JDK 25 (`java -version`)
-- Docker (para o MySQL de desenvolvimento)
-- Nenhuma instalação de Maven (use `./mvnw`)
+- Docker (for the development MySQL)
+- No Maven installation required (use `./mvnw`)
 
-## Configuração
+## Configuration
 
-1. Crie o `.env` a partir do exemplo e preencha os valores:
+1. Create the `.env` from the example and fill in the values:
 
    ```bash
    cp .env.example .env
    ```
 
-   Variáveis necessárias:
+   Required variables:
 
-   | Variável | Descrição |
+   | Variable | Description |
    |---|---|
-   | `MYSQL_USER` | usuário do banco |
-   | `MYSQL_PASSWORD` | senha do banco |
-   | `MYSQL_DATABASE` | nome do banco |
-   | `MYSQL_ROOT_PASSWORD` | senha do root do container |
-   | `API_SECURITY_TOKEN_SECRET` | segredo do JWT (mínimo 32 caracteres) |
-   | `API_CORS_ALLOWED_ORIGINS` | opcional em dev; origens do front-end separadas por vírgula (default `http://localhost:3000,http://localhost:5173`) |
+   | `MYSQL_USER` | database user |
+   | `MYSQL_PASSWORD` | database password |
+   | `MYSQL_DATABASE` | database name |
+   | `MYSQL_ROOT_PASSWORD` | container root password |
+   | `API_SECURITY_TOKEN_SECRET` | JWT secret (minimum 32 characters) |
+   | `API_CORS_ALLOWED_ORIGINS` | optional in dev; comma-separated front-end origins (default `http://localhost:3000,http://localhost:5173`) |
 
-   > Nunca comite o `.env` nem segredos reais.
+   > Never commit the `.env` or real secrets.
 
-2. Suba o banco de desenvolvimento:
+2. Start the development database:
 
    ```bash
    docker compose up -d
    ```
 
-3. Suba a aplicação (profile `dev` por padrão):
+3. Start the application (`dev` profile by default):
 
    ```bash
    ./mvnw spring-boot:run
    ```
 
-   A API fica em `http://localhost:8080`.
+   The API runs at `http://localhost:8080`.
 
 ### Profiles
 
-| Profile | Arquivo | Uso |
+| Profile | File | Usage |
 |---|---|---|
-| `dev` (default) | `application-dev.yaml` | MySQL local, Docker Compose, `show-sql: true`, `ddl-auto: validate` |
-| `test` | `application-test.yaml` | H2 em memória, Flyway off, `create-drop` (forçado pelo Surefire) |
+| `dev` (default) | `application-dev.yaml` | Local MySQL, Docker Compose, `show-sql: true`, `ddl-auto: validate` |
+| `test` | `application-test.yaml` | In-memory H2, Flyway off, `create-drop` (enforced by Surefire) |
 | `prod` | `application-prod.yaml` | `SPRING_PROFILES_ACTIVE=prod`; `show-sql: false`, Flyway on, `validate` |
 
-Em `prod` o boot **falha** se faltarem `API_SECURITY_TOKEN_SECRET`, `API_CORS_ALLOWED_ORIGINS`, `DB_URL`, `DB_USER` ou `DB_PASSWORD`. O schema é aplicado pelo Flyway; o Hibernate apenas valida.
+In `prod`, boot **fails** if `API_SECURITY_TOKEN_SECRET`, `API_CORS_ALLOWED_ORIGINS`, `DB_URL`, `DB_USER` or `DB_PASSWORD` is missing. The schema is applied by Flyway; Hibernate only validates it.
 
 ### CORS
 
-As origens permitidas vêm de `api.cors.allowed-origins` (`API_CORS_ALLOWED_ORIGINS`). Preflight de origem não listada recebe `403`. Métodos permitidos: `GET, POST, PUT, PATCH, DELETE, OPTIONS`; headers: `Authorization`, `Content-Type`; `Location` é exposto.
+Allowed origins come from `api.cors.allowed-origins` (`API_CORS_ALLOWED_ORIGINS`). A preflight from an unlisted origin gets `403`. Allowed methods: `GET, POST, PUT, PATCH, DELETE, OPTIONS`; headers: `Authorization`, `Content-Type`; `Location` is exposed.
 
-## Testes
+## Tests
 
-Os testes usam o profile `test` + H2 em memória e **não precisam de MySQL/Docker**:
+Tests use the `test` profile + in-memory H2 and **do not need MySQL/Docker**:
 
 ```bash
 ./mvnw test
 ./mvnw verify
 ```
 
-## Autenticação e autorização
+## Authentication and authorization
 
-- `POST /v1/auth/register` — cria usuário com papel `USER`.
+- `POST /v1/auth/register` — creates a user with the `USER` role.
   ```json
-  { "username": "joao", "email": "joao@example.com", "password": "senhaForte123" }
+  { "username": "john", "email": "john@example.com", "password": "strongPassword123" }
   ```
-- `POST /v1/auth/login` — autentica por e-mail e devolve o token.
+- `POST /v1/auth/login` — authenticates by email and returns the token.
   ```json
-  { "email": "joao@example.com", "password": "senhaForte123" }
+  { "email": "john@example.com", "password": "strongPassword123" }
   ```
-- Envie o token nas rotas protegidas: `Authorization: Bearer <token>`.
+- Send the token on protected routes: `Authorization: Bearer <token>`.
 
-Papéis:
+Roles:
 
-| Papel | Permissões |
+| Role | Permissions |
 |---|---|
 | `USER` | `GET /v1/**` |
-| `ADMIN` | escrita (`POST`/`PUT`/`PATCH`/`DELETE`) em `/v1/**`; leitura de `/v1/users` |
-| `SUPERADMIN` | gestão de usuários; exclusivo para administrar `ADMIN`s |
+| `ADMIN` | write (`POST`/`PUT`/`PATCH`/`DELETE`) on `/v1/**`; read `/v1/users` |
+| `SUPERADMIN` | user management; exclusive for administering `ADMIN`s |
 
-Existe exatamente **um** `SUPERADMIN` (criado por seed). A API não permite criar nem promover outro. Para recuperar a senha desse perfil, veja [docs/operacao/recuperacao-superadmin.md](docs/operacao/recuperacao-superadmin.md).
+There is exactly **one** `SUPERADMIN` (created by seed). The API does not allow creating or promoting another one. To recover this profile's password, see [docs/operacao/superadmin-recovery.md](docs/operacao/superadmin-recovery.md).
 
-## Versionamento da API
+## API versioning
 
-Versionamento nativo do Spring pelo primeiro segmento do path. Todos os recursos usam `/vN/...` e declaram `version = "1.0"`:
+Native Spring versioning by the first path segment. All resources use `/vN/...` and declare `version = "1.0"`:
 
-| Recurso | Base |
+| Resource | Base |
 |---|---|
-| Atletas | `/v1/atletas` |
-| Categorias | `/v1/categorias` |
-| Clubes | `/v1/clubes` |
-| Competições | `/v1/competicoes` |
-| Equipes | `/v1/equipes` |
-| Modalidades | `/v1/modalidades` |
-| Inscrições de atletas | `/v1/inscricoes-atletas` |
-| Inscrições de equipes | `/v1/inscricoes-equipes` |
-| Partidas | `/v1/partidas` |
-| Usuários | `/v1/users` |
-| Classificação | `/v1/competicoes/{id}/categorias/{catId}/classificacao` |
+| Athletes | `/v1/athletes` |
+| Categories | `/v1/categories` |
+| Clubs | `/v1/clubs` |
+| Competitions | `/v1/competitions` |
+| Teams | `/v1/teams` |
+| Modalities | `/v1/modalities` |
+| Athlete registrations | `/v1/athlete-registrations` |
+| Team registrations | `/v1/team-registrations` |
+| Matches | `/v1/matches` |
+| Users | `/v1/users` |
+| Standings | `/v1/competitions/{id}/categories/{catId}/standings` |
 
-Versão não suportada (ex.: `/v9/...`) responde `400`. Paths fora do padrão `/vN/...` (ex.: `/error`) não são versionados.
+An unsupported version (e.g., `/v9/...`) responds with `400`. Paths outside the `/vN/...` pattern (e.g., `/error`) are not versioned.
 
-Decisão: versionamento por **URL** (`/v1`), escolhido por simplicidade e compatibilidade com navegador. A alternativa por header (`Accept: application/vnd.gestao.v1+json`) foi descartada. Evolução: uma eventual `/v2` deve manter `/v1` disponível por um período de deprecação antes da remoção.
+Decision: versioning by **URL** (`/v1`), chosen for simplicity and browser compatibility. The header-based alternative (`Accept: application/vnd.sports.v1+json`) was rejected. Evolution: a future `/v2` must keep `/v1` available for a deprecation period before removal.
 
-## Exclusão e anotações
+## Deletion and notes
 
-- `DELETE /v1/atletas/{id}` é a **única exclusão física** da API. Exige atleta `INATIVO` e sem inscrições que ocupem vaga (`PENDENTE`/`APROVADA`/`INATIVA`); inscrições `CANCELADA`/`REJEITADA` são removidas junto. Responde `204`, `404` ou `409`.
-- Os demais recursos não têm exclusão física: o descarte é lógico, por `status` (`INATIVO`/`CANCELADA`).
-- Competições, inscrições de equipe, inscrições de atleta e partidas possuem **`observacao`** — texto livre (até 500 caracteres), opcional e **sem vínculo com o status**. Serve para comunicar qualquer informação (motivo de cancelamento, prorrogação de datas, avisos). Pode ser criada no `POST`, alterada ou limpa a qualquer momento via `PATCH .../observacao` (corpo `{"observacao":"..."}`; ausente ou em branco limpa o campo).
-- Os mesmos recursos expõem **`dataCancelamento`**, preenchida automaticamente e apenas na transição para `CANCELADA` (informativa).
+- `DELETE /v1/athletes/{id}` is the API's **only physical deletion**. It requires the athlete to be `INACTIVE` and have no registrations that take a slot (`PENDING`/`APPROVED`/`INACTIVE`); `CANCELED`/`REJECTED` registrations are removed along with it. Responds `204`, `404` or `409`.
+- The other resources have no physical deletion: disposal is logical, via `status` (`INACTIVE`/`CANCELED`).
+- Competitions, team registrations, athlete registrations and matches have **`notes`** — free text (up to 500 characters), optional and **not tied to status**. It is used to communicate any information (cancellation reason, date extensions, announcements). It can be set on `POST`, and changed or cleared at any time via `PATCH .../notes` (body `{"notes":"..."}`; absent or blank clears the field).
+- The same resources expose **`canceledAt`**, filled in automatically and only on the transition to `CANCELED` (informational).
 
-## Documentação operacional
+## Operational documentation
 
-- [Recuperação de senha do SUPERADMIN](docs/operacao/recuperacao-superadmin.md) — procedimento de servidor (CLI).
+- [SUPERADMIN password recovery](docs/operacao/superadmin-recovery.md) — server-side procedure (CLI).
 
-## Segurança
+## Security
 
-- O `.env` é ignorado pelo Git; mantenha segredos fora do repositório.
-- O boot falha se `API_SECURITY_TOKEN_SECRET` não estiver definido (fail-fast).
-- Troque a senha do `SUPERADMIN` no primeiro deploy. O seed é público no histórico de migrations; a rotação é obrigatória.
+- The `.env` is ignored by Git; keep secrets out of the repository.
+- Boot fails if `API_SECURITY_TOKEN_SECRET` is not set (fail-fast).
+- Change the `SUPERADMIN` password on the first deploy. The seed is public in the migration history; rotation is mandatory.
 
-### Rate limit de login
+### Login rate limit
 
-`POST /v1/auth/login` aplica dois limites em memória por tentativa: por IP (`max-por-ip`, default 100/15 min) e por (IP, e-mail) (`max-por-ip-email`, default 5/15 min). Ao exceder, responde `429` com `Retry-After` (segundos) no formato de erro padrão. Login bem-sucedido devolve a tentativa.
+`POST /v1/auth/login` applies two in-memory limits per attempt: per IP (`max-per-ip`, default 100/15 min) and per (IP, email) (`max-per-ip-email`, default 5/15 min). When exceeded, it responds `429` with `Retry-After` (seconds) in the standard error format. A successful login gives the attempt back.
 
-Não é lockout de conta: não há bloqueio permanente nem estado no banco. Os limites ficam em `api.security.login-rate-limit` (em prod, `API_LOGIN_RATE_LIMIT_*`). O contador é por instância, então com N réplicas o limite efetivo é N×; atrás de proxy reverso, configure `server.forward-headers-strategy` para o IP real chegar em `getRemoteAddr()`.
+This is not an account lockout: there is no permanent lock and no state in the database. The limits live under `api.security.login-rate-limit` (in prod, `API_LOGIN_RATE_LIMIT_*`). The counter is per instance, so with N replicas the effective limit is N×; behind a reverse proxy, configure `server.forward-headers-strategy` so the real IP reaches `getRemoteAddr()`.
