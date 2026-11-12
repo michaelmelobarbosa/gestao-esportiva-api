@@ -1,10 +1,12 @@
 package br.gov.quixada.esporte.security.auth;
 
+import br.gov.quixada.esporte.security.auth.exception.MuitasTentativasException;
 import br.gov.quixada.esporte.security.jwt.JwtService;
 import br.gov.quixada.esporte.security.users.UserDetailsAdapter;
 import br.gov.quixada.esporte.security.users.dto.LoginRequest;
 import br.gov.quixada.esporte.security.users.dto.LoginResponse;
 import br.gov.quixada.esporte.security.users.dto.RegisterRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Duration;
 import java.util.Objects;
 
 @RestController
@@ -25,11 +28,21 @@ public class AuthController {
     private final AuthService authService;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
+    private final LoginRateLimiter loginRateLimiter;
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody @Valid LoginRequest request) {
+    public ResponseEntity<LoginResponse> login(@RequestBody @Valid LoginRequest request,
+                                               HttpServletRequest httpRequest) {
+        var ip = httpRequest.getRemoteAddr();
+
+        var espera = loginRateLimiter.tentar(ip, request.email());
+        if (espera.isPresent()) {
+            throw new MuitasTentativasException(paraSegundos(espera.get()));
+        }
+
         var usernamePassword = new UsernamePasswordAuthenticationToken(request.email(), request.password());
         var auth = authenticationManager.authenticate(usernamePassword);
+        loginRateLimiter.devolver(ip, request.email());
 
         var userDetails = (UserDetailsAdapter) Objects.requireNonNull(auth.getPrincipal());
         var token = jwtService.generateToken(userDetails.user());
@@ -40,5 +53,9 @@ public class AuthController {
     public ResponseEntity<Void> register(@RequestBody @Valid RegisterRequest request) {
         authService.register(request);
         return ResponseEntity.ok().build();
+    }
+
+    private static long paraSegundos(Duration espera) {
+        return Math.max(1L, (long) Math.ceil(espera.toNanos() / 1_000_000_000.0));
     }
 }

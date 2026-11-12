@@ -3,6 +3,7 @@ package br.gov.quixada.esporte.security.auth;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -22,6 +23,8 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.Optional;
 
 import br.gov.quixada.esporte.security.auth.exception.EmailJaCadastradoException;
 import br.gov.quixada.esporte.security.jwt.JwtService;
@@ -52,12 +55,16 @@ class AuthControllerTest {
     @Mock
     private JwtService jwtService;
 
+    @Mock
+    private LoginRateLimiter loginRateLimiter;
+
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        var controller = new AuthController(authService, authenticationManager, jwtService);
+        var controller = new AuthController(authService, authenticationManager, jwtService, loginRateLimiter);
         mockMvc = ControllerTestSupport.mockMvc(controller);
+        lenient().when(loginRateLimiter.tentar(any(), any())).thenReturn(Optional.empty());
     }
 
     @Nested

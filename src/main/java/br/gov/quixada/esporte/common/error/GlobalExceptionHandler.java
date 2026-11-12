@@ -36,11 +36,13 @@ import br.gov.quixada.esporte.partida.exception.PartidaInvalidaException;
 import br.gov.quixada.esporte.partida.exception.PartidaNotFoundException;
 import br.gov.quixada.esporte.partida.exception.TransicaoStatusPartidaException;
 import br.gov.quixada.esporte.security.auth.exception.EmailJaCadastradoException;
+import br.gov.quixada.esporte.security.auth.exception.MuitasTentativasException;
 import br.gov.quixada.esporte.security.users.exception.OperacaoNaoPermitidaException;
 import br.gov.quixada.esporte.security.users.exception.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -86,6 +88,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiError> handleAuthentication(AuthenticationException ex, HttpServletRequest request) {
         return build(HttpStatus.UNAUTHORIZED, "Credenciais inválidas", request, List.of());
+    }
+
+    @ExceptionHandler(MuitasTentativasException.class)
+    public ResponseEntity<ApiError> handleMuitasTentativas(MuitasTentativasException ex, HttpServletRequest request) {
+        return build(HttpStatus.TOO_MANY_REQUESTS,
+                "Muitas tentativas de login. Tente novamente em instantes.",
+                request, List.of(), ex.retryAfterSeconds());
     }
 
     @ExceptionHandler(AtletaInativoException.class)
@@ -286,7 +295,17 @@ public class GlobalExceptionHandler {
 
     private ResponseEntity<ApiError> build(HttpStatus status, String message,
                                            HttpServletRequest request, List<ApiError.FieldErrors> errors) {
+        return build(status, message, request, errors, null);
+    }
+
+    private ResponseEntity<ApiError> build(HttpStatus status, String message,
+                                           HttpServletRequest request, List<ApiError.FieldErrors> errors,
+                                           Long retryAfterSeconds) {
         ApiError body = new ApiError(status.value(), message, LocalDateTime.now(), request.getRequestURI(), errors);
-        return ResponseEntity.status(status).body(body);
+        var response = ResponseEntity.status(status);
+        if (retryAfterSeconds != null) {
+            response.header(HttpHeaders.RETRY_AFTER, String.valueOf(retryAfterSeconds));
+        }
+        return response.body(body);
     }
 }
