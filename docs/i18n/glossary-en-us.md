@@ -11,6 +11,7 @@ tests, and documentation.
 | Scope | Source code, identifiers, messages, docs, HTTP contract, and database schema |
 | HTTP contract | The existing `/v1` paths are renamed in place (breaking change) |
 | Database | Renamed by Flyway `V22__rename_schema_to_english.sql`; applied migrations are never edited |
+| Historical migrations | `V1`–`V21` keep their original Portuguese comments and filenames to preserve the Flyway checksum; English starts at `V22` |
 | Project identity | `sports-management-api`, package `br.gov.quixada.sports`, database `sports_management`, container `sports-management-mysql` |
 | Locale-specific rules | Brazilian rules are preserved: CPF (`@CPF`, 11 digits), postal code `00000-000`, phone 10–12 digits, `America/Fortaleza` |
 | Spelling | US English (`canceled`, `enrollment` is not used; we use `registration`) |

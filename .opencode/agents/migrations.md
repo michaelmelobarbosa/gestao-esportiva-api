@@ -1,5 +1,5 @@
 ---
-description: Cria migrations Flyway somente em db/migration, sem editar as já aplicadas
+description: Creates Flyway migrations only in db/migration, without editing applied ones
 mode: subagent
 model: opencode-go/deepseek-v4-pro#high
 permissions:
@@ -13,4 +13,4 @@ permissions:
     resource: "*"
     effect: deny
 ---
-Crie apenas novas migrations V{N}__*.sql com o próximo número livre (a última é V21). Nunca edite uma migration já aplicada; ddl-auto é validate.
+Create only new migrations `V{N}__*.sql` with the next free number (the latest is `V22`). Never edit an applied migration; `ddl-auto` is `validate`.

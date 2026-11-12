@@ -68,7 +68,7 @@ This release translates identifiers, the HTTP contract, and the database schema.
 - REST paths, JSON field names, and enum values changed. Update clients before deploying.
 - Set `MYSQL_DATABASE=sports_management` in `.env` and use the new development URL.
 - Flyway `V22__rename_schema_to_english.sql` renames tables, columns, indexes, and enum values in place. **Back up the database before running it**; rollback is done by restoring the backup.
-- Historical migrations `V1`–`V21` were not modified.
+- Historical migrations `V1`–`V21` were not modified. Their comments remain in Portuguese to preserve the Flyway checksum; the English schema starts at `V22`.
 
 ### CORS
 

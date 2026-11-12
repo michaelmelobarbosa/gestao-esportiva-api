@@ -249,7 +249,7 @@ Result: **2 overrides + 3 new agents**.
 | 2 | `general` (override) | subagent | `opencode-go/glm-5.3#high` | $1.40/$4.40 — real implementation: multiple files, MapStruct/Lombok, refactoring. Good cost/benefit for code |
 | 3 | `arquiteto` | subagent, read-only | `opencode-go/deepseek-v4-pro#high` | $0.66/$1.98 — design reasoning for less than 1/3 of `gemini-4-argon` or `kimi-k3.1-pro`. This is where mistakes are expensive |
 | 4 | `revisor` | subagent, read-only | `opencode-go/kimi-k2.7-code#high` | $0.95/$4.00 — model tuned for code, good at diffs and regressions; cheaper on input than `glm-5.3` and `kimi-k3.1-pro` |
-| 5 | `migracoes` | subagent, restricted write | `opencode-go/deepseek-v4-pro#high` | Flyway is irreversible (`V21__...`, never edit an applied one). Same model as the architect for its specificity, but with `edit` allowed only in `db/migration/**` |
+| 5 | `migrations` | subagent, restricted write | `opencode-go/deepseek-v4-pro#high` | Flyway is irreversible (`V22__...`, never edit an applied one). Same model as the architect for its specificity, but with `edit` allowed only in `db/migration/**` |
 
 There is no separate testing agent: in this project the tests are pure
 JUnit/Mockito + `@DataJpaTest` on H2, which `general` covers. A new agent
@@ -260,7 +260,7 @@ recurring task.
 
 - `explore`, `arquiteto`, `revisor`: `edit: * → deny` and `shell: * → deny`.
   A reviewer that edits stops reviewing and starts justifying its own code.
-- `migracoes`: `edit` allowed only in `src/main/resources/db/migration/**`,
+- `migrations`: `edit` allowed only in `src/main/resources/db/migration/**`,
   denied everywhere else. It is the only write exception among the
   specialists.
 - `plan` (model override to `deepseek-v4-pro#high`) gets `subagent` with
@@ -275,7 +275,7 @@ build (deepseek-v4.1-flash)
   └─ plan + arquiteto  → step-by-step plan (human approval)
        └─ explore ×N    → locate services/entities/mappers in parallel
        └─ general       → implementation
-       └─ migracoes     → only if there is a new column/table
+       └─ migrations    → only if there is a new column/table
        └─ revisor       → final diff
 ```
 
@@ -299,7 +299,7 @@ opencode.jsonc                       → default model, overrides (explore/gener
                                        permissions, closed catalog
 .opencode/agents/arquiteto.md
 .opencode/agents/revisor.md
-.opencode/agents/migracoes.md
+.opencode/agents/migrations.md
 .opencode/commands/planejar.md       → /planejar <task> with agent: plan
 ```
 
@@ -320,7 +320,7 @@ a plan" into a one-word command.
 ## 4. Open decisions
 
 - [ ] Approve the design of 2 overrides + 3 new agents, or slim it down
-      (e.g.: drop `migracoes` and use `general` with restricted permission).
+      (e.g.: drop `migrations` and use `general` with restricted permission).
 - [ ] `general` on `glm-5.3#high` vs. `deepseek-v4-pro` (better reasoning,
       lower output cost, but slower).
 - [ ] `revisor` on `kimi-k2.7-code#high` vs. `glm-5.3#high` (unifying models
