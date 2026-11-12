@@ -119,7 +119,9 @@ tests, and documentation.
 
 Column names follow the same word map, in `snake_case` (for example
 `nome_completo` → `full_name`, `data_nascimento` → `birth_date`,
-`id_competicao` → `competition_id`).
+`id_competicao` → `competition_id`). The `year` field maps to the
+`competition_year` column because `YEAR` is a reserved word in the databases
+used by the project.
 
 ## Kept acronyms
 

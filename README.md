@@ -61,6 +61,15 @@ REST API for managing sports competitions: athletes, clubs, teams, modalities, c
 
 In `prod`, boot **fails** if `API_SECURITY_TOKEN_SECRET`, `API_CORS_ALLOWED_ORIGINS`, `DB_URL`, `DB_USER` or `DB_PASSWORD` is missing. The schema is applied by Flyway; Hibernate only validates it.
 
+### en-US migration (breaking)
+
+This release translates identifiers, the HTTP contract, and the database schema.
+
+- REST paths, JSON field names, and enum values changed. Update clients before deploying.
+- Set `MYSQL_DATABASE=sports_management` in `.env` and use the new development URL.
+- Flyway `V22__rename_schema_to_english.sql` renames tables, columns, indexes, and enum values in place. **Back up the database before running it**; rollback is done by restoring the backup.
+- Historical migrations `V1`–`V21` were not modified.
+
 ### CORS
 
 Allowed origins come from `api.cors.allowed-origins` (`API_CORS_ALLOWED_ORIGINS`). A preflight from an unlisted origin gets `403`. Allowed methods: `GET, POST, PUT, PATCH, DELETE, OPTIONS`; headers: `Authorization`, `Content-Type`; `Location` is exposed.
