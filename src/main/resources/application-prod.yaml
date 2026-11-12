@@ -36,6 +36,16 @@ api:
   cors:
     allowed-origins: ${API_CORS_ALLOWED_ORIGINS}
 
+  security:
+    login-rate-limit:
+      # O IP vem de request.getRemoteAddr(). Se a API ficar atrás de proxy/LB,
+      # habilite server.forward-headers-strategy=framework e garanta que o proxy
+      # é o único caminho de entrada (senão X-Forwarded-For é spoofável).
+      max-por-ip: ${API_LOGIN_RATE_LIMIT_MAX_POR_IP:100}
+      max-por-ip-email: ${API_LOGIN_RATE_LIMIT_MAX_POR_IP_EMAIL:5}
+      janela: ${API_LOGIN_RATE_LIMIT_JANELA:15m}
+      maximo-chaves: ${API_LOGIN_RATE_LIMIT_MAXIMO_CHAVES:100000}
+
 logging:
   level:
     root: INFO

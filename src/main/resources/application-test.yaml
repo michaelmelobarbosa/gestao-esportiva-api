@@ -23,3 +23,9 @@ api:
       secret: segredo-de-teste-nao-usar-em-producao
       issuer: gestao-esportiva-api
       expiration: 2h
+
+    login-rate-limit:
+      max-por-ip: 100
+      max-por-ip-email: 5
+      janela: 15m
+      maximo-chaves: 1000

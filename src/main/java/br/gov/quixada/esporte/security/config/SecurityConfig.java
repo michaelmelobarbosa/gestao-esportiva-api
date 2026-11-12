@@ -24,7 +24,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@EnableConfigurationProperties({TokenProperties.class, CorsProperties.class})
+@EnableConfigurationProperties({TokenProperties.class, CorsProperties.class, LoginRateLimitProperties.class})
 @RequiredArgsConstructor
 public class SecurityConfig {
 
