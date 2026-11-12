@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Size;
 
 public record AthleteRegistrationUpdateRequest(
         @NotBlank(message = "Jersey number is required")
-        @Size(max = 3, message = "Jersey number must have at most 3 characters")
+        @Size(max = 3, message = "Jersey number must have at most 3 digits")
         @Pattern(regexp = "\\d{1,3}", message = "Jersey number must contain only digits")
         String jerseyNumber
 ) {

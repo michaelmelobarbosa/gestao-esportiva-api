@@ -44,7 +44,7 @@ public class Athlete {
     private String fullName;
 
     @Column(unique = true, nullable = false, length = 11)
-    @Pattern(regexp = "\\d{11}", message = "CPF must contain only digits and have 11 characters")
+    @Pattern(regexp = "\\d{11}", message = "CPF must contain only digits and be 11 digits long")
     private String cpf;
 
     @Column(nullable = false)

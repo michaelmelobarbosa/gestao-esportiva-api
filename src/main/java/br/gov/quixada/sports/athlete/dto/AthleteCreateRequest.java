@@ -27,6 +27,6 @@ public record AthleteCreateRequest(
         @NotNull(message = "Gender is required")
         Gender gender,
         @NotBlank(message = "Phone is required")
-        @Pattern(regexp = "\\d{10,12}", message = "Phone must contain only digits and have 10 to 12 characters")
+        @Pattern(regexp = "\\d{10,12}", message = "Phone must contain only digits and be 10 to 12 digits long")
         String phone
 ) {}
