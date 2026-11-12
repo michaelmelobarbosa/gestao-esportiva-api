@@ -1,6 +1,6 @@
 # Pendências — Gestão Esportiva API
 
-> Arquivo consolidado em 2026-11-09; atualizado em 2026-11-10 para marcar itens concluídos. Reúne **tudo que ainda não foi implementado ou está pendente** no projeto, extraído de `decisoes.md`, `estudos.md`, `fixes.md`, `futuras-iterações.md` e `securityfixes.md` (removidos após a consolidação).
+> Arquivo consolidado em 2026-11-09; atualizado em 2026-11-12 para marcar itens concluídos. Reúne **tudo que ainda não foi implementado ou está pendente** no projeto, extraído de `decisoes.md`, `estudos.md`, `fixes.md`, `futuras-iterações.md` e `securityfixes.md` (removidos após a consolidação).
 >
 > Itens concluídos permanecem marcados com `[x]` para rastreabilidade; os pendentes ficam com `[ ]`.
 >
@@ -11,7 +11,7 @@
 ## Checklist
 
 ### Segurança / Autenticação
-- [ ] **A5** — Rate limiting / lockout no login (P0)
+- [x] **A5** — Rate limiting no login (bucket4j, sem lockout) (P0)
 - [ ] **C6** — Refresh token / logout / revogação (P2)
 - [ ] **C7** — (Opcional) roles como claim do JWT (P2)
 - [x] **C8** — Configurar CORS (P2)
@@ -46,15 +46,15 @@
 
 ## Detalhamento
 
-### A5 — Rate limiting / lockout no login (P0)
-- **Onde:** `security/auth/AuthController` (`/v1/auth/login`), `security/users/User` (`isAccountNonLocked`), `security/config/SecurityConfig`.
-- **Situação:** hoje é possível tentar senhas infinitamente; `isAccountNonLocked()` retorna sempre `true`. Não há `bucket4j`/`Resilience4j` no `pom.xml`.
-- **Por quê:** é a defesa contra força bruta em um endpoint público de login.
-- **Como implementar (opções):**
-  1. Rate limit por IP/usuário com `bucket4j` ou `Resilience4j` (ex.: N tentativas por minuto).
-  2. Lockout usando o `User`: campos `tentativasFalhas`/`bloqueadoAte` e `isAccountNonLocked()` refletindo isso; requer migration nova.
-  3. WAF/proxy (nginx, API Gateway) na infraestrutura.
-- **Como testar:** várias tentativas de login com senha errada → a partir da N-ésima, `429` (rate limit) ou `401` com conta bloqueada.
+### A5 — Rate limiting no login (P0) — Concluído
+- **Onde:** `security/auth/AuthController#login`, `security/auth/LoginRateLimiter`, `security/config/LoginRateLimitProperties`, `security/config/ClockTimeMeter`, `security/config/RateLimitConfig`, `security/auth/exception/MuitasTentativasException`, `common/error/GlobalExceptionHandler`.
+- **Situação anterior:** tentativas infinitas; `UserDetailsAdapter.isAccountNonLocked()` retornava sempre `true`; não havia `bucket4j`/`Resilience4j` no `pom.xml`.
+- **Decisão:** **rate limiting, não lockout de conta**, com **bucket4j core** (`bucket4j_jdk17-core:8.22.0`, versão explícita) + **Caffeine** (versão gerenciada pelo Boot) para limitar memória. Sem migration e sem estado persistente. `Resilience4j` fica reservado para chamadas externas futuras (retry/circuit breaker).
+- **Modelo:** dois buckets em memória por tentativa — por **IP** (`max-por-ip`) e por **(IP, e-mail normalizado)** (`max-por-ip-email`). Nunca por e-mail isolado: permitiria bloquear a conta de terceiros (DoS). O consumo acontece **antes** do BCrypt; login com sucesso devolve a tentativa (`addTokens`). Excedeu → `429` no formato `ApiError` + header `Retry-After` (segundos, de `getNanosToWaitForRefill`), com mensagem genérica.
+- **Config:** `api.security.login-rate-limit.{max-por-ip:100, max-por-ip-email:5, janela:15m, maximo-chaves:100000}`. Em prod, tunável por `API_LOGIN_RATE_LIMIT_*` (com default).
+- **Semântica:** `refillGreedy` ⇒ 5 tentativas/15 min = 1 token a cada 3 min. É throttle suave, não bloqueio duro de 15 min.
+- **Limitações:** estado em memória e por instância — N réplicas ⇒ limite efetivo N×; restart zera contadores; evicção do Caffeine (`maximo-chaves`) recria buckets cheios (fail-open); evolução é trocar o `Cache<String,Bucket>` por `ProxyManager` (Redis/MySQL). IP vem de `request.getRemoteAddr()`; atrás de proxy confiável, configurar `server.forward-headers-strategy` (senão todo o tráfego aparece como o IP do proxy).
+- **Testes:** `LoginRateLimiterTest` (8), `AuthControllerLoginRateLimitTest` (4) e `LoginRateLimitPropertiesTest` (3), sem `Thread.sleep` (`ClockTimeMeter` + `MutableClock`; IP via `request.setRemoteAddr`).
 
 ### C6 — Refresh token / logout / revogação (P2)
 - **Onde:** fluxo de auth como um todo (`security/jwt/JwtService`, `security/auth/AuthController`).

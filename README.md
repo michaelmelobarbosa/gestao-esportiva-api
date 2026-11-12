@@ -134,3 +134,9 @@ Decisão: versionamento por **URL** (`/v1`), escolhido por simplicidade e compat
 - O `.env` é ignorado pelo Git; mantenha segredos fora do repositório.
 - O boot falha se `API_SECURITY_TOKEN_SECRET` não estiver definido (fail-fast).
 - Troque a senha do `SUPERADMIN` no primeiro deploy. O seed é público no histórico de migrations; a rotação é obrigatória.
+
+### Rate limit de login
+
+`POST /v1/auth/login` aplica dois limites em memória por tentativa: por IP (`max-por-ip`, default 100/15 min) e por (IP, e-mail) (`max-por-ip-email`, default 5/15 min). Ao exceder, responde `429` com `Retry-After` (segundos) no formato de erro padrão. Login bem-sucedido devolve a tentativa.
+
+Não é lockout de conta: não há bloqueio permanente nem estado no banco. Os limites ficam em `api.security.login-rate-limit` (em prod, `API_LOGIN_RATE_LIMIT_*`). O contador é por instância, então com N réplicas o limite efetivo é N×; atrás de proxy reverso, configure `server.forward-headers-strategy` para o IP real chegar em `getRemoteAddr()`.
