@@ -9,7 +9,7 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>br.gov.quixada</groupId>
-    <artifactId>gestao-esportiva-api</artifactId>
+    <artifactId>sports-management-api</artifactId>
     <version>0.0.1-SNAPSHOT</version>
 
     <properties>
