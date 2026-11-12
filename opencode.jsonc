@@ -1,0 +1,31 @@
+{
+  // Modelo padrão das sessões novas neste projeto.
+  // Sem variante: a raiz só guarda provider/model.
+  "$schema": "https://opencode.ai/config.json",
+  "model": "opencode-go/deepseek-v4.1-flash",
+
+  "agents": {
+    // --- Built-ins sobrescritos: só o modelo muda ---
+    "explore": {
+      "model": "opencode-go/qwen3.8-flash"
+    },
+    "general": {
+      "model": "opencode-go/deepseek-v4.1-flash#high"
+    },
+    "plan": {
+      "model": "opencode-go/deepseek-v4-pro#high"
+    },
+
+    // --- Permissões do agente principal ---
+    // Pede aprovação antes de lançar qualquer subagent.
+    // Para liberar sem perguntar: troque "ask" por "allow".
+    // Para fechar o catálogo: adicione antes
+    //   { "action": "subagent", "resource": "*", "effect": "deny" }
+    // e um "allow" por nome permitido.
+    "build": {
+      "permissions": [
+        { "action": "subagent", "resource": "*", "effect": "ask" }
+      ]
+    }
+  }
+}
