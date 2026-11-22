@@ -1,6 +1,6 @@
 # Pending Items — Sports Management API
 
-> File consolidated on 2026-11-09; updated on 2026-11-12 to mark completed items. It gathers **everything that has not yet been implemented or is pending** in the project, extracted from `decisions.md`, `studies.md`, `fixes.md`, `future-iterations.md` and `securityfixes.md` (removed after consolidation).
+> File consolidated on 2026-11-09; updated on 2026-11-16 to mark completed items. It gathers **everything that has not yet been implemented or is pending** in the project, extracted from `decisions.md`, `studies.md`, `fixes.md`, `future-iterations.md` and `securityfixes.md` (removed after consolidation).
 >
 > Completed items remain marked with `[x]` for traceability; pending ones stay `[ ]`.
 >
@@ -23,12 +23,12 @@
 
 ### Athlete
 - [x] `hardDelete` + `DELETE /v1/athletes/{id}` endpoint (P1)
-- [ ] `AthleteControllerTest` (P1)
+- [x] `AthleteControllerTest` (P1)
 - [x] `AthleteMapperTest` (P1)
 - [x] Configure standalone `MockMvc` + fixed `Clock` in controller tests (P1)
 
 ### Tests for the new flows
-- [ ] Controller/mapper tests for competition, registration, match and standings (P1)
+- [x] Controller/mapper tests for competition, registration, match and standings (P1)
 
 ### Sports core
 - [ ] Automatic round generation (single round-robin / double round-robin) (P1)
@@ -103,10 +103,11 @@
 - **`canceledAt`:** informational, written only on the transition to `CANCELED` (including the bulk update of matches).
 - **Not in listings:** the `*SummaryResponse` records do not expose `notes`.
 
-### `AthleteControllerTest` (P1)
-- **Where:** `src/test/java/.../athlete/AthleteControllerTest.java` (does not exist yet).
-- **Minimum scenarios:** valid `POST /v1/athletes` → `201` + `Location` header; invalid `POST` → `400` with `errors[].field`; `PATCH /{id}/status` → `200`; `GET /v1/athletes/-1` → `400`; `PUT /{id}` on an inactive athlete → `409`.
-- **Attention:** the versioned controller requires `ApiVersionStrategy` in standalone MockMvc (see `AuthControllerTest`), otherwise it throws `IllegalStateException`.
+### `AthleteControllerTest` (P1) — Completed
+- **Where:** `src/test/java/.../athlete/AthleteControllerTest.java` — 16 tests in `@Nested` groups (`POST`, `GET`, `PATCH /status`, `PUT`, `DELETE`, `versioning`).
+- **Scenarios:** valid `POST` → `201` + `Location: http://localhost/v1/athletes/1`; blank name and invalid CPF check digit → `400` with `errors[].field`; duplicate CPF → `409`; `GET /{id}` and `GET /cpf/{cpf}` → `200`; `GET /v1/athletes/-1` and `GET /cpf/abc` → `400`; `PATCH /status` activate/deactivate → `200`, missing status → `400`; `PUT` → `200`, on an inactive athlete → `409`; `DELETE` → `204`, blocked → `409`; unsupported version → `400`.
+- **Gotcha found:** the controller is `@Validated` ([AthleteController.java:22](AthleteController.java)), so Spring MVC **skips** its built-in method validation and delegates the parameter constraints (`@Positive`, `@Pattern`) to the AOP proxy that `MethodValidationPostProcessor` creates. Standalone MockMvc has no such proxy, so `GET /v1/athletes/-1` and `GET /cpf/abc` returned `200` (the service was called with the invalid value). Fixed by adding `ControllerTestSupport.mockMvcValidated(...)`, which wraps the controller in a `ProxyFactory` + `MethodValidationInterceptor`; the resulting `ConstraintViolationException` is mapped to `400` by `GlobalExceptionHandler`.
+- **Note:** `verifyNoInteractions(service)` guards the validation paths, so the test fails if the proxy is dropped.
 
 ### `AthleteMapperTest` (P1) — Completed
 - **Where:** `src/test/java/.../athlete/AthleteMapperTest.java`.
@@ -117,9 +118,12 @@
 - **How it turned out:** `ControllerTestSupport` centralizes the standalone MockMvc (with `GlobalExceptionHandler` + `ApiVersionStrategy`) and exposes `FIXED_CLOCK` (`2026-06-15T12:00:00Z`, `America/Fortaleza`). `ClockTestConfig` is a `@TestConfiguration` with `@Primary` to override the `Clock` bean in tests that boot the context (`@Import(ClockTestConfig.class)`).
 - **Adoption:** `AuthControllerTest` and `CompetitionControllerTest` now use `ControllerTestSupport.mockMvc(...)`, removing the duplicated versioning strategy. `AthleteControllerClockTest` validates the age calculated with the fixed clock on `GET` and `POST`; `ClockTestConfigTest` guarantees the fixed bean takes precedence.
 
-### Controller/mapper tests for the new flows (P1)
-- **Where:** `src/test/java/.../` — currently there are `AuthControllerTest`, `CompetitionControllerTest` (notes) and `AthleteMapperTest`.
-- **Missing scope:** competition, registration (`AthleteRegistration`/`TeamRegistration`), match and standings — controllers and mappers.
+### Controller/mapper tests for the new flows (P1) — Completed
+- **Where:** `src/test/java/br/gov/quixada/sports/` — added standalone contract tests (`ControllerTestSupport.mockMvcValidated` + `PageableHandlerMethodArgumentResolver` + `AuthenticationPrincipalArgumentResolver`) and MapStruct unit tests across all remaining controllers and mappers:
+  - `competition`: `CompetitionControllerTest`, `CompetitionMapperTest`
+  - `registration`: `TeamRegistrationControllerTest`, `TeamRegistrationMapperTest`, `AthleteRegistrationControllerTest`, `AthleteRegistrationMapperTest`
+  - `match`: `MatchControllerTest`, `MatchMapperTest`, `StandingsControllerTest`
+  - `category` / `club` / `team` / `modality` / `users` / `shared`: `CategoryControllerTest`, `CategoryMapperTest`, `ClubControllerTest`, `ClubMapperTest`, `TeamControllerTest`, `TeamMapperTest`, `ModalityControllerTest`, `ModalityMapperTest`, `UserControllerTest`, `UserMapperTest`, `AddressMapperTest`.
 
 ### Automatic round generation (single round-robin / double round-robin) (P1)
 - **Where:** `match/` (`Match.round`, `MatchCreateRequest.round`).
