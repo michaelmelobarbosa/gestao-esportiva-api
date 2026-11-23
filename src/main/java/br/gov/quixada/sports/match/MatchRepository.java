@@ -107,7 +107,7 @@ public interface MatchRepository extends JpaRepository<Match, Long> {
               and ((p.homeRegistration.id = :home and p.awayRegistration.id = :away)
                 or (p.homeRegistration.id = :away and p.awayRegistration.id = :home))
             """)
-    boolean existsConfrontoNaRound(@Param("home") Long homeId,
+    boolean existsMatchupInRound(@Param("home") Long homeId,
                                     @Param("away") Long awayId,
                                     @Param("round") Integer round,
                                     @Param("ignoredId") Long ignoredId,
@@ -120,7 +120,7 @@ public interface MatchRepository extends JpaRepository<Match, Long> {
               and p.scheduledAt = :scheduledAt
               and (p.homeRegistration.id in :registrationIds or p.awayRegistration.id in :registrationIds)
             """)
-    boolean existsConflitoScheduledAt(@Param("registrationIds") Collection<Long> registrationIds,
+    boolean existsScheduleConflict(@Param("registrationIds") Collection<Long> registrationIds,
                                    @Param("scheduledAt") LocalDateTime scheduledAt,
                                    @Param("ignoredId") Long ignoredId,
                                    @Param("canceled") MatchStatus canceled);
@@ -132,10 +132,20 @@ public interface MatchRepository extends JpaRepository<Match, Long> {
               and p.status <> :canceled
               and (p.homeRegistration.id in :registrationIds or p.awayRegistration.id in :registrationIds)
             """)
-    boolean existsTeamNaRound(@Param("registrationIds") Collection<Long> registrationIds,
+    boolean existsTeamInRound(@Param("registrationIds") Collection<Long> registrationIds,
                                  @Param("round") Integer round,
                                  @Param("ignoredId") Long ignoredId,
                                  @Param("canceled") MatchStatus canceled);
+
+    @Query("""
+            select (count(p) > 0) from Match p
+            where p.homeRegistration.competition.id = :competitionId
+              and p.homeRegistration.category.id = :categoryId
+              and p.status <> :canceled
+            """)
+    boolean existsActiveByCompetitionAndCategory(@Param("competitionId") Long competitionId,
+                                                 @Param("categoryId") Long categoryId,
+                                                 @Param("canceled") MatchStatus canceled);
 
     @Modifying(clearAutomatically = true)
     @Query("""

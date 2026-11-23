@@ -17,6 +17,7 @@ import br.gov.quixada.sports.team.exception.TeamNotFoundException;
 import br.gov.quixada.sports.registration.exception.TeamAlreadyRegisteredException;
 import br.gov.quixada.sports.registration.exception.TeamRegistrationNotFoundException;
 import br.gov.quixada.sports.registration.exception.TeamRegistrationWithoutAthletesException;
+import br.gov.quixada.sports.registration.exception.RosterLimitExceededException;
 import br.gov.quixada.sports.registration.exception.InvalidRegistrationException;
 import br.gov.quixada.sports.registration.exception.RegistrationClosedException;
 import br.gov.quixada.sports.registration.exception.InvalidStatusTransitionException;
@@ -115,7 +116,7 @@ public class TeamRegistrationService {
         registration.changeStatus(status, LocalDateTime.now(clock));
 
         if (status == RegistrationStatus.CANCELED || status == RegistrationStatus.INACTIVE) {
-            cascadeAthleteStatuss(registration.getId(), status);
+            cascadeAthleteStatuses(registration.getId(), status);
             matchService.cancelByRegistration(registration.getId());
         }
 
@@ -141,7 +142,7 @@ public class TeamRegistrationService {
                 continue;
             }
             registration.changeStatus(RegistrationStatus.CANCELED, LocalDateTime.now(clock));
-            cascadeAthleteStatuss(registration.getId(), RegistrationStatus.CANCELED);
+            cascadeAthleteStatuses(registration.getId(), RegistrationStatus.CANCELED);
         }
     }
 
@@ -172,23 +173,33 @@ public class TeamRegistrationService {
     }
 
     private void validateMinimumAthletes(TeamRegistration registration) {
+        Category category = registration.getCategory();
+        int minAthletes = category != null ? category.effectiveMinAthletes() : 1;
+        Integer maxAthletes = category != null ? category.getMaxAthletes() : null;
+
         long activeAthletes = athleteRegistrationRepository.countByTeamRegistrationIdAndStatusIn(
                 registration.getId(), List.of(RegistrationStatus.PENDING, RegistrationStatus.APPROVED));
-        if (activeAthletes < 1) {
-            throw new TeamRegistrationWithoutAthletesException(
-                    "Team registration requires at least one athlete to be approved");
+        if (activeAthletes < minAthletes) {
+            String message = minAthletes == 1
+                    ? "Team registration requires at least one athlete to be approved"
+                    : "Team registration requires at least " + minAthletes + " athletes to be approved";
+            throw new TeamRegistrationWithoutAthletesException(message);
+        }
+        if (maxAthletes != null && activeAthletes > maxAthletes) {
+            throw new RosterLimitExceededException(
+                    "Team registration exceeds the category maximum of " + maxAthletes + " athletes");
         }
     }
 
-    private void cascadeAthleteStatuss(Long teamRegistrationId, RegistrationStatus status) {
+    private void cascadeAthleteStatuses(Long teamRegistrationId, RegistrationStatus status) {
         for (AthleteRegistration athleteRegistration : athleteRegistrationRepository.findByTeamRegistrationId(teamRegistrationId)) {
-            RegistrationStatus atual = athleteRegistration.getStatus();
+            RegistrationStatus current = athleteRegistration.getStatus();
 
-            if (atual == RegistrationStatus.CANCELED || atual == RegistrationStatus.REJECTED || atual == status) {
+            if (current == RegistrationStatus.CANCELED || current == RegistrationStatus.REJECTED || current == status) {
                 continue;
             }
-            if (status == RegistrationStatus.INACTIVE && atual != RegistrationStatus.PENDING
-                    && atual != RegistrationStatus.APPROVED) {
+            if (status == RegistrationStatus.INACTIVE && current != RegistrationStatus.PENDING
+                    && current != RegistrationStatus.APPROVED) {
                 continue;
             }
 

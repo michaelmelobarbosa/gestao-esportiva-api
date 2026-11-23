@@ -23,6 +23,7 @@ api:
       secret: segredo-de-teste-nao-usar-em-producao
       issuer: sports-management-api
       expiration: 2h
+      refresh-expiration: 7d
 
     login-rate-limit:
       max-per-ip: 100

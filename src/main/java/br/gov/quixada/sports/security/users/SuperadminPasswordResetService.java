@@ -1,6 +1,7 @@
 package br.gov.quixada.sports.security.users;
 
 import br.gov.quixada.sports.security.auth.UserRepository;
+import br.gov.quixada.sports.security.jwt.RefreshTokenService;
 import br.gov.quixada.sports.security.users.exception.OperationNotAllowedException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -14,6 +15,7 @@ public class SuperadminPasswordResetService {
     private final UserRepository repository;
     private final PasswordEncoder passwordEncoder;
     private final UserAuditService auditService;
+    private final RefreshTokenService refreshTokenService;
 
     @Transactional
     public void reset(String email, char[] newPassword) {
@@ -28,7 +30,9 @@ public class SuperadminPasswordResetService {
 
         user.setPassword(passwordEncoder.encode(new String(newPassword)));
         user.setStatus(UserStatus.ACTIVE);
+        user.incrementTokenVersion();
         repository.saveAndFlush(user);
+        refreshTokenService.revokeAllForUser(user);
 
         auditService.recordSystem(user, UserAuditAction.PASSWORD_RESET,
                 "password reset via recovery CLI");

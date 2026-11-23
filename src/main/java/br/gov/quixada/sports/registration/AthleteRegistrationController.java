@@ -6,6 +6,8 @@ import br.gov.quixada.sports.registration.dto.AthleteRegistrationResponse;
 import br.gov.quixada.sports.registration.dto.AthleteRegistrationSummaryResponse;
 import br.gov.quixada.sports.registration.dto.AthleteRegistrationStatusRequest;
 import br.gov.quixada.sports.registration.dto.AthleteRegistrationUpdateRequest;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -22,11 +24,13 @@ import java.net.URI;
 @RequestMapping(path = "/v{version}/athlete-registrations", version = "1.0")
 @RequiredArgsConstructor
 @Validated
+@Tag(name = "Athlete Registrations", description = "Athlete enrollments and jersey numbers")
 public class AthleteRegistrationController {
 
     private final AthleteRegistrationService service;
     private final AthleteRegistrationMapper mapper;
 
+    @Operation(summary = "List athlete registrations with optional team registration and status filter")
     @GetMapping
     public ResponseEntity<Page<AthleteRegistrationSummaryResponse>> findAll(@RequestParam(required = false) Long teamRegistrationId,
                                                                        @RequestParam(required = false) RegistrationStatus status,
@@ -34,12 +38,14 @@ public class AthleteRegistrationController {
         return ResponseEntity.ok(service.findAll(teamRegistrationId, status, pageable).map(mapper::toSummary));
     }
 
+    @Operation(summary = "Find athlete registration by ID")
     @GetMapping("/{id}")
     public ResponseEntity<AthleteRegistrationResponse> findById(@PathVariable @Positive Long id) {
         AthleteRegistration registration = service.findByIdOrThrowNotFound(id);
         return ResponseEntity.ok(mapper.toResponse(registration));
     }
 
+    @Operation(summary = "Enroll athlete in a team registration")
     @PostMapping
     public ResponseEntity<AthleteRegistrationResponse> save(@RequestBody @Valid AthleteRegistrationCreateRequest request) {
         AthleteRegistration registration = mapper.toEntity(request);
@@ -51,6 +57,7 @@ public class AthleteRegistrationController {
         return ResponseEntity.created(location).body(mapper.toResponse(saved));
     }
 
+    @Operation(summary = "Change athlete registration status")
     @PatchMapping("/{id}/status")
     public ResponseEntity<AthleteRegistrationResponse> changeStatus(@PathVariable @Positive Long id,
                                                                  @RequestBody @Valid AthleteRegistrationStatusRequest request) {
@@ -62,6 +69,7 @@ public class AthleteRegistrationController {
      * Free-form note: independent of status and can be set, changed, or cleared at
      * any time. Blank or missing text clears the value.
      */
+    @Operation(summary = "Update free-form notes on an athlete registration")
     @PatchMapping("/{id}/notes")
     public ResponseEntity<AthleteRegistrationResponse> updateNotes(
             @PathVariable @Positive Long id,
@@ -70,6 +78,7 @@ public class AthleteRegistrationController {
         return ResponseEntity.ok(mapper.toResponse(registration));
     }
 
+    @Operation(summary = "Update jersey number of an athlete registration")
     @PutMapping("/{id}")
     public ResponseEntity<AthleteRegistrationResponse> update(@PathVariable @Positive Long id,
                                                          @RequestBody @Valid AthleteRegistrationUpdateRequest request) {

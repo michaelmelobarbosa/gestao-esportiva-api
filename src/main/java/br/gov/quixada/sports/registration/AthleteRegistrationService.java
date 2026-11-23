@@ -16,7 +16,9 @@ import br.gov.quixada.sports.registration.exception.InvalidRegistrationException
 import br.gov.quixada.sports.registration.exception.JerseyNumberAlreadyUsedException;
 import br.gov.quixada.sports.registration.exception.InvalidStatusTransitionException;
 import br.gov.quixada.sports.registration.exception.LastActiveAthleteException;
+import br.gov.quixada.sports.registration.exception.RosterLimitExceededException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -64,12 +66,17 @@ public class AthleteRegistrationService {
         validateActiveCategory(teamRegistration.getCategory());
         validateSlots(teamRegistrationId, teamRegistration.getCompetition().getId(), athleteId,
                 registration.getJerseyNumber(), null);
+        validateRosterCeiling(teamRegistrationId, teamRegistration.getCategory(), false);
         validateAge(athlete, teamRegistration.getCategory());
 
         registration.setTeamRegistration(teamRegistration);
         registration.setAthlete(athlete);
         registration.setStatus(RegistrationStatus.PENDING);
-        return repository.save(registration);
+        try {
+            return repository.saveAndFlush(registration);
+        } catch (DataIntegrityViolationException e) {
+            throw translateUniquenessViolation(e);
+        }
     }
 
     @Transactional
@@ -117,7 +124,11 @@ public class AthleteRegistrationService {
         }
 
         registration.updateDetails(jerseyNumber);
-        return registration;
+        try {
+            return repository.saveAndFlush(registration);
+        } catch (DataIntegrityViolationException e) {
+            throw translateUniquenessViolation(e);
+        }
     }
 
     private void revalidateReactivation(AthleteRegistration registration) {
@@ -128,7 +139,35 @@ public class AthleteRegistrationService {
         validateActiveCategory(teamRegistration.getCategory());
         validateSlots(teamRegistration.getId(), teamRegistration.getCompetition().getId(),
                 registration.getAthlete().getId(), registration.getJerseyNumber(), registration.getId());
+        validateRosterCeiling(teamRegistration.getId(), teamRegistration.getCategory(),
+                registration.getStatus().occupiesSlot());
         validateAge(registration.getAthlete(), teamRegistration.getCategory());
+    }
+
+    private void validateRosterCeiling(Long teamRegistrationId, Category category, boolean alreadyOccupiesSlot) {
+        if (category == null || category.getMaxAthletes() == null) {
+            return;
+        }
+        int maxAthletes = category.getMaxAthletes();
+        if (!alreadyOccupiesSlot) {
+            long currentCount = repository.countByTeamRegistrationIdAndStatusIn(
+                    teamRegistrationId, RegistrationStatus.OCCUPY_SLOT);
+            if (currentCount >= maxAthletes) {
+                throw new RosterLimitExceededException(
+                        "Team roster has reached the category maximum of " + maxAthletes + " athletes");
+            }
+        }
+    }
+
+    private RuntimeException translateUniquenessViolation(DataIntegrityViolationException e) {
+        String message = e.getMostSpecificCause().getMessage();
+        if (message != null && message.contains("uk_athlete_registration_jersey_active")) {
+            return new JerseyNumberAlreadyUsedException("Jersey number already used in this registration");
+        }
+        if (message != null && message.contains("uk_athlete_registration_athlete_active")) {
+            return new AthleteAlreadyRegisteredException("Athlete is already registered on this team");
+        }
+        return e;
     }
 
     private void validateSlots(Long teamRegistrationId, Long competitionId, Long athleteId,
@@ -162,13 +201,13 @@ public class AthleteRegistrationService {
     }
 
     private void validateLastAthleteRemoval(AthleteRegistration registration, RegistrationStatus newStatus) {
-        boolean removeDaActive = newStatus == RegistrationStatus.CANCELED
+        boolean removesActive = newStatus == RegistrationStatus.CANCELED
                 || newStatus == RegistrationStatus.INACTIVE
                 || newStatus == RegistrationStatus.REJECTED;
-        boolean estavaActive = registration.getStatus() == RegistrationStatus.PENDING
+        boolean wasActive = registration.getStatus() == RegistrationStatus.PENDING
                 || registration.getStatus() == RegistrationStatus.APPROVED;
 
-        if (!removeDaActive || !estavaActive) {
+        if (!removesActive || !wasActive) {
             return;
         }
 
@@ -177,11 +216,15 @@ public class AthleteRegistrationService {
             return;
         }
 
+        Category category = teamRegistration.getCategory();
+        int minAthletes = category != null ? category.effectiveMinAthletes() : 1;
         long activeAthletes = repository.countByTeamRegistrationIdAndStatusIn(
                 teamRegistration.getId(), List.of(RegistrationStatus.PENDING, RegistrationStatus.APPROVED));
-        if (activeAthletes <= 1) {
-            throw new LastActiveAthleteException(
-                    "An approved team must keep at least one active athlete");
+        if (activeAthletes <= minAthletes) {
+            String message = minAthletes == 1
+                    ? "An approved team must keep at least one active athlete"
+                    : "An approved team must keep at least " + minAthletes + " active athletes";
+            throw new LastActiveAthleteException(message);
         }
     }
 

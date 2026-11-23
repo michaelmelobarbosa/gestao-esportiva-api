@@ -11,6 +11,7 @@ import br.gov.quixada.sports.category.exception.DuplicateCategoryException;
 import br.gov.quixada.sports.category.exception.InactiveCategoryException;
 import br.gov.quixada.sports.category.exception.CategoryNotFoundException;
 import br.gov.quixada.sports.category.exception.InvalidAgeException;
+import br.gov.quixada.sports.category.exception.InvalidRosterLimitException;
 import br.gov.quixada.sports.club.exception.InactiveClubException;
 import br.gov.quixada.sports.club.exception.ClubNotFoundException;
 import br.gov.quixada.sports.competition.exception.CompetitionNotEditableException;
@@ -30,13 +31,17 @@ import br.gov.quixada.sports.registration.exception.RegistrationClosedException;
 import br.gov.quixada.sports.registration.exception.JerseyNumberAlreadyUsedException;
 import br.gov.quixada.sports.registration.exception.InvalidStatusTransitionException;
 import br.gov.quixada.sports.registration.exception.LastActiveAthleteException;
+import br.gov.quixada.sports.registration.exception.RosterLimitExceededException;
 import br.gov.quixada.sports.modality.exception.InactiveModalityException;
 import br.gov.quixada.sports.modality.exception.ModalityNotFoundException;
 import br.gov.quixada.sports.match.exception.InvalidMatchException;
 import br.gov.quixada.sports.match.exception.MatchNotFoundException;
+import br.gov.quixada.sports.match.exception.MatchScheduleAlreadyExistsException;
 import br.gov.quixada.sports.match.exception.MatchStatusTransitionException;
 import br.gov.quixada.sports.security.auth.exception.EmailAlreadyRegisteredException;
+import br.gov.quixada.sports.security.auth.exception.InvalidRefreshTokenException;
 import br.gov.quixada.sports.security.auth.exception.TooManyAttemptsException;
+import br.gov.quixada.sports.security.users.exception.InvalidAuditQueryException;
 import br.gov.quixada.sports.security.users.exception.OperationNotAllowedException;
 import br.gov.quixada.sports.security.users.exception.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -91,7 +96,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(TooManyAttemptsException.class)
-    public ResponseEntity<ApiError> handleMuitasTentactives(TooManyAttemptsException ex, HttpServletRequest request) {
+    public ResponseEntity<ApiError> handleTooManyAttempts(TooManyAttemptsException ex, HttpServletRequest request) {
         return build(HttpStatus.TOO_MANY_REQUESTS,
                 "Too many login attempts. Try again shortly.",
                 request, List.of(), ex.retryAfterSeconds());
@@ -103,7 +108,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(AthleteNotDeletableException.class)
-    public ResponseEntity<ApiError> handleAthleteNaoExcluivel(AthleteNotDeletableException ex,
+    public ResponseEntity<ApiError> handleAthleteNotDeletable(AthleteNotDeletableException ex,
                                                              HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
@@ -124,23 +129,23 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(InvalidAgeException.class)
-    public ResponseEntity<ApiError> handleAgeInvalida(InvalidAgeException ex, HttpServletRequest request) {
+    public ResponseEntity<ApiError> handleInvalidAge(InvalidAgeException ex, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(InactiveCategoryException.class)
-    public ResponseEntity<ApiError> handleCategoryInactive(InactiveCategoryException ex, HttpServletRequest request) {
+    public ResponseEntity<ApiError> handleInactiveCategory(InactiveCategoryException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(DuplicateCategoryException.class)
-    public ResponseEntity<ApiError> handleCategoryDuplicada(DuplicateCategoryException ex,
+    public ResponseEntity<ApiError> handleDuplicateCategory(DuplicateCategoryException ex,
                                                              HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(InactiveClubException.class)
-    public ResponseEntity<ApiError> handleClubInactive(InactiveClubException ex, HttpServletRequest request) {
+    public ResponseEntity<ApiError> handleInactiveClub(InactiveClubException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 
@@ -155,12 +160,12 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(InactiveTeamException.class)
-    public ResponseEntity<ApiError> handleTeamInactive(InactiveTeamException ex, HttpServletRequest request) {
+    public ResponseEntity<ApiError> handleInactiveTeam(InactiveTeamException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(InactiveModalityException.class)
-    public ResponseEntity<ApiError> handleModalityInactive(InactiveModalityException ex, HttpServletRequest request) {
+    public ResponseEntity<ApiError> handleInactiveModality(InactiveModalityException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 
@@ -180,28 +185,28 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(AthleteOutsideCategoryException.class)
-    public ResponseEntity<ApiError> handleAthleteForaDaCategory(AthleteOutsideCategoryException ex, HttpServletRequest request) {
+    public ResponseEntity<ApiError> handleAthleteOutsideCategory(AthleteOutsideCategoryException ex, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(AthleteAlreadyRegisteredException.class)
-    public ResponseEntity<ApiError> handleAthleteJaInscrito(AthleteAlreadyRegisteredException ex, HttpServletRequest request) {
+    public ResponseEntity<ApiError> handleAthleteAlreadyRegistered(AthleteAlreadyRegisteredException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(TeamAlreadyRegisteredException.class)
-    public ResponseEntity<ApiError> handleTeamJaInscrita(TeamAlreadyRegisteredException ex, HttpServletRequest request) {
+    public ResponseEntity<ApiError> handleTeamAlreadyRegistered(TeamAlreadyRegisteredException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(TeamRegistrationWithoutAthletesException.class)
-    public ResponseEntity<ApiError> handleTeamRegistrationSemAthletes(TeamRegistrationWithoutAthletesException ex,
+    public ResponseEntity<ApiError> handleTeamRegistrationWithoutAthletes(TeamRegistrationWithoutAthletesException ex,
                                                                     HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(LastActiveAthleteException.class)
-    public ResponseEntity<ApiError> handleUltimoAthleteActive(LastActiveAthleteException ex,
+    public ResponseEntity<ApiError> handleLastActiveAthlete(LastActiveAthleteException ex,
                                                             HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
@@ -218,7 +223,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(JerseyNumberAlreadyUsedException.class)
-    public ResponseEntity<ApiError> handleJerseyNumberJaUtilizado(JerseyNumberAlreadyUsedException ex, HttpServletRequest request) {
+    public ResponseEntity<ApiError> handleJerseyNumberAlreadyUsed(JerseyNumberAlreadyUsedException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 
@@ -233,7 +238,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(CompetitionNotEditableException.class)
-    public ResponseEntity<ApiError> handleCompetitionNaoEditavel(CompetitionNotEditableException ex, HttpServletRequest request) {
+    public ResponseEntity<ApiError> handleCompetitionNotEditable(CompetitionNotEditableException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 
@@ -249,7 +254,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(InvalidMatchException.class)
-    public ResponseEntity<ApiError> handleMatchInvalida(InvalidMatchException ex, HttpServletRequest request) {
+    public ResponseEntity<ApiError> handleInvalidMatch(InvalidMatchException ex, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
     }
 
@@ -257,6 +262,36 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleMatchStatusTransition(MatchStatusTransitionException ex,
                                                                  HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(InvalidRosterLimitException.class)
+    public ResponseEntity<ApiError> handleInvalidRosterLimit(InvalidRosterLimitException ex,
+                                                             HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(RosterLimitExceededException.class)
+    public ResponseEntity<ApiError> handleRosterLimitExceeded(RosterLimitExceededException ex,
+                                                              HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(MatchScheduleAlreadyExistsException.class)
+    public ResponseEntity<ApiError> handleMatchScheduleAlreadyExists(MatchScheduleAlreadyExistsException ex,
+                                                                     HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(InvalidAuditQueryException.class)
+    public ResponseEntity<ApiError> handleInvalidAuditQuery(InvalidAuditQueryException ex,
+                                                            HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ResponseEntity<ApiError> handleInvalidRefreshToken(InvalidRefreshTokenException ex,
+                                                              HttpServletRequest request) {
+        return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(ConstraintViolationException.class)

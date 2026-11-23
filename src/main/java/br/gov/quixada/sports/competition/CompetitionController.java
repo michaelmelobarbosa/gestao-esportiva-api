@@ -6,6 +6,8 @@ import br.gov.quixada.sports.competition.dto.CompetitionResponse;
 import br.gov.quixada.sports.competition.dto.CompetitionSummaryResponse;
 import br.gov.quixada.sports.competition.dto.CompetitionStatusRequest;
 import br.gov.quixada.sports.competition.dto.CompetitionUpdateRequest;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -22,11 +24,13 @@ import java.net.URI;
 @RequestMapping(path = "/v{version}/competitions", version = "1.0")
 @RequiredArgsConstructor
 @Validated
+@Tag(name = "Competitions", description = "Competitions lifecycle and scheduling periods")
 public class CompetitionController {
 
     private final CompetitionService service;
     private final CompetitionMapper mapper;
 
+    @Operation(summary = "List competitions with optional name and status filter")
     @GetMapping
     public ResponseEntity<Page<CompetitionSummaryResponse>> findAll(@RequestParam(required = false) String name,
                                                                   @RequestParam(required = false) CompetitionStatus status,
@@ -34,12 +38,14 @@ public class CompetitionController {
         return ResponseEntity.ok(service.findAll(name, status, pageable).map(mapper::toSummary));
     }
 
+    @Operation(summary = "Find competition by ID")
     @GetMapping("/{id}")
     public ResponseEntity<CompetitionResponse> findById(@PathVariable @Positive Long id) {
         Competition competition = service.findByIdOrThrowNotFound(id);
         return ResponseEntity.ok(mapper.toResponse(competition));
     }
 
+    @Operation(summary = "Create a new competition")
     @PostMapping
     public ResponseEntity<CompetitionResponse> save(@RequestBody @Valid CompetitionCreateRequest request) {
         Competition competition = mapper.toEntity(request);
@@ -51,6 +57,7 @@ public class CompetitionController {
         return ResponseEntity.created(location).body(mapper.toResponse(saved));
     }
 
+    @Operation(summary = "Change competition status (cancel competition)")
     @PatchMapping("/{id}/status")
     public ResponseEntity<CompetitionResponse> changeStatus(@PathVariable @Positive Long id,
                                                             @RequestBody @Valid CompetitionStatusRequest request) {
@@ -62,6 +69,7 @@ public class CompetitionController {
      * Free-form note: independent of status and can be set, changed, or cleared at
      * any time. Blank or missing text clears the value.
      */
+    @Operation(summary = "Update free-form notes on a competition")
     @PatchMapping("/{id}/notes")
     public ResponseEntity<CompetitionResponse> updateNotes(
             @PathVariable @Positive Long id,
@@ -70,6 +78,7 @@ public class CompetitionController {
         return ResponseEntity.ok(mapper.toResponse(competition));
     }
 
+    @Operation(summary = "Update competition by ID")
     @PutMapping("/{id}")
     public ResponseEntity<CompetitionResponse> update(@PathVariable @Positive Long id,
                                                      @RequestBody @Valid CompetitionUpdateRequest request) {

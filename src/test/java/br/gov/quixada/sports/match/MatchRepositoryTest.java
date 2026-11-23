@@ -121,8 +121,8 @@ class MatchRepositoryTest {
         var scenario = scenario();
         var ids = List.of(scenario.registration().getId());
 
-        assertThat(repository.existsTeamNaRound(ids, 1, -1L, MatchStatus.CANCELED)).isTrue();
-        assertThat(repository.existsTeamNaRound(ids, 2, -1L, MatchStatus.CANCELED)).isFalse();
+        assertThat(repository.existsTeamInRound(ids, 1, -1L, MatchStatus.CANCELED)).isTrue();
+        assertThat(repository.existsTeamInRound(ids, 2, -1L, MatchStatus.CANCELED)).isFalse();
     }
 
     @Test
@@ -131,8 +131,8 @@ class MatchRepositoryTest {
         var scenario = scenario();
         var ids = List.of(scenario.registration().getId());
 
-        assertThat(repository.existsConflitoScheduledAt(ids, SCHEDULED_AT, -1L, MatchStatus.CANCELED)).isTrue();
-        assertThat(repository.existsConflitoScheduledAt(ids, SCHEDULED_AT.plusHours(1), -1L, MatchStatus.CANCELED))
+        assertThat(repository.existsScheduleConflict(ids, SCHEDULED_AT, -1L, MatchStatus.CANCELED)).isTrue();
+        assertThat(repository.existsScheduleConflict(ids, SCHEDULED_AT.plusHours(1), -1L, MatchStatus.CANCELED))
                 .isFalse();
     }
 
@@ -149,5 +149,39 @@ class MatchRepositoryTest {
         var canceled = repository.findById(scenario.match().getId()).orElseThrow();
         assertThat(canceled.getStatus()).isEqualTo(MatchStatus.CANCELED);
         assertThat(canceled.getCanceledAt()).isEqualTo(now);
+    }
+
+    @Test
+    @DisplayName("should detect active matches by competition and category ignoring CANCELED matches")
+    void shouldCheckActiveMatchesByCompetitionAndCategory() {
+        var scenario = scenario();
+        Long compId = scenario.competition().getId();
+        Long catId = scenario.category().getId();
+
+        assertThat(repository.existsActiveByCompetitionAndCategory(compId, catId, MatchStatus.CANCELED))
+                .isTrue();
+
+        repository.cancelByCompetition(
+                compId,
+                List.of(MatchStatus.SCHEDULED, MatchStatus.IN_PROGRESS),
+                MatchStatus.CANCELED,
+                LocalDateTime.of(2026, 3, 10, 9, 0));
+        entityManager.clear();
+
+        assertThat(repository.existsActiveByCompetitionAndCategory(compId, catId, MatchStatus.CANCELED))
+                .isFalse();
+
+        var unscheduled = entityManager.persistFlushFind(Match.builder()
+                .round(2)
+                .scheduledAt(null)
+                .venue(null)
+                .homeRegistration(scenario.registration())
+                .awayRegistration(scenario.registration())
+                .status(MatchStatus.SCHEDULED)
+                .build());
+
+        assertThat(unscheduled.getScheduledAt()).isNull();
+        assertThat(repository.existsActiveByCompetitionAndCategory(compId, catId, MatchStatus.CANCELED))
+                .isTrue();
     }
 }

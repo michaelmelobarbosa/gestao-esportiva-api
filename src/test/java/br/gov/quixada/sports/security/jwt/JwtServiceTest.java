@@ -29,19 +29,42 @@ class JwtServiceTest {
 
     @BeforeEach
     void setUp() {
-        var properties = new TokenProperties(SECRET, ISSUER, Duration.ofHours(2));
+        var properties = new TokenProperties(SECRET, ISSUER, Duration.ofHours(2), Duration.ofDays(7));
         var clock = Clock.fixed(Instant.now(), ZoneId.of("America/Fortaleza"));
         service = new JwtService(properties, clock);
     }
 
     @Test
-    @DisplayName("should generate token and extract the email")
+    @DisplayName("should generate token with ver and role claims and extract email and claims")
     void shouldGenerateAndExtractEmail() {
-        var user = new User("john", "john@example.com", "hash", UserRole.USER);
+        var user = new User("john", "john@example.com", "hash", UserRole.ADMIN);
+        user.incrementTokenVersion();
+        user.incrementTokenVersion();
 
         var token = service.generateToken(user);
 
         assertThat(service.extractEmail(token)).isEqualTo("john@example.com");
+        var claims = service.extractClaims(token);
+        assertThat(claims.email()).isEqualTo("john@example.com");
+        assertThat(claims.tokenVersion()).isEqualTo(2);
+
+        var decoded = JWT.decode(token);
+        assertThat(decoded.getClaim("ver").asInt()).isEqualTo(2);
+        assertThat(decoded.getClaim("role").asString()).isEqualTo("ADMIN");
+    }
+
+    @Test
+    @DisplayName("should throw InvalidTokenException when ver claim is missing")
+    void shouldThrowWhenVerClaimIsMissing() {
+        var token = JWT.create()
+                .withIssuer(ISSUER)
+                .withSubject("john@example.com")
+                .withExpiresAt(Instant.now().plusSeconds(3600))
+                .sign(Algorithm.HMAC256(SECRET));
+
+        assertThatThrownBy(() -> service.extractClaims(token))
+                .isInstanceOf(InvalidTokenException.class)
+                .hasMessage("Invalid or expired token");
     }
 
     @Test

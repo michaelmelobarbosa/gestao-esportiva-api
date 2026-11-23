@@ -7,6 +7,8 @@ import br.gov.quixada.sports.match.dto.MatchResultRequest;
 import br.gov.quixada.sports.match.dto.MatchSummaryResponse;
 import br.gov.quixada.sports.match.dto.MatchStatusRequest;
 import br.gov.quixada.sports.match.dto.MatchUpdateRequest;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -23,11 +25,13 @@ import java.net.URI;
 @RequestMapping(path = "/v{version}/matches", version = "1.0")
 @RequiredArgsConstructor
 @Validated
+@Tag(name = "Matches", description = "Matches management and results")
 public class MatchController {
 
     private final MatchService service;
     private final MatchMapper mapper;
 
+    @Operation(summary = "List matches with optional competition, category, and status filter")
     @GetMapping
     public ResponseEntity<Page<MatchSummaryResponse>> findAll(
             @RequestParam(required = false) Long competitionId,
@@ -37,11 +41,13 @@ public class MatchController {
         return ResponseEntity.ok(service.findAll(competitionId, categoryId, status, pageable).map(mapper::toSummary));
     }
 
+    @Operation(summary = "Find match by ID")
     @GetMapping("/{id}")
     public ResponseEntity<MatchResponse> findById(@PathVariable @Positive Long id) {
         return ResponseEntity.ok(mapper.toResponse(service.findByIdOrThrowNotFound(id)));
     }
 
+    @Operation(summary = "Create a new match")
     @PostMapping
     public ResponseEntity<MatchResponse> save(@RequestBody @Valid MatchCreateRequest request) {
         Match match = service.create(request);
@@ -52,18 +58,21 @@ public class MatchController {
         return ResponseEntity.created(location).body(mapper.toResponse(match));
     }
 
+    @Operation(summary = "Update match details by ID")
     @PutMapping("/{id}")
     public ResponseEntity<MatchResponse> update(@PathVariable @Positive Long id,
                                                   @RequestBody @Valid MatchUpdateRequest request) {
         return ResponseEntity.ok(mapper.toResponse(service.update(id, request)));
     }
 
+    @Operation(summary = "Change match status (progress / cancel)")
     @PatchMapping("/{id}/status")
     public ResponseEntity<MatchResponse> changeStatus(@PathVariable @Positive Long id,
                                                          @RequestBody @Valid MatchStatusRequest request) {
         return ResponseEntity.ok(mapper.toResponse(service.changeStatus(id, request.status())));
     }
 
+    @Operation(summary = "Record match score result")
     @PatchMapping("/{id}/result")
     public ResponseEntity<MatchResponse> recordResult(@PathVariable @Positive Long id,
                                                               @RequestBody @Valid MatchResultRequest request) {
@@ -74,6 +83,7 @@ public class MatchController {
      * Free-form note: independent of status and can be set, changed, or cleared at
      * any time. Blank or missing text clears the value.
      */
+    @Operation(summary = "Update free-form notes on a match")
     @PatchMapping("/{id}/notes")
     public ResponseEntity<MatchResponse> updateNotes(
             @PathVariable @Positive Long id,

@@ -54,7 +54,7 @@ class JwtAuthenticationFilterTest {
     @DisplayName("should authenticate when the token is valid")
     void shouldAuthenticateWithValidToken() throws Exception {
         var user = new User("john", "john@example.com", "hash", UserRole.USER);
-        when(jwtService.extractEmail("token")).thenReturn("john@example.com");
+        when(jwtService.extractClaims("token")).thenReturn(new JwtService.TokenClaims("john@example.com", 0));
         when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
 
         var request = new MockHttpServletRequest();
@@ -73,7 +73,7 @@ class JwtAuthenticationFilterTest {
     @Test
     @DisplayName("should continue without authentication when the token is invalid")
     void shouldContinueWithoutAuthenticationWithInvalidToken() throws Exception {
-        when(jwtService.extractEmail("token")).thenThrow(new InvalidTokenException("Invalid or expired token"));
+        when(jwtService.extractClaims("token")).thenThrow(new InvalidTokenException("Invalid or expired token"));
 
         var request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer token");
@@ -94,7 +94,7 @@ class JwtAuthenticationFilterTest {
 
         filter.doFilter(request, new MockHttpServletResponse(), chain);
 
-        verify(jwtService, never()).extractEmail(anyString());
+        verify(jwtService, never()).extractClaims(anyString());
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         assertThat(chain.getRequest()).isSameAs(request);
     }
@@ -102,7 +102,7 @@ class JwtAuthenticationFilterTest {
     @Test
     @DisplayName("should continue without authentication when the token user does not exist")
     void shouldContinueWithoutAuthenticationWhenUserDoesNotExist() throws Exception {
-        when(jwtService.extractEmail("token")).thenReturn("missing@example.com");
+        when(jwtService.extractClaims("token")).thenReturn(new JwtService.TokenClaims("missing@example.com", 0));
         when(userRepository.findByEmail("missing@example.com")).thenReturn(Optional.empty());
 
         var request = new MockHttpServletRequest();
@@ -120,7 +120,24 @@ class JwtAuthenticationFilterTest {
     void shouldNotAuthenticateInactiveUser() throws Exception {
         var user = new User("john", "john@example.com", "hash", UserRole.USER);
         user.setStatus(br.gov.quixada.sports.security.users.UserStatus.INACTIVE);
-        when(jwtService.extractEmail("token")).thenReturn("john@example.com");
+        when(jwtService.extractClaims("token")).thenReturn(new JwtService.TokenClaims("john@example.com", 0));
+        when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
+
+        var request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer token");
+        var chain = new MockFilterChain();
+
+        filter.doFilter(request, new MockHttpServletResponse(), chain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
+    @DisplayName("should not authenticate when token ver claim does not match user tokenVersion")
+    void shouldNotAuthenticateWhenTokenVersionMismatches() throws Exception {
+        var user = new User("john", "john@example.com", "hash", UserRole.USER);
+        user.incrementTokenVersion();
+        when(jwtService.extractClaims("token")).thenReturn(new JwtService.TokenClaims("john@example.com", 0));
         when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
 
         var request = new MockHttpServletRequest();

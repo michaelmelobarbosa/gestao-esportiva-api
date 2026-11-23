@@ -49,7 +49,7 @@ class CompetitionStatusSchedulerTest {
         var canceled = competition(CompetitionStatus.CANCELED);
         when(repository.findAll()).thenReturn(List.of(completed, canceled));
 
-        scheduler.sincronizar();
+        scheduler.syncStatuses();
 
         assertThat(completed.getStatus()).isEqualTo(CompetitionStatus.COMPLETED);
         assertThat(canceled.getStatus()).isEqualTo(CompetitionStatus.CANCELED);

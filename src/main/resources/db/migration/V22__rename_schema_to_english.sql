@@ -117,7 +117,7 @@ alter table db_athlete_registration
 
 -- athlete.gender
 alter table db_athletes
-    modify column gender enum('FEMININO','MASCULINO','FEMALE','MALE') not null;
+    change column sexo gender enum('FEMININO','MASCULINO','FEMALE','MALE') not null;
 update db_athletes
 set gender = case gender when 'MASCULINO' then 'MALE' else 'FEMALE' end;
 alter table db_athletes

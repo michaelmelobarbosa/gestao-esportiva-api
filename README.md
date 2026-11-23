@@ -34,6 +34,9 @@ REST API for managing sports competitions: athletes, clubs, teams, modalities, c
    | `MYSQL_ROOT_PASSWORD` | container root password |
    | `API_SECURITY_TOKEN_SECRET` | JWT secret (minimum 32 characters) |
    | `API_CORS_ALLOWED_ORIGINS` | optional in dev; comma-separated front-end origins (default `http://localhost:3000,http://localhost:5173`) |
+   | `API_OPENAPI_ENABLED` | optional; enables OpenAPI `/v3/api-docs` and Swagger UI `/swagger-ui.html` (default `true` in dev, `false` in prod) |
+   | `API_SECURITY_REFRESH_TOKEN_EXPIRATION` | optional; duration for refresh token expiration (default `7d`) |
+   | `API_AUDIT_RETENTION_DAYS` | optional; number of days to retain user audit logs before purge (default `365`) |
 
    > Never commit the `.env` or real secrets.
 
@@ -83,16 +86,27 @@ Tests use the `test` profile + in-memory H2 and **do not need MySQL/Docker**:
 ./mvnw verify
 ```
 
+Integration tests requiring real MySQL dialect, constraints, and Flyway validation (`MySqlFlywayAndConstraintsTest`) extend `AbstractMySqlIntegrationTest` using Testcontainers 2.0.5 (`mysql:8.4`, `@Testcontainers(disabledWithoutDocker = true)`). They automatically run when Docker is available and are cleanly skipped if Docker daemon is offline.
+
 ## Authentication and authorization
 
 - `POST /v1/auth/register` — creates a user with the `USER` role.
   ```json
   { "username": "john", "email": "john@example.com", "password": "strongPassword123" }
   ```
-- `POST /v1/auth/login` — authenticates by email and returns the token.
+- `POST /v1/auth/login` — authenticates by email and returns both access and refresh tokens.
   ```json
   { "email": "john@example.com", "password": "strongPassword123" }
   ```
+  Response (`LoginResponse`):
+  ```json
+  { "token": "<jwt-access-token>", "refreshToken": "<opaque-refresh-token>" }
+  ```
+- `POST /v1/auth/refresh` — rotates the refresh token and issues a new access token (with token family reuse detection and automatic revocation).
+  ```json
+  { "refreshToken": "<opaque-refresh-token>" }
+  ```
+- `POST /v1/auth/logout` — authenticated endpoint (`Authorization: Bearer <token>`) that revokes the user's refresh tokens and increments their `tokenVersion` for immediate token revocation.
 - Send the token on protected routes: `Authorization: Bearer <token>`.
 
 Roles:
@@ -120,10 +134,20 @@ Native Spring versioning by the first path segment. All resources use `/vN/...` 
 | Athlete registrations | `/v1/athlete-registrations` |
 | Team registrations | `/v1/team-registrations` |
 | Matches | `/v1/matches` |
+| Match schedule generation | `POST /v1/competitions/{id}/categories/{catId}/matches/generate` |
 | Users | `/v1/users` |
+| User audit export | `GET /v1/users/audit/export` |
 | Standings | `/v1/competitions/{id}/categories/{catId}/standings` |
 
-An unsupported version (e.g., `/v9/...`) responds with `400`. Paths outside the `/vN/...` pattern (e.g., `/error`) are not versioned.
+An unsupported version (e.g., `/v9/...`) responds with `400`. Paths outside the `/vN/...` pattern (e.g., `/error`, `/v3/api-docs`, `/swagger-ui`) are not versioned.
+
+### OpenAPI & Swagger UI
+
+Interactive API documentation is powered by Springdoc OpenAPI 3.2.1:
+- Swagger UI: `http://localhost:8080/swagger-ui.html` (or `http://localhost:8080/swagger-ui/index.html`)
+- OpenAPI JSON Spec: `http://localhost:8080/v3/api-docs`
+
+These endpoints are excluded from URL path versioning and are publicly accessible. In the `prod` profile, OpenAPI and Swagger UI are disabled by default for security, but can be enabled by setting `API_OPENAPI_ENABLED=true`.
 
 Decision: versioning by **URL** (`/v1`), chosen for simplicity and browser compatibility. The header-based alternative (`Accept: application/vnd.sports.v1+json`) was rejected. Evolution: a future `/v2` must keep `/v1` available for a deprecation period before removal.
 

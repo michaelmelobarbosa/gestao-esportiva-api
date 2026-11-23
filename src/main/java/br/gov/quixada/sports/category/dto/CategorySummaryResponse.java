@@ -7,6 +7,8 @@ public record CategorySummaryResponse(
         String name,
         Integer minAge,
         Integer maxAge,
+        Integer minAthletes,
+        Integer maxAthletes,
         Long competitionId,
         CategoryStatus status
 ) {

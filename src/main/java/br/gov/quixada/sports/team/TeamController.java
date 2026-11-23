@@ -5,6 +5,8 @@ import br.gov.quixada.sports.team.dto.TeamResponse;
 import br.gov.quixada.sports.team.dto.TeamSummaryResponse;
 import br.gov.quixada.sports.team.dto.TeamStatusRequest;
 import br.gov.quixada.sports.team.dto.TeamUpdateRequest;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -21,11 +23,13 @@ import java.net.URI;
 @RequestMapping(path = "/v{version}/teams", version = "1.0")
 @RequiredArgsConstructor
 @Validated
+@Tag(name = "Teams", description = "Teams management")
 public class TeamController {
 
     private final TeamService service;
     private final TeamMapper mapper;
 
+    @Operation(summary = "List teams with optional name and status filter")
     @GetMapping
     public ResponseEntity<Page<TeamSummaryResponse>> findAll(@RequestParam(required = false) String name,
                                                               @RequestParam(required = false) TeamStatus status,
@@ -33,12 +37,14 @@ public class TeamController {
         return ResponseEntity.ok(service.findAll(name, status, pageable).map(mapper::toSummary));
     }
 
+    @Operation(summary = "Find team by ID")
     @GetMapping("/{id}")
     public ResponseEntity<TeamResponse> findById(@PathVariable @Positive Long id) {
         Team team = service.findByIdOrThrowNotFound(id);
         return ResponseEntity.ok(mapper.toResponse(team));
     }
 
+    @Operation(summary = "Create a new team")
     @PostMapping
     public ResponseEntity<TeamResponse> save(@RequestBody @Valid TeamCreateRequest request) {
         Team team = mapper.toEntity(request);
@@ -50,6 +56,7 @@ public class TeamController {
         return ResponseEntity.created(location).body(mapper.toResponse(saved));
     }
 
+    @Operation(summary = "Change team status (activate / deactivate)")
     @PatchMapping("/{id}/status")
     public ResponseEntity<TeamResponse> changeStatus(@PathVariable @Positive Long id,
                                                         @RequestBody @Valid TeamStatusRequest request) {
@@ -57,6 +64,7 @@ public class TeamController {
         return ResponseEntity.ok(mapper.toResponse(team));
     }
 
+    @Operation(summary = "Update team by ID")
     @PutMapping("/{id}")
     public ResponseEntity<TeamResponse> update(@PathVariable @Positive Long id,
                                                  @RequestBody @Valid TeamUpdateRequest request) {

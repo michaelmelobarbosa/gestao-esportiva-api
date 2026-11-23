@@ -2,6 +2,7 @@ package br.gov.quixada.sports.category.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
@@ -16,6 +17,10 @@ public record CategoryCreateRequest(
         @PositiveOrZero(message = "Max age must be zero or positive")
         Integer maxAge,
         @NotNull(message = "Competition is required")
-        Long competitionId
+        Long competitionId,
+        @Positive(message = "Min athletes must be positive")
+        Integer minAthletes,
+        @Positive(message = "Max athletes must be positive")
+        Integer maxAthletes
 ) {
 }

@@ -28,19 +28,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         var token = this.resolveToken(request);
         if (token != null) {
-            this.autenticar(token);
+            this.authenticate(token);
         }
         filterChain.doFilter(request, response);
     }
 
-    private void autenticar(String token) {
+    private void authenticate(String token) {
         try {
-            var email = jwtService.extractEmail(token);
-            userRepository.findByEmail(email).map(UserDetailsAdapter::new)
-                    .filter(UserDetailsAdapter::isEnabled).ifPresent(userDetails -> {
-                var authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-            });
+            var claims = jwtService.extractClaims(token);
+            userRepository.findByEmail(claims.email()).map(UserDetailsAdapter::new)
+                    .filter(UserDetailsAdapter::isEnabled)
+                    .filter(userDetails -> userDetails.user().getTokenVersion() == claims.tokenVersion())
+                    .ifPresent(userDetails -> {
+                        var authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                    });
         } catch (InvalidTokenException e) {
             SecurityContextHolder.clearContext();
         }

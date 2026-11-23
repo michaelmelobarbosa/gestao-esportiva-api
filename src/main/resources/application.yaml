@@ -23,6 +23,7 @@ api:
       secret: ${API_SECURITY_TOKEN_SECRET}
       issuer: sports-management-api
       expiration: 2h
+      refresh-expiration: 7d
 
     login-rate-limit:
       max-per-ip: 100
@@ -32,3 +33,8 @@ api:
 
   cors:
     allowed-origins: ${API_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+
+  audit:
+    retention-days: 365
+    purge-cron: "0 0 3 * * *"
+    export-max-rows: 10000

@@ -41,7 +41,7 @@ public class Match {
     @Column(nullable = false)
     private Integer round;
 
-    @Column(nullable = false)
+    @Column
     private LocalDateTime scheduledAt;
 
     @Column(length = 150)
