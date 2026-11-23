@@ -64,7 +64,7 @@ public class Competition {
     private LocalDateTime canceledAt;
 
     /** Manual cancellation (terminal). */
-    public void cancelar(LocalDateTime now) {
+    public void cancel(LocalDateTime now) {
         this.status = CompetitionStatus.CANCELED;
         this.canceledAt = now;
     }
@@ -82,30 +82,30 @@ public class Competition {
     }
 
     /** Recalculates the status based on the dates; CANCELED is terminal. */
-    public void syncStatus(LocalDate hoje) {
+    public void syncStatus(LocalDate today) {
         if (this.status == CompetitionStatus.CANCELED) {
             return;
         }
-        this.status = calculateStatus(hoje);
+        this.status = calculateStatus(today);
     }
 
-    public CompetitionStatus calculateStatus(LocalDate hoje) {
+    public CompetitionStatus calculateStatus(LocalDate today) {
         if (this.status == CompetitionStatus.CANCELED) {
             return CompetitionStatus.CANCELED;
         }
         if (registrationStartDate == null || registrationEndDate == null || startDate == null || endDate == null) {
             return this.status != null ? this.status : CompetitionStatus.PLANNING;
         }
-        if (hoje.isAfter(this.endDate)) {
+        if (today.isAfter(this.endDate)) {
             return CompetitionStatus.COMPLETED;
         }
-        if (!hoje.isBefore(this.startDate)) {
+        if (!today.isBefore(this.startDate)) {
             return CompetitionStatus.IN_PROGRESS;
         }
-        if (hoje.isAfter(this.registrationEndDate)) {
+        if (today.isAfter(this.registrationEndDate)) {
             return CompetitionStatus.REGISTRATION_CLOSED;
         }
-        if (!hoje.isBefore(this.registrationStartDate)) {
+        if (!today.isBefore(this.registrationStartDate)) {
             return CompetitionStatus.REGISTRATION_OPEN;
         }
         return CompetitionStatus.PLANNING;

@@ -17,8 +17,8 @@ public class CompetitionStatusScheduler {
 
     @Scheduled(cron = "0 0 * * * *")
     @Transactional
-    public void sincronizar() {
-        var hoje = LocalDate.now(clock);
-        repository.findAll().forEach(competition -> competition.syncStatus(hoje));
+    public void syncStatuses() {
+        var today = LocalDate.now(clock);
+        repository.findAll().forEach(competition -> competition.syncStatus(today));
     }
 }

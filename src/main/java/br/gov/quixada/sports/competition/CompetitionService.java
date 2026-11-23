@@ -65,7 +65,7 @@ public class CompetitionService {
             return competition;
         }
 
-        competition.cancelar(LocalDateTime.now(clock));
+        competition.cancel(LocalDateTime.now(clock));
         teamRegistrationService.cancelByCompetition(id);
         matchService.cancelByCompetition(id);
         return competition;
