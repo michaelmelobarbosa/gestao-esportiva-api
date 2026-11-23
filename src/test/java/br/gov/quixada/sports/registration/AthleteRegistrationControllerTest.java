@@ -26,6 +26,7 @@ import br.gov.quixada.sports.registration.exception.AthleteOutsideCategoryExcept
 import br.gov.quixada.sports.registration.exception.AthleteRegistrationNotFoundException;
 import br.gov.quixada.sports.registration.exception.JerseyNumberAlreadyUsedException;
 import br.gov.quixada.sports.registration.exception.LastActiveAthleteException;
+import br.gov.quixada.sports.registration.exception.RosterLimitExceededException;
 import br.gov.quixada.sports.support.ControllerTestSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -154,6 +155,21 @@ class AthleteRegistrationControllerTest {
                             .content(VALID_CREATE_JSON))
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.message").value("Athlete already registered in this competition"));
+        }
+
+        @Test
+        @DisplayName("should return 409 when category maxAthletes limit is exceeded")
+        void shouldReturn409WhenRosterLimitExceeded() throws Exception {
+            var registration = aRegistration(RegistrationStatus.PENDING, "10");
+            when(mapper.toEntity(any(AthleteRegistrationCreateRequest.class))).thenReturn(registration);
+            when(service.save(same(registration), eq(10L), eq(50L)))
+                    .thenThrow(new RosterLimitExceededException("Maximum roster limit reached"));
+
+            mockMvc.perform(post("/v1/athlete-registrations")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(VALID_CREATE_JSON))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.message").value("Maximum roster limit reached"));
         }
     }
 

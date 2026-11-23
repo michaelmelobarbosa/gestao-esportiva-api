@@ -5,6 +5,8 @@ import br.gov.quixada.sports.registration.dto.TeamRegistrationNotesRequest;
 import br.gov.quixada.sports.registration.dto.TeamRegistrationResponse;
 import br.gov.quixada.sports.registration.dto.TeamRegistrationSummaryResponse;
 import br.gov.quixada.sports.registration.dto.TeamRegistrationStatusRequest;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -21,11 +23,13 @@ import java.net.URI;
 @RequestMapping(path = "/v{version}/team-registrations", version = "1.0")
 @RequiredArgsConstructor
 @Validated
+@Tag(name = "Team Registrations", description = "Team enrollments in competitions")
 public class TeamRegistrationController {
 
     private final TeamRegistrationService service;
     private final TeamRegistrationMapper mapper;
 
+    @Operation(summary = "List team registrations with optional competition and status filter")
     @GetMapping
     public ResponseEntity<Page<TeamRegistrationSummaryResponse>> findAll(@RequestParam(required = false) Long competitionId,
                                                                        @RequestParam(required = false) RegistrationStatus status,
@@ -33,12 +37,14 @@ public class TeamRegistrationController {
         return ResponseEntity.ok(service.findAll(competitionId, status, pageable).map(mapper::toSummary));
     }
 
+    @Operation(summary = "Find team registration by ID")
     @GetMapping("/{id}")
     public ResponseEntity<TeamRegistrationResponse> findById(@PathVariable @Positive Long id) {
         TeamRegistration registration = service.findByIdOrThrowNotFound(id);
         return ResponseEntity.ok(mapper.toResponse(registration));
     }
 
+    @Operation(summary = "Enroll team in a competition category")
     @PostMapping
     public ResponseEntity<TeamRegistrationResponse> save(@RequestBody @Valid TeamRegistrationCreateRequest request) {
         TeamRegistration registration = mapper.toEntity(request);
@@ -50,6 +56,7 @@ public class TeamRegistrationController {
         return ResponseEntity.created(location).body(mapper.toResponse(saved));
     }
 
+    @Operation(summary = "Change team registration status")
     @PatchMapping("/{id}/status")
     public ResponseEntity<TeamRegistrationResponse> changeStatus(@PathVariable @Positive Long id,
                                                                  @RequestBody @Valid TeamRegistrationStatusRequest request) {
@@ -61,6 +68,7 @@ public class TeamRegistrationController {
      * Free-form note: independent of status and can be set, changed, or cleared at
      * any time. Blank or missing text clears the value.
      */
+    @Operation(summary = "Update free-form notes on a team registration")
     @PatchMapping("/{id}/notes")
     public ResponseEntity<TeamRegistrationResponse> updateNotes(
             @PathVariable @Positive Long id,

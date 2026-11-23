@@ -25,6 +25,7 @@ import br.gov.quixada.sports.category.exception.CategoryNotFoundException;
 import br.gov.quixada.sports.category.exception.DuplicateCategoryException;
 import br.gov.quixada.sports.category.exception.InactiveCategoryException;
 import br.gov.quixada.sports.category.exception.InvalidAgeException;
+import br.gov.quixada.sports.category.exception.InvalidRosterLimitException;
 import br.gov.quixada.sports.common.error.ActiveReferenceException;
 import br.gov.quixada.sports.support.ControllerTestSupport;
 import org.junit.jupiter.api.BeforeEach;
@@ -86,11 +87,11 @@ class CategoryControllerTest {
     }
 
     private CategoryResponse aResponse(CategoryStatus status) {
-        return new CategoryResponse(1L, "U-17", 15, 17, 100L, "Municipal Cup", status);
+        return new CategoryResponse(1L, "U-17", 15, 17, null, null, 100L, "Municipal Cup", status);
     }
 
     private CategorySummaryResponse aSummary(CategoryStatus status) {
-        return new CategorySummaryResponse(1L, "U-17", 15, 17, 100L, status);
+        return new CategorySummaryResponse(1L, "U-17", 15, 17, null, null, 100L, status);
     }
 
     @Nested
@@ -129,6 +130,50 @@ class CategoryControllerTest {
         }
 
         @Test
+        @DisplayName("should return 400 when minAthletes is non-positive")
+        void shouldReturn400WhenMinAthletesIsNonPositive() throws Exception {
+            String json = """
+                    {
+                      "name": "U-17",
+                      "minAge": 15,
+                      "maxAge": 17,
+                      "competitionId": 100,
+                      "minAthletes": 0
+                    }
+                    """;
+
+            mockMvc.perform(post("/v1/categories")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.errors[0].field").value("minAthletes"));
+
+            verifyNoInteractions(service);
+        }
+
+        @Test
+        @DisplayName("should return 400 when maxAthletes is non-positive")
+        void shouldReturn400WhenMaxAthletesIsNonPositive() throws Exception {
+            String json = """
+                    {
+                      "name": "U-17",
+                      "minAge": 15,
+                      "maxAge": 17,
+                      "competitionId": 100,
+                      "maxAthletes": 0
+                    }
+                    """;
+
+            mockMvc.perform(post("/v1/categories")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.errors[0].field").value("maxAthletes"));
+
+            verifyNoInteractions(service);
+        }
+
+        @Test
         @DisplayName("should return 400 when minAge exceeds maxAge")
         void shouldReturn400WhenMinGreaterThanMax() throws Exception {
             var category = aCategory(CategoryStatus.ACTIVE);
@@ -156,6 +201,21 @@ class CategoryControllerTest {
                             .content(VALID_CREATE_JSON))
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.message").value("Duplicate age range in competition"));
+        }
+
+        @Test
+        @DisplayName("should return 400 when minAthletes exceeds maxAthletes")
+        void shouldReturn400WhenRosterLimitsInvalid() throws Exception {
+            var category = aCategory(CategoryStatus.ACTIVE);
+            when(mapper.toEntity(any(CategoryCreateRequest.class))).thenReturn(category);
+            when(service.save(same(category), eq(100L)))
+                    .thenThrow(new InvalidRosterLimitException("minAthletes cannot exceed maxAthletes"));
+
+            mockMvc.perform(post("/v1/categories")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(VALID_CREATE_JSON))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("minAthletes cannot exceed maxAthletes"));
         }
     }
 

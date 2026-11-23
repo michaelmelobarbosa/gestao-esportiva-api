@@ -16,6 +16,7 @@ import java.util.Optional;
 import br.gov.quixada.sports.category.exception.InactiveCategoryException;
 import br.gov.quixada.sports.category.exception.CategoryNotFoundException;
 import br.gov.quixada.sports.category.exception.InvalidAgeException;
+import br.gov.quixada.sports.category.exception.InvalidRosterLimitException;
 import br.gov.quixada.sports.category.exception.DuplicateCategoryException;
 import br.gov.quixada.sports.common.error.ActiveReferenceException;
 import br.gov.quixada.sports.registration.RegistrationStatus;
@@ -187,6 +188,52 @@ class CategoryServiceTest {
                     .isInstanceOf(CompetitionNotFoundException.class)
                     .hasMessage("Competition not found");
         }
+
+        @Test
+        @DisplayName("should throw InvalidRosterLimitException when minAthletes is less than 1")
+        void shouldThrowInvalidRosterLimitWhenMinAthletesLessThanOne() {
+            Category category = Category.builder()
+                    .name("Sub-15")
+                    .minAge(13)
+                    .maxAge(15)
+                    .minAthletes(0)
+                    .build();
+
+            assertThatThrownBy(() -> service.save(category, 1L))
+                    .isInstanceOf(InvalidRosterLimitException.class)
+                    .hasMessage("Min athletes must be at least 1");
+        }
+
+        @Test
+        @DisplayName("should throw InvalidRosterLimitException when maxAthletes is less than 1")
+        void shouldThrowInvalidRosterLimitWhenMaxAthletesLessThanOne() {
+            Category category = Category.builder()
+                    .name("Sub-15")
+                    .minAge(13)
+                    .maxAge(15)
+                    .maxAthletes(0)
+                    .build();
+
+            assertThatThrownBy(() -> service.save(category, 1L))
+                    .isInstanceOf(InvalidRosterLimitException.class)
+                    .hasMessage("Max athletes must be at least 1");
+        }
+
+        @Test
+        @DisplayName("should throw InvalidRosterLimitException when minAthletes exceeds maxAthletes")
+        void shouldThrowInvalidRosterLimitWhenMinExceedsMax() {
+            Category category = Category.builder()
+                    .name("Sub-15")
+                    .minAge(13)
+                    .maxAge(15)
+                    .minAthletes(12)
+                    .maxAthletes(10)
+                    .build();
+
+            assertThatThrownBy(() -> service.save(category, 1L))
+                    .isInstanceOf(InvalidRosterLimitException.class)
+                    .hasMessage("Min athletes cannot be greater than max athletes");
+        }
     }
 
     @Nested
@@ -267,11 +314,13 @@ class CategoryServiceTest {
                     .name("Sub-17")
                     .minAge(15)
                     .maxAge(17)
+                    .minAthletes(5)
+                    .maxAthletes(15)
                     .build();
         }
 
         @Test
-        @DisplayName("should copy name and ages and not call save")
+        @DisplayName("should copy name, ages, and roster limits and not call save")
         void shouldUpdateDetailsWhenActive() {
             Category existing = aCategory(CategoryStatus.ACTIVE);
             when(repository.findById(1L)).thenReturn(Optional.of(existing));
@@ -282,7 +331,28 @@ class CategoryServiceTest {
             assertThat(result.getName()).isEqualTo("Sub-17");
             assertThat(result.getMinAge()).isEqualTo(15);
             assertThat(result.getMaxAge()).isEqualTo(17);
+            assertThat(result.getMinAthletes()).isEqualTo(5);
+            assertThat(result.getMaxAthletes()).isEqualTo(15);
+            assertThat(result.effectiveMinAthletes()).isEqualTo(5);
             verify(repository, never()).save(any(Category.class));
+        }
+
+        @Test
+        @DisplayName("should throw InvalidRosterLimitException when updated minAthletes exceeds maxAthletes")
+        void shouldThrowInvalidRosterLimitOnUpdate() {
+            Category existing = aCategory(CategoryStatus.ACTIVE);
+            when(repository.findById(1L)).thenReturn(Optional.of(existing));
+            Category invalidLimits = Category.builder()
+                    .name("Sub-17")
+                    .minAge(15)
+                    .maxAge(17)
+                    .minAthletes(10)
+                    .maxAthletes(8)
+                    .build();
+
+            assertThatThrownBy(() -> service.update(1L, invalidLimits))
+                    .isInstanceOf(InvalidRosterLimitException.class)
+                    .hasMessage("Min athletes cannot be greater than max athletes");
         }
 
         @Test

@@ -34,6 +34,8 @@ class CategoryMapperTest {
                 .name("U-17")
                 .minAge(15)
                 .maxAge(17)
+                .minAthletes(5)
+                .maxAthletes(12)
                 .competition(competition)
                 .status(CategoryStatus.ACTIVE)
                 .build();
@@ -42,7 +44,7 @@ class CategoryMapperTest {
     @Test
     @DisplayName("toEntity(CategoryCreateRequest) should map fields and ignore id, competition, and status")
     void createRequestToEntity() {
-        var request = new CategoryCreateRequest("U-17", 15, 17, 100L);
+        var request = new CategoryCreateRequest("U-17", 15, 17, 100L, 5, 12);
 
         Category entity = mapper.toEntity(request);
 
@@ -52,12 +54,14 @@ class CategoryMapperTest {
         assertThat(entity.getName()).isEqualTo("U-17");
         assertThat(entity.getMinAge()).isEqualTo(15);
         assertThat(entity.getMaxAge()).isEqualTo(17);
+        assertThat(entity.getMinAthletes()).isEqualTo(5);
+        assertThat(entity.getMaxAthletes()).isEqualTo(12);
     }
 
     @Test
     @DisplayName("toEntity(CategoryUpdateRequest) should map fields and ignore id, competition, and status")
     void updateRequestToEntity() {
-        var request = new CategoryUpdateRequest("U-18", 16, 18);
+        var request = new CategoryUpdateRequest("U-18", 16, 18, 6, 15);
 
         Category entity = mapper.toEntity(request);
 
@@ -67,10 +71,12 @@ class CategoryMapperTest {
         assertThat(entity.getName()).isEqualTo("U-18");
         assertThat(entity.getMinAge()).isEqualTo(16);
         assertThat(entity.getMaxAge()).isEqualTo(18);
+        assertThat(entity.getMinAthletes()).isEqualTo(6);
+        assertThat(entity.getMaxAthletes()).isEqualTo(15);
     }
 
     @Test
-    @DisplayName("toResponse, toSummary, and toSummaryList should map competition fields")
+    @DisplayName("toResponse, toSummary, and toSummaryList should map competition and roster limit fields")
     void toResponseAndSummaryShouldFlattenCompetition() {
         var category = aCategory();
 
@@ -79,11 +85,15 @@ class CategoryMapperTest {
         var list = mapper.toSummaryList(List.of(category));
 
         assertThat(response.id()).isEqualTo(1L);
+        assertThat(response.minAthletes()).isEqualTo(5);
+        assertThat(response.maxAthletes()).isEqualTo(12);
         assertThat(response.competitionId()).isEqualTo(100L);
         assertThat(response.competitionName()).isEqualTo("Municipal Cup");
         assertThat(response.status()).isEqualTo(CategoryStatus.ACTIVE);
 
         assertThat(summary.id()).isEqualTo(1L);
+        assertThat(summary.minAthletes()).isEqualTo(5);
+        assertThat(summary.maxAthletes()).isEqualTo(12);
         assertThat(summary.competitionId()).isEqualTo(100L);
         assertThat(list).containsExactly(summary);
     }

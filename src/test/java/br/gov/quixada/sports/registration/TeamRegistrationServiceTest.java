@@ -31,6 +31,7 @@ import br.gov.quixada.sports.team.exception.TeamNotFoundException;
 import br.gov.quixada.sports.registration.exception.TeamAlreadyRegisteredException;
 import br.gov.quixada.sports.registration.exception.TeamRegistrationNotFoundException;
 import br.gov.quixada.sports.registration.exception.TeamRegistrationWithoutAthletesException;
+import br.gov.quixada.sports.registration.exception.RosterLimitExceededException;
 import br.gov.quixada.sports.registration.exception.InvalidRegistrationException;
 import br.gov.quixada.sports.registration.exception.RegistrationClosedException;
 import br.gov.quixada.sports.registration.exception.InvalidStatusTransitionException;
@@ -427,6 +428,96 @@ class TeamRegistrationServiceTest {
             assertThatThrownBy(() -> service.changeStatus(1L, RegistrationStatus.APPROVED))
                     .isInstanceOf(TeamRegistrationWithoutAthletesException.class)
                     .hasMessage("Team registration requires at least one athlete to be approved");
+        }
+
+        @Test
+        @DisplayName("should reject approving a team with fewer athletes than category minAthletes")
+        void shouldRejectApprovalBelowCategoryMinAthletes() {
+            Competition competition = aCompetition(1L, 10L, CompetitionStatus.REGISTRATION_OPEN);
+            Category category = Category.builder()
+                    .id(2L)
+                    .name("Sub-15")
+                    .minAge(13)
+                    .maxAge(15)
+                    .minAthletes(5)
+                    .maxAthletes(12)
+                    .competition(competition)
+                    .status(CategoryStatus.ACTIVE)
+                    .build();
+            TeamRegistration registration = TeamRegistration.builder()
+                    .id(1L)
+                    .status(RegistrationStatus.PENDING)
+                    .competition(competition)
+                    .category(category)
+                    .team(aTeam(3L, 10L, TeamStatus.ACTIVE))
+                    .build();
+            when(repository.findById(1L)).thenReturn(Optional.of(registration));
+            when(athleteRegistrationRepository.countByTeamRegistrationIdAndStatusIn(eq(1L), anyCollection()))
+                    .thenReturn(4L);
+
+            assertThatThrownBy(() -> service.changeStatus(1L, RegistrationStatus.APPROVED))
+                    .isInstanceOf(TeamRegistrationWithoutAthletesException.class)
+                    .hasMessage("Team registration requires at least 5 athletes to be approved");
+        }
+
+        @Test
+        @DisplayName("should reject approving a team with more athletes than category maxAthletes")
+        void shouldRejectApprovalAboveCategoryMaxAthletes() {
+            Competition competition = aCompetition(1L, 10L, CompetitionStatus.REGISTRATION_OPEN);
+            Category category = Category.builder()
+                    .id(2L)
+                    .name("Sub-15")
+                    .minAge(13)
+                    .maxAge(15)
+                    .minAthletes(5)
+                    .maxAthletes(12)
+                    .competition(competition)
+                    .status(CategoryStatus.ACTIVE)
+                    .build();
+            TeamRegistration registration = TeamRegistration.builder()
+                    .id(1L)
+                    .status(RegistrationStatus.PENDING)
+                    .competition(competition)
+                    .category(category)
+                    .team(aTeam(3L, 10L, TeamStatus.ACTIVE))
+                    .build();
+            when(repository.findById(1L)).thenReturn(Optional.of(registration));
+            when(athleteRegistrationRepository.countByTeamRegistrationIdAndStatusIn(eq(1L), anyCollection()))
+                    .thenReturn(13L);
+
+            assertThatThrownBy(() -> service.changeStatus(1L, RegistrationStatus.APPROVED))
+                    .isInstanceOf(RosterLimitExceededException.class)
+                    .hasMessage("Team registration exceeds the category maximum of 12 athletes");
+        }
+
+        @Test
+        @DisplayName("should approve a team when athletes count is within custom category minAthletes and maxAthletes")
+        void shouldApproveWithinCustomRosterLimits() {
+            Competition competition = aCompetition(1L, 10L, CompetitionStatus.REGISTRATION_OPEN);
+            Category category = Category.builder()
+                    .id(2L)
+                    .name("Sub-15")
+                    .minAge(13)
+                    .maxAge(15)
+                    .minAthletes(5)
+                    .maxAthletes(12)
+                    .competition(competition)
+                    .status(CategoryStatus.ACTIVE)
+                    .build();
+            TeamRegistration registration = TeamRegistration.builder()
+                    .id(1L)
+                    .status(RegistrationStatus.PENDING)
+                    .competition(competition)
+                    .category(category)
+                    .team(aTeam(3L, 10L, TeamStatus.ACTIVE))
+                    .build();
+            when(repository.findById(1L)).thenReturn(Optional.of(registration));
+            when(athleteRegistrationRepository.countByTeamRegistrationIdAndStatusIn(eq(1L), anyCollection()))
+                    .thenReturn(7L);
+
+            TeamRegistration result = service.changeStatus(1L, RegistrationStatus.APPROVED);
+
+            assertThat(result.getStatus()).isEqualTo(RegistrationStatus.APPROVED);
         }
 
         @Test

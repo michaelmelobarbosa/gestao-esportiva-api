@@ -21,15 +21,15 @@ public enum RegistrationStatus {
         return FREE_SLOT.contains(this);
     }
 
-    public boolean canTransitionTo(RegistrationStatus novo) {
-        if (this == novo) {
+    public boolean canTransitionTo(RegistrationStatus target) {
+        if (this == target) {
             return true;
         }
         return switch (this) {
-            case PENDING -> novo == APPROVED || novo == REJECTED || novo == CANCELED || novo == INACTIVE;
-            case APPROVED -> novo == CANCELED || novo == INACTIVE;
-            case REJECTED -> novo == PENDING || novo == CANCELED;
-            case INACTIVE -> novo == PENDING;
+            case PENDING -> target == APPROVED || target == REJECTED || target == CANCELED || target == INACTIVE;
+            case APPROVED -> target == CANCELED || target == INACTIVE;
+            case REJECTED -> target == PENDING || target == CANCELED;
+            case INACTIVE -> target == PENDING;
             case CANCELED -> false;
         };
     }

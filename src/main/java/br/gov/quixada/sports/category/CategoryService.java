@@ -88,7 +88,9 @@ public class CategoryService {
         existingCategory.updateDetails(
                 categoryToUpdate.getName(),
                 categoryToUpdate.getMinAge(),
-                categoryToUpdate.getMaxAge()
+                categoryToUpdate.getMaxAge(),
+                categoryToUpdate.getMinAthletes(),
+                categoryToUpdate.getMaxAthletes()
         );
         return existingCategory;
     }

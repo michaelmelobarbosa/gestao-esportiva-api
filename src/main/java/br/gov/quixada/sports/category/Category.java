@@ -1,6 +1,7 @@
 package br.gov.quixada.sports.category;
 
 import br.gov.quixada.sports.category.exception.InvalidAgeException;
+import br.gov.quixada.sports.category.exception.InvalidRosterLimitException;
 import br.gov.quixada.sports.category.exception.InactiveCategoryException;
 import br.gov.quixada.sports.competition.Competition;
 import jakarta.persistence.*;
@@ -36,6 +37,10 @@ public class Category {
     @Column(nullable = false)
     private Integer maxAge;
 
+    private Integer minAthletes;
+
+    private Integer maxAthletes;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "competition_id", nullable = false)
     private Competition competition;
@@ -55,18 +60,26 @@ public class Category {
     }
 
     /** Updates mutable data. Competition is immutable after creation; blocked when INACTIVE. */
-    public void updateDetails(String name, Integer minAge, Integer maxAge) {
+    public void updateDetails(String name, Integer minAge, Integer maxAge, Integer minAthletes, Integer maxAthletes) {
         if (this.status == CategoryStatus.INACTIVE) {
             throw new InactiveCategoryException("Category is inactive; reactivate it before editing");
         }
         validateAges(minAge, maxAge);
+        validateRosterLimits(minAthletes, maxAthletes);
         this.name = name;
         this.minAge = minAge;
         this.maxAge = maxAge;
+        this.minAthletes = minAthletes;
+        this.maxAthletes = maxAthletes;
+    }
+
+    public int effectiveMinAthletes() {
+        return minAthletes != null ? minAthletes : 1;
     }
 
     public void validate() {
         validateAges(this.minAge, this.maxAge);
+        validateRosterLimits(this.minAthletes, this.maxAthletes);
     }
 
     void setCompetition(Competition competition) {
@@ -83,6 +96,18 @@ public class Category {
     private void validateAges(Integer minAge, Integer maxAge) {
         if (minAge != null && maxAge != null && minAge > maxAge) {
             throw new InvalidAgeException("Min age cannot be greater than max age");
+        }
+    }
+
+    private void validateRosterLimits(Integer minAthletes, Integer maxAthletes) {
+        if (minAthletes != null && minAthletes < 1) {
+            throw new InvalidRosterLimitException("Min athletes must be at least 1");
+        }
+        if (maxAthletes != null && maxAthletes < 1) {
+            throw new InvalidRosterLimitException("Max athletes must be at least 1");
+        }
+        if (minAthletes != null && maxAthletes != null && minAthletes > maxAthletes) {
+            throw new InvalidRosterLimitException("Min athletes cannot be greater than max athletes");
         }
     }
 }

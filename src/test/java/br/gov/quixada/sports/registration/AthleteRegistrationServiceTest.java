@@ -27,6 +27,7 @@ import br.gov.quixada.sports.registration.exception.AthleteOutsideCategoryExcept
 import br.gov.quixada.sports.registration.exception.AthleteAlreadyRegisteredException;
 import br.gov.quixada.sports.registration.exception.AthleteRegistrationNotFoundException;
 import br.gov.quixada.sports.registration.exception.LastActiveAthleteException;
+import br.gov.quixada.sports.registration.exception.RosterLimitExceededException;
 import br.gov.quixada.sports.registration.exception.InvalidRegistrationException;
 import br.gov.quixada.sports.registration.exception.TeamRegistrationNotFoundException;
 import br.gov.quixada.sports.registration.exception.JerseyNumberAlreadyUsedException;
@@ -39,6 +40,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -175,7 +177,7 @@ class AthleteRegistrationServiceTest {
             Athlete athlete = anAthlete(LocalDate.of(2000, 6, 15));
             when(teamRegistrationRepository.findById(1L)).thenReturn(Optional.of(teamRegistration));
             when(athleteRepository.findById(2L)).thenReturn(Optional.of(athlete));
-            when(repository.save(any(AthleteRegistration.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(repository.saveAndFlush(any(AthleteRegistration.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
             AthleteRegistration registration = AthleteRegistration.builder().jerseyNumber("10").build();
             AthleteRegistration saved = service.save(registration, 1L, 2L);
@@ -184,7 +186,7 @@ class AthleteRegistrationServiceTest {
             assertThat(saved.getTeamRegistration()).isSameAs(teamRegistration);
             assertThat(saved.getAthlete()).isSameAs(athlete);
             assertThat(saved.getStatus()).isEqualTo(RegistrationStatus.PENDING);
-            verify(repository).save(registration);
+            verify(repository).saveAndFlush(registration);
         }
 
         @Test
@@ -275,14 +277,121 @@ class AthleteRegistrationServiceTest {
             Athlete athlete = anAthlete(null);
             when(teamRegistrationRepository.findById(1L)).thenReturn(Optional.of(teamRegistration));
             when(athleteRepository.findById(2L)).thenReturn(Optional.of(athlete));
-            when(repository.save(any(AthleteRegistration.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(repository.saveAndFlush(any(AthleteRegistration.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
             AthleteRegistration registration = AthleteRegistration.builder().jerseyNumber("10").build();
             AthleteRegistration saved = service.save(registration, 1L, 2L);
 
             assertThat(saved).isSameAs(registration);
             assertThat(saved.getStatus()).isEqualTo(RegistrationStatus.PENDING);
-            verify(repository).save(registration);
+            verify(repository).saveAndFlush(registration);
+        }
+
+        @Test
+        @DisplayName("should throw RosterLimitExceededException when team roster has reached category maxAthletes")
+        void shouldThrowRosterLimitExceededOnSave() {
+            Category category = Category.builder()
+                    .id(2L)
+                    .name("Sub-20")
+                    .minAge(18)
+                    .maxAge(40)
+                    .maxAthletes(12)
+                    .competition(Competition.builder().id(1L).name("Test Cup")
+                            .status(CompetitionStatus.REGISTRATION_OPEN).build())
+                    .status(br.gov.quixada.sports.category.CategoryStatus.ACTIVE)
+                    .build();
+            TeamRegistration teamRegistration = aTeamRegistration(category);
+            Athlete athlete = anAthlete(LocalDate.of(2000, 6, 15));
+            when(teamRegistrationRepository.findById(1L)).thenReturn(Optional.of(teamRegistration));
+            when(athleteRepository.findById(2L)).thenReturn(Optional.of(athlete));
+            when(repository.countByTeamRegistrationIdAndStatusIn(1L, RegistrationStatus.OCCUPY_SLOT))
+                    .thenReturn(12L);
+
+            AthleteRegistration registration = AthleteRegistration.builder().jerseyNumber("10").build();
+
+            assertThatThrownBy(() -> service.save(registration, 1L, 2L))
+                    .isInstanceOf(RosterLimitExceededException.class)
+                    .hasMessage("Team roster has reached the category maximum of 12 athletes");
+        }
+
+        @Test
+        @DisplayName("should translate DataIntegrityViolationException for uk_athlete_registration_jersey_active")
+        void shouldTranslateDuplicateJerseyConstraintOnSave() {
+            TeamRegistration teamRegistration = aTeamRegistration(aCategory(2L, 18, 40));
+            Athlete athlete = anAthlete(LocalDate.of(2000, 6, 15));
+            when(teamRegistrationRepository.findById(1L)).thenReturn(Optional.of(teamRegistration));
+            when(athleteRepository.findById(2L)).thenReturn(Optional.of(athlete));
+            when(repository.saveAndFlush(any(AthleteRegistration.class)))
+                    .thenThrow(new DataIntegrityViolationException("Duplicate entry",
+                            new RuntimeException("Duplicate entry for key 'db_athlete_registration.uk_athlete_registration_jersey_active'")));
+
+            AthleteRegistration registration = AthleteRegistration.builder().jerseyNumber("10").build();
+
+            assertThatThrownBy(() -> service.save(registration, 1L, 2L))
+                    .isInstanceOf(JerseyNumberAlreadyUsedException.class)
+                    .hasMessage("Jersey number already used in this registration");
+        }
+
+        @Test
+        @DisplayName("should translate DataIntegrityViolationException for uk_athlete_registration_athlete_active")
+        void shouldTranslateDuplicateAthleteConstraintOnSave() {
+            TeamRegistration teamRegistration = aTeamRegistration(aCategory(2L, 18, 40));
+            Athlete athlete = anAthlete(LocalDate.of(2000, 6, 15));
+            when(teamRegistrationRepository.findById(1L)).thenReturn(Optional.of(teamRegistration));
+            when(athleteRepository.findById(2L)).thenReturn(Optional.of(athlete));
+            when(repository.saveAndFlush(any(AthleteRegistration.class)))
+                    .thenThrow(new DataIntegrityViolationException("Duplicate entry",
+                            new RuntimeException("Duplicate entry for key 'db_athlete_registration.uk_athlete_registration_athlete_active'")));
+
+            AthleteRegistration registration = AthleteRegistration.builder().jerseyNumber("10").build();
+
+            assertThatThrownBy(() -> service.save(registration, 1L, 2L))
+                    .isInstanceOf(AthleteAlreadyRegisteredException.class)
+                    .hasMessage("Athlete is already registered on this team");
+        }
+    }
+
+    @Nested
+    @DisplayName("update")
+    class Update {
+
+        @Test
+        @DisplayName("should update jersey number and call saveAndFlush")
+        void shouldUpdateJerseyNumber() {
+            TeamRegistration teamRegistration = aTeamRegistration(aCategory(2L, 18, 40));
+            AthleteRegistration registration = AthleteRegistration.builder()
+                    .id(10L)
+                    .teamRegistration(teamRegistration)
+                    .jerseyNumber("10")
+                    .status(RegistrationStatus.APPROVED)
+                    .build();
+            when(repository.findById(10L)).thenReturn(Optional.of(registration));
+            when(repository.saveAndFlush(registration)).thenReturn(registration);
+
+            AthleteRegistration updated = service.update(10L, "99");
+
+            assertThat(updated.getJerseyNumber()).isEqualTo("99");
+            verify(repository).saveAndFlush(registration);
+        }
+
+        @Test
+        @DisplayName("should translate DataIntegrityViolationException for uk_athlete_registration_jersey_active on update")
+        void shouldTranslateDuplicateJerseyConstraintOnUpdate() {
+            TeamRegistration teamRegistration = aTeamRegistration(aCategory(2L, 18, 40));
+            AthleteRegistration registration = AthleteRegistration.builder()
+                    .id(10L)
+                    .teamRegistration(teamRegistration)
+                    .jerseyNumber("10")
+                    .status(RegistrationStatus.APPROVED)
+                    .build();
+            when(repository.findById(10L)).thenReturn(Optional.of(registration));
+            when(repository.saveAndFlush(registration))
+                    .thenThrow(new DataIntegrityViolationException("Duplicate entry",
+                            new RuntimeException("Duplicate entry for key 'db_athlete_registration.uk_athlete_registration_jersey_active'")));
+
+            assertThatThrownBy(() -> service.update(10L, "99"))
+                    .isInstanceOf(JerseyNumberAlreadyUsedException.class)
+                    .hasMessage("Jersey number already used in this registration");
         }
     }
 
@@ -410,6 +519,98 @@ class AthleteRegistrationServiceTest {
             var result = service.changeStatus(10L, RegistrationStatus.CANCELED);
 
             assertThat(result.getStatus()).isEqualTo(RegistrationStatus.CANCELED);
+        }
+
+        @Test
+        @DisplayName("should block removing an athlete when active count equals custom category minAthletes")
+        void shouldBlockRemovalAtCustomMinAthletes() {
+            Category category = Category.builder()
+                    .id(2L)
+                    .name("Sub-20")
+                    .minAge(18)
+                    .maxAge(40)
+                    .minAthletes(5)
+                    .competition(Competition.builder().id(1L).name("Test Cup")
+                            .status(CompetitionStatus.REGISTRATION_OPEN).build())
+                    .status(br.gov.quixada.sports.category.CategoryStatus.ACTIVE)
+                    .build();
+            TeamRegistration teamRegistration = aTeamRegistration(category);
+            teamRegistration.changeStatus(RegistrationStatus.APPROVED, LocalDateTime.now());
+            Athlete athlete = anAthlete(LocalDate.of(2000, 6, 15));
+            AthleteRegistration registration = AthleteRegistration.builder()
+                    .id(10L).status(RegistrationStatus.APPROVED)
+                    .teamRegistration(teamRegistration).athlete(athlete).jerseyNumber("10")
+                    .build();
+            when(repository.findById(10L)).thenReturn(Optional.of(registration));
+            when(repository.countByTeamRegistrationIdAndStatusIn(eq(1L), anyCollection())).thenReturn(5L);
+
+            assertThatThrownBy(() -> service.changeStatus(10L, RegistrationStatus.CANCELED))
+                    .isInstanceOf(LastActiveAthleteException.class)
+                    .hasMessage("An approved team must keep at least 5 active athletes");
+        }
+
+        @Test
+        @DisplayName("should block reactivating a REJECTED athlete when team roster reached category maxAthletes")
+        void shouldBlockReactivatingRejectedWhenMaxAthletesReached() {
+            Category category = Category.builder()
+                    .id(2L)
+                    .name("Sub-20")
+                    .minAge(18)
+                    .maxAge(40)
+                    .maxAthletes(12)
+                    .competition(Competition.builder().id(1L).name("Test Cup")
+                            .status(CompetitionStatus.REGISTRATION_OPEN).build())
+                    .status(br.gov.quixada.sports.category.CategoryStatus.ACTIVE)
+                    .build();
+            TeamRegistration teamRegistration = aTeamRegistration(category);
+            Athlete athlete = Athlete.builder()
+                    .id(2L)
+                    .fullName("John de Tal")
+                    .birthDate(LocalDate.of(2000, 6, 15))
+                    .status(br.gov.quixada.sports.athlete.AthleteStatus.ACTIVE)
+                    .build();
+            AthleteRegistration registration = AthleteRegistration.builder()
+                    .id(10L).status(RegistrationStatus.REJECTED)
+                    .teamRegistration(teamRegistration).athlete(athlete).jerseyNumber("10")
+                    .build();
+            when(repository.findById(10L)).thenReturn(Optional.of(registration));
+            when(repository.countByTeamRegistrationIdAndStatusIn(1L, RegistrationStatus.OCCUPY_SLOT))
+                    .thenReturn(12L);
+
+            assertThatThrownBy(() -> service.changeStatus(10L, RegistrationStatus.PENDING))
+                    .isInstanceOf(RosterLimitExceededException.class)
+                    .hasMessage("Team roster has reached the category maximum of 12 athletes");
+        }
+
+        @Test
+        @DisplayName("should allow reactivating an INACTIVE athlete even when OCCUPY_SLOT count equals maxAthletes")
+        void shouldAllowReactivatingInactiveWhenAtMaxAthletes() {
+            Category category = Category.builder()
+                    .id(2L)
+                    .name("Sub-20")
+                    .minAge(18)
+                    .maxAge(40)
+                    .maxAthletes(12)
+                    .competition(Competition.builder().id(1L).name("Test Cup")
+                            .status(CompetitionStatus.REGISTRATION_OPEN).build())
+                    .status(br.gov.quixada.sports.category.CategoryStatus.ACTIVE)
+                    .build();
+            TeamRegistration teamRegistration = aTeamRegistration(category);
+            Athlete athlete = Athlete.builder()
+                    .id(2L)
+                    .fullName("John de Tal")
+                    .birthDate(LocalDate.of(2000, 6, 15))
+                    .status(br.gov.quixada.sports.athlete.AthleteStatus.ACTIVE)
+                    .build();
+            AthleteRegistration registration = AthleteRegistration.builder()
+                    .id(10L).status(RegistrationStatus.INACTIVE)
+                    .teamRegistration(teamRegistration).athlete(athlete).jerseyNumber("10")
+                    .build();
+            when(repository.findById(10L)).thenReturn(Optional.of(registration));
+
+            AthleteRegistration result = service.changeStatus(10L, RegistrationStatus.PENDING);
+
+            assertThat(result.getStatus()).isEqualTo(RegistrationStatus.PENDING);
         }
     }
 
