@@ -3,6 +3,7 @@ package br.gov.quixada.sports.security.users;
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -11,6 +12,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -22,6 +24,7 @@ import br.gov.quixada.sports.security.auth.exception.EmailAlreadyRegisteredExcep
 import br.gov.quixada.sports.security.users.dto.UserCreateRequest;
 import br.gov.quixada.sports.security.users.dto.UserResponse;
 import br.gov.quixada.sports.security.users.dto.UserUpdateRequest;
+import br.gov.quixada.sports.security.users.exception.InvalidAuditQueryException;
 import br.gov.quixada.sports.security.users.exception.OperationNotAllowedException;
 import br.gov.quixada.sports.security.users.exception.UserNotFoundException;
 import br.gov.quixada.sports.support.ControllerTestSupport;
@@ -192,7 +195,7 @@ class UserControllerTest {
                     .targetEmail("manager@quixada.gov.br")
                     .changes("role=ADMIN")
                     .build();
-            when(auditService.findAll(any(Pageable.class)))
+            when(auditService.findAll(isNull(), isNull(), isNull(), isNull(), isNull(), any(Pageable.class)))
                     .thenReturn(new PageImpl<>(List.of(audit), PageRequest.of(0, 10), 1));
 
             mockMvc.perform(get("/v1/users/audit"))
@@ -200,6 +203,96 @@ class UserControllerTest {
                     .andExpect(jsonPath("$.content[0].id").value(10))
                     .andExpect(jsonPath("$.content[0].action").value("CREATE"))
                     .andExpect(jsonPath("$.content[0].targetEmail").value("manager@quixada.gov.br"));
+        }
+
+        @Test
+        @DisplayName("should return 200 with filtered audit page")
+        void shouldReturn200WithFilteredAuditPage() throws Exception {
+            var audit = UserAudit.builder()
+                    .id(11L)
+                    .occurredAt(LocalDateTime.of(2026, 6, 15, 10, 0))
+                    .actorId(1L)
+                    .actorEmail("admin@quixada.gov.br")
+                    .action(UserAuditAction.UPDATE)
+                    .targetId(2L)
+                    .targetEmail("manager@quixada.gov.br")
+                    .changes("role=ADMIN")
+                    .build();
+            when(auditService.findAll(eq("admin@quixada.gov.br"), eq("manager@quixada.gov.br"), eq(UserAuditAction.UPDATE), any(LocalDateTime.class), any(LocalDateTime.class), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(audit), PageRequest.of(0, 10), 1));
+
+            mockMvc.perform(get("/v1/users/audit")
+                            .param("actorEmail", "admin@quixada.gov.br")
+                            .param("targetEmail", "manager@quixada.gov.br")
+                            .param("action", "UPDATE")
+                            .param("from", "2026-06-01T00:00:00")
+                            .param("to", "2026-06-30T23:59:59"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[0].id").value(11))
+                    .andExpect(jsonPath("$.content[0].action").value("UPDATE"));
+        }
+
+        @Test
+        @DisplayName("should return 200 with CSV export by default")
+        void shouldExportAuditCsvByDefault() throws Exception {
+            var audit = UserAudit.builder()
+                    .id(10L)
+                    .occurredAt(LocalDateTime.of(2026, 6, 15, 10, 0))
+                    .actorId(1L)
+                    .actorEmail("admin@quixada.gov.br")
+                    .action(UserAuditAction.CREATE)
+                    .targetId(2L)
+                    .targetEmail("manager@quixada.gov.br")
+                    .changes("role=ADMIN")
+                    .build();
+            when(auditService.findForExport(isNull(), isNull(), isNull(), isNull(), isNull()))
+                    .thenReturn(List.of(audit));
+            when(auditService.exportCsv(List.of(audit)))
+                    .thenReturn("id,occurredAt,actorId,actorEmail,action,targetId,targetEmail,changes\n10,2026-06-15T10:00,1,admin@quixada.gov.br,CREATE,2,manager@quixada.gov.br,role=ADMIN\n");
+
+            mockMvc.perform(get("/v1/users/audit/export"))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string("Content-Disposition", "attachment; filename=\"user-audit.csv\""))
+                    .andExpect(header().string("Content-Type", containsString("text/csv")))
+                    .andExpect(content().string(containsString("admin@quixada.gov.br")));
+        }
+
+        @Test
+        @DisplayName("should return 200 with JSON export when format=JSON")
+        void shouldExportAuditJson() throws Exception {
+            var audit = UserAudit.builder()
+                    .id(10L)
+                    .occurredAt(LocalDateTime.of(2026, 6, 15, 10, 0))
+                    .actorId(1L)
+                    .actorEmail("admin@quixada.gov.br")
+                    .action(UserAuditAction.CREATE)
+                    .targetId(2L)
+                    .targetEmail("manager@quixada.gov.br")
+                    .changes("role=ADMIN")
+                    .build();
+            when(auditService.findForExport(isNull(), isNull(), isNull(), isNull(), isNull()))
+                    .thenReturn(List.of(audit));
+
+            mockMvc.perform(get("/v1/users/audit/export")
+                            .param("format", "JSON"))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string("Content-Disposition", "attachment; filename=\"user-audit.json\""))
+                    .andExpect(header().string("Content-Type", containsString("application/json")))
+                    .andExpect(jsonPath("$[0].id").value(10))
+                    .andExpect(jsonPath("$[0].targetEmail").value("manager@quixada.gov.br"));
+        }
+
+        @Test
+        @DisplayName("should return 400 when audit query date range is invalid")
+        void shouldReturn400WhenAuditQueryInvalid() throws Exception {
+            when(auditService.findAll(isNull(), isNull(), isNull(), any(LocalDateTime.class), any(LocalDateTime.class), any(Pageable.class)))
+                    .thenThrow(new InvalidAuditQueryException("Start date cannot be after end date"));
+
+            mockMvc.perform(get("/v1/users/audit")
+                            .param("from", "2026-06-30T00:00:00")
+                            .param("to", "2026-06-01T00:00:00"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("Start date cannot be after end date"));
         }
 
         @Test
