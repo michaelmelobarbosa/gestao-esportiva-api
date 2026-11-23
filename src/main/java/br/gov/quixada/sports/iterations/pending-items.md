@@ -12,14 +12,14 @@
 
 ### Security / Authentication
 - [x] **A5** — Rate limiting on login (bucket4j, no lockout) (P0)
-- [ ] **C6** — Refresh token / logout / revocation (P2)
-- [ ] **C7** — (Optional) roles as a JWT claim (P2)
+- [x] **C6** — Refresh token / logout / revocation (P2)
+- [x] **C7** — (Optional) roles as a JWT claim (P2) — role claim added as informational while retaining DB lookup for immediate revocation via tokenVersion & status
 - [x] **C8** — Configure CORS (P2)
 
 ### Users / Governance
 - [x] Decision: exactly **1 SUPERADMIN**, no creation/promotion through the API (existing blocks in `UserService`)
 - [x] SUPERADMIN password recovery via CLI (P1)
-- [ ] Audit: filters by actor/target/period, retention/purge and export (P2)
+- [x] Audit: filters by actor/target/period, retention/purge and export (P2)
 
 ### Athlete
 - [x] `hardDelete` + `DELETE /v1/athletes/{id}` endpoint (P1)
@@ -31,16 +31,16 @@
 - [x] Controller/mapper tests for competition, registration, match and standings (P1)
 
 ### Sports core
-- [ ] Automatic round generation (single round-robin / double round-robin) (P1)
-- [ ] Minimum/maximum roster size — decision with the technical staff (P1)
+- [x] Automatic round generation (single round-robin / double round-robin) (P1)
+- [x] Minimum/maximum roster size (P1) — configurable min/max on Category (default min = 1, max = unlimited); sport-specific presets remain technical staff configuration choice
 
 ### Infrastructure / Documentation
-- [ ] OpenAPI/springdoc + `@Tag`/`@Operation` (P2)
+- [x] OpenAPI/springdoc + `@Tag`/`@Operation` (P2)
 - [x] README + versioning strategy documentation (P2)
 - [x] `application-prod.yaml` + separate dev/prod config (P2)
 - [x] Verify Java 25 + Spring Boot 4.1.0 + MapStruct 1.6.3 compatibility (P2)
 - [x] CI (GitHub Actions) running `./mvnw verify` (P2)
-- [ ] Testcontainers (optional) (P2)
+- [x] Testcontainers (optional) (P2)
 
 ---
 
@@ -56,17 +56,17 @@
 - **Limitations:** state is in memory and per instance — N replicas ⇒ effective limit N×; a restart resets counters; Caffeine eviction (`max-keys`) recreates full buckets (fail-open); the evolution is to swap the `Cache<String,Bucket>` for a `ProxyManager` (Redis/MySQL). The IP comes from `request.getRemoteAddr()`; behind a trusted proxy, configure `server.forward-headers-strategy` (otherwise all traffic appears to come from the proxy IP).
 - **Tests:** `LoginRateLimiterTest` (8), `AuthControllerLoginRateLimitTest` (4) and `LoginRateLimitPropertiesTest` (3), with no `Thread.sleep` (`ClockTimeMeter` + `MutableClock`; IP via `request.setRemoteAddr`).
 
-### C6 — Refresh token / logout / revocation (P2)
-- **Where:** the auth flow as a whole (`security/jwt/JwtService`, `security/auth/AuthController`).
-- **Situation:** the token lasts `2h` (`api.security.token.expiration`) and there is no refresh or server-side logout.
-- **Why:** when it expires, the user has to log in again; there is no way to invalidate a token before expiry (e.g. password change, logout). Plain JWT does not solve this.
-- **How to implement:** define the long-term session strategy — refresh token + blacklist/allowlist. The `security/jwt` package was split precisely to prepare for this.
-- **How to test:** revoke a token and verify it starts answering `401`; refresh issues a new access token.
+### C6 — Refresh token / logout / revocation (P2) — Completed
+- **Where:** `security/jwt/RefreshToken`, `RefreshTokenRepository`, `RefreshTokenService`, `RefreshTokenRequest`, `TokenProperties`, `security/auth/AuthController#login`, `#refresh`, `#logout`, `security/config/JwtAuthenticationFilter`, Flyway migration `V26__create_refresh_tokens_and_token_version.sql`.
+- **How it turned out:** `POST /v1/auth/login` returns `{ token, refreshToken }`. Refresh tokens are opaque, securely generated tokens stored as SHA-256 hashes in `db_refresh_tokens`.
+- **Rotation & Reuse Detection:** `POST /v1/auth/refresh` rotates the token (marks the existing token as revoked and issues a new pair). If a revoked token is presented (reuse attempt), the entire token family is revoked and `db_users.token_version` is incremented.
+- **Revocation & Logout:** `POST /v1/auth/logout` (authenticated) revokes all refresh tokens for the user and increments `token_version`. Changing password, updating user role, deactivating an account, or performing CLI SUPERADMIN password recovery also increments `token_version`, instantly invalidating all active JWT access tokens on subsequent requests.
+- **Tests:** `RefreshTokenServiceTest`, `AuthControllerTest`, and `MySqlFlywayAndConstraintsTest`.
 
-### C7 — (Optional) roles as a JWT claim (P2)
-- **Where:** `security/jwt/JwtService` + `security/config/JwtAuthenticationFilter`.
-- **Situation:** the filter performs **one SELECT against the database per request** to load the user and their authorities.
-- **Trade-off:** putting the roles in the token avoids the query, but loses immediate revocation (an old token keeps the old role until it expires). Performance × revocation — decide.
+### C7 — Roles as a JWT claim (P2) — Completed
+- **Where:** `security/jwt/JwtService`, `security/config/JwtAuthenticationFilter`.
+- **Architectural Decision:** `role` claim was added to the JWT payload as informational data (useful for client-side decoding and observability). However, the architecture intentionally retains the database user lookup in `JwtAuthenticationFilter` (`userRepository.findByEmail`).
+- **Rationale:** Retaining the DB lookup guarantees immediate revocation: checking `user.getTokenVersion() == claims.tokenVersion()` and `user.isEnabled()` ensures that token version bumps (logout, password change, deactivation, role change) and account deactivations take effect immediately without having to wait for the 2-hour JWT access token expiration window.
 
 ### C8 — Configure CORS (P2) — Completed
 - **Where:** `security/config/CorsProperties`, `SecurityConfig`, `application.yaml` / `application-prod.yaml`.
@@ -84,11 +84,13 @@
 - **Limitation:** JWT is stateless — tokens issued before the reset remain valid until they expire (2h); immediate revocation depends on item C6.
 - **How to test:** `SuperadminPasswordResetServiceTest` covers success, non-existent email, non-SUPERADMIN user and out-of-range password.
 
-### User audit: filters, retention/purge and export (P2)
-- **Where:** `security/users/UserController#findAudit` (`GET /v1/users/audit`), `security/users/UserAuditService#findAll`, `UserAuditRepository`, table `db_user_audit` (`V18`).
-- **Situation:** only `findAll(Pageable)` exists — no filters and no export; there is no retention/purge policy.
-- **How to implement:** filters by actor/target/action and date range (Specifications), an export endpoint (CSV/JSON) and a retention routine/job.
-- **How to test:** `GET /v1/users/audit?actorEmail=...&from=...&to=...`; the purge removes records outside the window.
+### User audit: filters, retention/purge and export (P2) — Completed
+- **Where:** `security/users/UserController#findAudit` (`GET /v1/users/audit`), `UserController#exportAudit` (`GET /v1/users/audit/export`), `UserAuditSpecifications`, `UserAuditService`, `UserAuditRetentionScheduler`, `UserAuditRetentionProperties`, `UserAuditRepository`, table `db_user_audit` (`V18`).
+- **How it turned out:**
+  - Combinable filters implemented via Spring Data JPA `Specification`: `actorEmail`, `targetEmail`, `action`, `from`, `to` datetime range with pagination.
+  - Export endpoint: `GET /v1/users/audit/export?format=csv|json` allows SUPERADMIN to export filtered audit records (up to `api.audit.export-max-rows`, default 10,000). CSV export implements formula injection neutralization (sanitizing cells starting with `=`, `+`, `-`, `@`, `\t`, `\r`).
+  - Retention & Purge: `UserAuditRetentionScheduler` runs daily at 03:00 (configured via `api.audit.purge-cron` and `api.audit.retention-days`, default 365 days; configurable in prod via `API_AUDIT_RETENTION_DAYS`) and deletes audit entries older than the retention threshold.
+- **Tests:** `UserAuditServiceTest`, `UserAuditSpecificationsTest`, `UserControllerTest`.
 
 ### Athlete `hardDelete` + endpoint (P1) — Completed
 - **Status:** implemented. `AthleteService#hardDelete` + `DELETE /v1/athletes/{id}`.
@@ -125,22 +127,32 @@
   - `match`: `MatchControllerTest`, `MatchMapperTest`, `StandingsControllerTest`
   - `category` / `club` / `team` / `modality` / `users` / `shared`: `CategoryControllerTest`, `CategoryMapperTest`, `ClubControllerTest`, `ClubMapperTest`, `TeamControllerTest`, `TeamMapperTest`, `ModalityControllerTest`, `ModalityMapperTest`, `UserControllerTest`, `UserMapperTest`, `AddressMapperTest`.
 
-### Automatic round generation (single round-robin / double round-robin) (P1)
-- **Where:** `match/` (`Match.round`, `MatchCreateRequest.round`).
-- **Situation:** `round` is a manually informed field; there is no automatic schedule generation.
-- **How to implement:** generate matchups from the competition/category registrations in `APPROVED` status (round-robin, single/double round-robin), respecting the "one team per round/time slot" rule.
-- **How to test:** N teams → expected number/structure of matches; the double round-robin swaps home/away.
+### Automatic round generation (single round-robin / double round-robin) (P1) — Completed
+- **Where:** `match/RoundRobinScheduler`, `match/MatchScheduleController#generate` (`POST /v1/competitions/{competitionId}/categories/{categoryId}/matches/generate`), `MatchService#generateSchedule`, `MatchScheduleGenerateRequest`, `MatchScheduleGenerateResponse`, Flyway migration `V24__make_match_scheduled_at_nullable.sql`.
+- **How it turned out:**
+  - Implements the polygon/circle round-robin scheduling algorithm for `APPROVED` team registrations within a category. Odd team counts automatically receive a dummy "bye" slot.
+  - Supports both single and double round-robin (`doubleRound: true|false`). In double round-robin, matchups repeat with inverted home/away venues.
+  - `V24__make_match_scheduled_at_nullable.sql` makes `db_match.scheduled_at` nullable so fixtures can be generated before dates and venues are decided. Transitioning a match to `IN_PROGRESS` validates that `scheduledAt != null`.
+- **Tests:** `RoundRobinSchedulerTest`, `MatchScheduleControllerTest`, `MatchServiceTest`.
 
-### Minimum/maximum roster size (P1)
-- **Where:** `team`/`registration` rules.
-- **Situation:** there is no validation of the minimum/maximum roster size.
-- **Blocker:** depends on a decision with the technical staff about the limits per modality/category.
-- **How to implement:** once defined, validate in `TeamRegistrationService` and cover with tests.
+### Minimum/maximum roster size (P1) — Completed
+- **Where:** `category/Category` (`minAthletes`, `maxAthletes`), `CategoryCreateRequest`, `CategoryUpdateRequest`, `CategoryResponse`, `CategorySummaryResponse`, `TeamRegistrationService`, `AthleteRegistrationService`, Flyway migration `V25__category_roster_limits.sql`.
+- **Architectural Decision:** Configurable roster limits were placed on the `Category` entity (`min_athletes`, `max_athletes` in `db_category`), with `min >= 1` and `min <= max`.
+- **Enforcement:**
+  - `TeamRegistrationService` enforces that approving a team registration requires at least `category.effectiveMinAthletes()` (defaults to 1 if `minAthletes` is null).
+  - `AthleteRegistrationService` enforces that adding an active athlete does not exceed `maxAthletes` (when configured), and that removing an athlete does not leave an approved team below `effectiveMinAthletes()`.
+  - Modality/sport-specific defaults (e.g. 11 for soccer, 5 for futsal) remain a configuration choice made by technical staff when creating the category.
+- **Tests:** `CategoryServiceTest`, `TeamRegistrationServiceTest`, `AthleteRegistrationServiceTest`, `CategoryControllerTest`.
 
-### OpenAPI/springdoc + annotations (P2)
-- **Where:** `pom.xml` (no `springdoc-openapi-starter-webmvc-ui`), controllers.
-- **How to implement:** add the dependency, annotate controllers with `@Tag`/`@Operation`, expose `swagger-ui.html` and validate `GET /v1/athletes?name=&page=0` and `POST` with `Location`.
-- **Attention:** `spring.jpa.open-in-view=false` is already on — map DTOs inside `@Transactional` or use `@EntityGraph`/`JOIN FETCH`.
+### OpenAPI/springdoc + annotations (P2) — Completed
+- **Where:** `pom.xml` (`springdoc-openapi-starter-webmvc-ui` 3.2.1), `config/OpenApiConfig`, `config/ApiVersioningConfig`, `security/config/SecurityConfig`, `application.yaml`, `application-prod.yaml`.
+- **How it turned out:**
+  - Swagger UI accessible at `/swagger-ui.html` and OpenAPI 3 schema at `/v3/api-docs`.
+  - Configured with Bearer JWT security scheme in `OpenApiConfig`.
+  - `ApiVersioningConfig` exempts `/v3/api-docs` and `/swagger-ui` from the path versioning segment predicate.
+  - Excluded from CSRF and permitted for public GET access in `SecurityConfig`.
+  - Controlled by `API_OPENAPI_ENABLED` (enabled by default in dev/test, disabled by default in `prod`).
+- **Tests:** `OpenApiTest`.
 
 ### README + versioning strategy documentation (P2) — Completed
 - **Status:** `README.md` created, with setup, authentication/roles, endpoint table, tests and the versioning decision (URL `/v1`; header-based alternative discarded; deprecation policy).
@@ -158,13 +170,17 @@
 - **Where:** `.github/workflows/ci.yml`.
 - **How it turned out:** workflow triggered on `push`/`pull_request` to `dev` and `main`, with JDK 25 (Temurin), Maven cache and `./mvnw --batch-mode --no-transfer-progress verify` (profile `test`/H2, no MySQL). `permissions: contents: read` and per-ref `concurrency`.
 
-### Testcontainers (optional) (P2)
-- **Where:** integration tests.
-- **How to implement:** spin up a real MySQL in a container for tests that depend on MySQL dialect/constraints (today the tests use H2 — the `errorCode == 1062` CPF branch is not exercised).
+### Testcontainers (optional) (P2) — Completed
+- **Where:** `support/AbstractMySqlIntegrationTest`, `integration/MySqlFlywayAndConstraintsTest`, `pom.xml` (`testcontainers:2.0.5` + `mysql:2.0.5`).
+- **How it turned out:** `AbstractMySqlIntegrationTest` configures Testcontainers MySQL 8.4 via `@Testcontainers(disabledWithoutDocker = true)` and `@ServiceConnection`, running against Flyway migrations with `ddl-auto: validate`.
+- **Tests covered:** Real MySQL duplicate CPF handling (1062 error code in `AthleteService`), functional unique indexes on `db_athlete_registration` (V23), seed data validation (V17 superadmin), and token hash uniqueness & rotation in MySQL. Tests skip silently when the Docker daemon is not active.
+- **V22 fix verified:** Running `MySqlFlywayAndConstraintsTest` against a real MySQL 8.4 container uncovered and confirmed a pre-existing bug in `V22__rename_schema_to_english.sql:119` (`modify column gender` instead of `change column sexo gender`). Fixed with user authorization (`change column sexo gender`), and all 26 migrations (`V1`–`V26`) plus Hibernate `ddl-auto: validate` pass cleanly against MySQL 8.4.
+
+### V23 conditional unique constraints & en-US hygiene — Completed
+- **Where:** Flyway migration `V23__conditional_unique_athlete_registration.sql`.
+- **Details:** Created MySQL 8.4 functional unique indexes (`uk_athlete_registration_jersey_active`, `uk_athlete_registration_athlete_active`) using expressions `(case when status in ('PENDING', 'APPROVED', 'INACTIVE') then 1 else null end)`. This ensures athlete and jersey number uniqueness only apply while occupying slots, allowing immediate reuse of numbers and athletes once prior registrations are `CANCELED` or `REJECTED`.
 
 ---
 
 ## Blockers / decisions required before implementing
-- **Minimum/maximum roster size:** depends on the technical staff (limits per modality/category).
-- **`SUPERADMIN` creation through the API:** decided — exactly 1 SUPERADMIN, no creation/promotion endpoint; password recovery via CLI.
-- **C6/C7:** define the trade-off between immediate revocation and performance (SELECT per request × roles in the token).
+- None remaining for the current iteration roadmap. All P0, P1, and P2 pending items have been implemented and verified.
