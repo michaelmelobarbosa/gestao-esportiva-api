@@ -1,16 +1,24 @@
 package br.gov.quixada.sports.match;
 
+import br.gov.quixada.sports.category.Category;
+import br.gov.quixada.sports.category.CategoryRepository;
+import br.gov.quixada.sports.category.exception.CategoryNotFoundException;
 import br.gov.quixada.sports.competition.Competition;
+import br.gov.quixada.sports.competition.CompetitionRepository;
 import br.gov.quixada.sports.competition.CompetitionStatus;
+import br.gov.quixada.sports.competition.exception.CompetitionNotEditableException;
+import br.gov.quixada.sports.competition.exception.CompetitionNotFoundException;
 import br.gov.quixada.sports.registration.TeamRegistration;
 import br.gov.quixada.sports.registration.TeamRegistrationRepository;
 import br.gov.quixada.sports.registration.RegistrationStatus;
 import br.gov.quixada.sports.registration.exception.TeamRegistrationNotFoundException;
 import br.gov.quixada.sports.match.dto.MatchCreateRequest;
 import br.gov.quixada.sports.match.dto.MatchResultRequest;
+import br.gov.quixada.sports.match.dto.MatchScheduleGenerateRequest;
 import br.gov.quixada.sports.match.dto.MatchUpdateRequest;
 import br.gov.quixada.sports.match.exception.InvalidMatchException;
 import br.gov.quixada.sports.match.exception.MatchNotFoundException;
+import br.gov.quixada.sports.match.exception.MatchScheduleAlreadyExistsException;
 import br.gov.quixada.sports.match.exception.MatchStatusTransitionException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -21,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -32,6 +41,9 @@ public class MatchService {
 
     private final MatchRepository repository;
     private final TeamRegistrationRepository teamRegistrationRepository;
+    private final CompetitionRepository competitionRepository;
+    private final CategoryRepository categoryRepository;
+    private final RoundRobinScheduler roundRobinScheduler;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -94,9 +106,73 @@ public class MatchService {
             throw new MatchStatusTransitionException(
                     "Invalid status transition: " + match.getStatus() + " -> " + status);
         }
+        if (status == MatchStatus.IN_PROGRESS && match.getScheduledAt() == null) {
+            throw new InvalidMatchException("Match must have a scheduled date and time before starting");
+        }
 
         match.changeStatus(status, LocalDateTime.now(clock));
         return match;
+    }
+
+    @Transactional
+    public List<Match> generateSchedule(Long competitionId, Long categoryId, MatchScheduleGenerateRequest request) {
+        Competition competition = competitionRepository.findById(competitionId)
+                .orElseThrow(() -> new CompetitionNotFoundException("Competition not found"));
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
+
+        if (!category.getCompetition().getId().equals(competition.getId())) {
+            throw new InvalidMatchException("Category does not belong to the informed competition");
+        }
+
+        CompetitionStatus competitionStatus = competition.calculateStatus(LocalDate.now(clock));
+        if (competitionStatus == CompetitionStatus.CANCELED || competitionStatus == CompetitionStatus.COMPLETED) {
+            throw new CompetitionNotEditableException(
+                    "A canceled or completed competition does not allow generating matches");
+        }
+
+        if (repository.existsActiveByCompetitionAndCategory(competitionId, categoryId, MatchStatus.CANCELED)) {
+            throw new MatchScheduleAlreadyExistsException(
+                    "Active matches already exist for this competition and category");
+        }
+
+        List<TeamRegistration> approved = teamRegistrationRepository
+                .findByCompetitionIdAndCategoryIdAndStatus(competitionId, categoryId, RegistrationStatus.APPROVED);
+
+        MatchScheduleGenerateRequest effectiveRequest = request != null
+                ? request
+                : new MatchScheduleGenerateRequest(false, null, null, null);
+
+        List<RoundRobinScheduler.ScheduledPairing> pairings =
+                roundRobinScheduler.generate(approved, effectiveRequest.doubleRoundRobin());
+
+        LocalDateTime firstRoundAt = effectiveRequest.firstRoundAt();
+        int daysStep = effectiveRequest.daysBetweenRounds() != null ? effectiveRequest.daysBetweenRounds() : 7;
+        String venue = (effectiveRequest.defaultVenue() == null || effectiveRequest.defaultVenue().isBlank())
+                ? null
+                : effectiveRequest.defaultVenue().trim();
+
+        List<Match> matches = new ArrayList<>(pairings.size());
+        for (RoundRobinScheduler.ScheduledPairing pairing : pairings) {
+            LocalDateTime matchTime = null;
+            if (firstRoundAt != null) {
+                matchTime = firstRoundAt.plusDays((long) (pairing.round() - 1) * daysStep);
+                LocalDate matchDate = matchTime.toLocalDate();
+                if (matchDate.isBefore(competition.getStartDate()) || matchDate.isAfter(competition.getEndDate())) {
+                    throw new InvalidMatchException("Generated schedule exceeds the competition period");
+                }
+            }
+            matches.add(Match.builder()
+                    .round(pairing.round())
+                    .scheduledAt(matchTime)
+                    .venue(venue)
+                    .status(MatchStatus.SCHEDULED)
+                    .homeRegistration(pairing.home())
+                    .awayRegistration(pairing.away())
+                    .build());
+        }
+
+        return repository.saveAll(matches);
     }
 
     /**
@@ -152,23 +228,25 @@ public class MatchService {
             throw new InvalidMatchException("The teams belong to different categories");
         }
 
-        Competition competition = home.getCompetition();
-        LocalDate matchDate = scheduledAt.toLocalDate();
-        if (matchDate.isBefore(competition.getStartDate()) || matchDate.isAfter(competition.getEndDate())) {
-            throw new InvalidMatchException("Match date must be within the competition period");
+        if (scheduledAt != null) {
+            Competition competition = home.getCompetition();
+            LocalDate matchDate = scheduledAt.toLocalDate();
+            if (matchDate.isBefore(competition.getStartDate()) || matchDate.isAfter(competition.getEndDate())) {
+                throw new InvalidMatchException("Match date must be within the competition period");
+            }
         }
 
-        if (repository.existsConfrontoNaRound(home.getId(), away.getId(), round,
+        if (repository.existsMatchupInRound(home.getId(), away.getId(), round,
                 ignoredId, MatchStatus.CANCELED)) {
             throw new InvalidMatchException("A match already exists between these teams in this round");
         }
 
-        if (repository.existsTeamNaRound(List.of(home.getId(), away.getId()), round,
+        if (repository.existsTeamInRound(List.of(home.getId(), away.getId()), round,
                 ignoredId, MatchStatus.CANCELED)) {
             throw new InvalidMatchException("One of the teams already has a match in this round");
         }
 
-        if (repository.existsConflitoScheduledAt(List.of(home.getId(), away.getId()), scheduledAt,
+        if (scheduledAt != null && repository.existsScheduleConflict(List.of(home.getId(), away.getId()), scheduledAt,
                 ignoredId, MatchStatus.CANCELED)) {
             throw new InvalidMatchException("One of the teams already has a match at this time");
         }

@@ -40,10 +40,10 @@ public class StandingsService {
             throw new InvalidRegistrationException("Category does not belong to the informed competition");
         }
 
-        Map<Long, Linha> linhas = new LinkedHashMap<>();
+        Map<Long, StandingRow> rows = new LinkedHashMap<>();
         teamRegistrationRepository.findByCompetitionIdAndCategoryIdAndStatus(
                         competitionId, categoryId, RegistrationStatus.APPROVED)
-                .forEach(registration -> linhas.put(registration.getId(), new Linha(registration)));
+                .forEach(registration -> rows.put(registration.getId(), new StandingRow(registration)));
 
         List<Match> matches = repository.findByCompetitionAndCategory(competitionId, categoryId);
         for (Match match : matches) {
@@ -53,8 +53,8 @@ public class StandingsService {
 
             TeamRegistration home = match.getHomeRegistration();
             TeamRegistration away = match.getAwayRegistration();
-            Linha homeLine = linhas.computeIfAbsent(home.getId(), id -> new Linha(home));
-            Linha awayLine = linhas.computeIfAbsent(away.getId(), id -> new Linha(away));
+            StandingRow homeLine = rows.computeIfAbsent(home.getId(), id -> new StandingRow(home));
+            StandingRow awayLine = rows.computeIfAbsent(away.getId(), id -> new StandingRow(away));
 
             int homeGoals = match.getHomeGoals();
             int awayGoals = match.getAwayGoals();
@@ -78,13 +78,13 @@ public class StandingsService {
             }
         }
 
-        List<Linha> ordenadas = new ArrayList<>(linhas.values());
-        ordenadas.sort((a, b) -> comparar(a, b, matches));
+        List<StandingRow> sorted = new ArrayList<>(rows.values());
+        sorted.sort((a, b) -> compareRows(a, b, matches));
 
-        List<StandingsResponse> resposta = new ArrayList<>();
-        for (int i = 0; i < ordenadas.size(); i++) {
-            Linha linha = ordenadas.get(i);
-            resposta.add(new StandingsResponse(
+        List<StandingsResponse> response = new ArrayList<>();
+        for (int i = 0; i < sorted.size(); i++) {
+            StandingRow linha = sorted.get(i);
+            response.add(new StandingsResponse(
                     i + 1,
                     linha.registration.getId(),
                     linha.registration.getTeam().getId(),
@@ -100,7 +100,7 @@ public class StandingsService {
                     linha.pointsPercentage()
             ));
         }
-        return resposta;
+        return response;
     }
 
     private boolean matchValidForStandings(Match match) {
@@ -109,7 +109,7 @@ public class StandingsService {
                 && match.getAwayGoals() != null;
     }
 
-    private int comparar(Linha a, Linha b, List<Match> matches) {
+    private int compareRows(StandingRow a, StandingRow b, List<Match> matches) {
         int comparacao = Integer.compare(b.points(), a.points());
         if (comparacao != 0) return comparacao;
 
@@ -122,13 +122,13 @@ public class StandingsService {
         comparacao = Integer.compare(b.goalsFor, a.goalsFor);
         if (comparacao != 0) return comparacao;
 
-        comparacao = confrontoDireto(a, b, matches);
+        comparacao = headToHead(a, b, matches);
         if (comparacao != 0) return comparacao;
 
         return a.registration.getTeam().getName().compareToIgnoreCase(b.registration.getTeam().getName());
     }
 
-    private int confrontoDireto(Linha a, Linha b, List<Match> matches) {
+    private int headToHead(StandingRow a, StandingRow b, List<Match> matches) {
         int pointsA = 0;
         int pointsB = 0;
         int differenceA = 0;
@@ -164,7 +164,7 @@ public class StandingsService {
         return Integer.compare(differenceB, differenceA);
     }
 
-    private static final class Linha {
+    private static final class StandingRow {
         private final TeamRegistration registration;
         private int played;
         private int wins;
@@ -173,7 +173,7 @@ public class StandingsService {
         private int goalsFor;
         private int goalsAgainst;
 
-        private Linha(TeamRegistration registration) {
+        private StandingRow(TeamRegistration registration) {
             this.registration = registration;
         }
 
@@ -187,8 +187,8 @@ public class StandingsService {
 
         private double pointsPercentage() {
             if (played == 0) return 0.0;
-            double valor = (points() / (played * 3.0)) * 100.0;
-            return Math.round(valor * 100.0) / 100.0;
+            double percentage = (points() / (played * 3.0)) * 100.0;
+            return Math.round(percentage * 100.0) / 100.0;
         }
     }
 }

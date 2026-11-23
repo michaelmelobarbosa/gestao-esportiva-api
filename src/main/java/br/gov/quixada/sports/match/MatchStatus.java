@@ -6,13 +6,13 @@ public enum MatchStatus {
     COMPLETED,
     CANCELED;
 
-    public boolean canTransitionTo(MatchStatus novo) {
-        if (this == novo) {
+    public boolean canTransitionTo(MatchStatus target) {
+        if (this == target) {
             return true;
         }
         return switch (this) {
-            case SCHEDULED -> novo == IN_PROGRESS || novo == CANCELED;
-            case IN_PROGRESS -> novo == COMPLETED || novo == CANCELED;
+            case SCHEDULED -> target == IN_PROGRESS || target == CANCELED;
+            case IN_PROGRESS -> target == COMPLETED || target == CANCELED;
             case COMPLETED -> false;
             case CANCELED -> false;
         };
