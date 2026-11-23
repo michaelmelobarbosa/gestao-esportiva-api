@@ -2,6 +2,7 @@ package br.gov.quixada.sports.security.users;
 
 import br.gov.quixada.sports.security.auth.UserRepository;
 import br.gov.quixada.sports.security.auth.exception.EmailAlreadyRegisteredException;
+import br.gov.quixada.sports.security.jwt.RefreshTokenService;
 import br.gov.quixada.sports.security.users.dto.UserCreateRequest;
 import br.gov.quixada.sports.security.users.dto.UserUpdateRequest;
 import br.gov.quixada.sports.security.users.exception.OperationNotAllowedException;
@@ -23,6 +24,7 @@ public class UserService {
     private final UserRepository repository;
     private final PasswordEncoder passwordEncoder;
     private final UserAuditService auditService;
+    private final RefreshTokenService refreshTokenService;
 
     @Transactional(readOnly = true)
     public Page<User> findAll(String search, UserStatus status, Pageable pageable) {
@@ -50,7 +52,7 @@ public class UserService {
                 passwordEncoder.encode(request.password()), request.role());
         user.setStatus(UserStatus.ACTIVE);
 
-        var saved = saveTraduzindoDuplicity(user);
+        var saved = saveTranslatingDuplicate(user);
         auditService.record(actor, saved, UserAuditAction.CREATE, "role: " + saved.getRole());
         return saved;
     }
@@ -79,17 +81,25 @@ public class UserService {
             throw new EmailAlreadyRegisteredException("Email already registered");
         }
 
-        var alteracoes = describeChanges(user, request);
+        boolean passwordChanged = request.password() != null && !request.password().isBlank();
+        boolean roleChanged = user.getRole() != request.role();
+        var changes = describeChanges(user, request);
         user.setUsername(request.username());
         user.setEmail(request.email());
         user.setRole(request.role());
 
-        if (request.password() != null && !request.password().isBlank()) {
+        if (passwordChanged) {
             user.setPassword(passwordEncoder.encode(request.password()));
         }
+        if (passwordChanged || roleChanged) {
+            user.incrementTokenVersion();
+        }
 
-        var saved = saveTraduzindoDuplicity(user);
-        auditService.record(actor, saved, UserAuditAction.UPDATE, alteracoes);
+        var saved = saveTranslatingDuplicate(user);
+        if (passwordChanged || roleChanged) {
+            refreshTokenService.revokeAllForUser(saved);
+        }
+        auditService.record(actor, saved, UserAuditAction.UPDATE, changes);
         return saved;
     }
 
@@ -111,6 +121,11 @@ public class UserService {
 
         var previousStatus = user.getStatus();
         user.setStatus(status);
+        if (status == UserStatus.INACTIVE) {
+            user.incrementTokenVersion();
+            repository.saveAndFlush(user);
+            refreshTokenService.revokeAllForUser(user);
+        }
         auditService.record(actor, user, UserAuditAction.STATUS_CHANGE,
                 "status: " + previousStatus + " -> " + status);
         return user;
@@ -123,25 +138,25 @@ public class UserService {
     }
 
     private String describeChanges(User user, UserUpdateRequest request) {
-        var alteracoes = new ArrayList<String>();
+        var changes = new ArrayList<String>();
 
         if (!user.getUsername().equals(request.username())) {
-            alteracoes.add("username: " + user.getUsername() + " -> " + request.username());
+            changes.add("username: " + user.getUsername() + " -> " + request.username());
         }
         if (!user.getEmail().equalsIgnoreCase(request.email())) {
-            alteracoes.add("email: " + user.getEmail() + " -> " + request.email());
+            changes.add("email: " + user.getEmail() + " -> " + request.email());
         }
         if (user.getRole() != request.role()) {
-            alteracoes.add("role: " + user.getRole() + " -> " + request.role());
+            changes.add("role: " + user.getRole() + " -> " + request.role());
         }
         if (request.password() != null && !request.password().isBlank()) {
-            alteracoes.add("password: changed");
+            changes.add("password: changed");
         }
 
-        return alteracoes.isEmpty() ? "no changes" : String.join("; ", alteracoes);
+        return changes.isEmpty() ? "no changes" : String.join("; ", changes);
     }
 
-    private User saveTraduzindoDuplicity(User user) {
+    private User saveTranslatingDuplicate(User user) {
         try {
             return repository.saveAndFlush(user);
         } catch (DataIntegrityViolationException e) {

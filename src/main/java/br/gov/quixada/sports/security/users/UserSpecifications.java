@@ -15,10 +15,10 @@ public final class UserSpecifications {
             var predicates = new ArrayList<Predicate>();
 
             if (search != null && !search.isBlank()) {
-                var termo = "%" + search.toLowerCase() + "%";
+                var pattern = "%" + search.toLowerCase() + "%";
                 predicates.add(builder.or(
-                        builder.like(builder.lower(root.<String>get("username")), termo),
-                        builder.like(builder.lower(root.<String>get("email")), termo)));
+                        builder.like(builder.lower(root.<String>get("username")), pattern),
+                        builder.like(builder.lower(root.<String>get("email")), pattern)));
             }
 
             if (status != null) {

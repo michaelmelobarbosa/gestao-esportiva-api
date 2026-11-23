@@ -20,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import br.gov.quixada.sports.security.auth.UserRepository;
+import br.gov.quixada.sports.security.jwt.RefreshTokenService;
 import br.gov.quixada.sports.security.users.dto.UserCreateRequest;
 import br.gov.quixada.sports.security.users.dto.UserUpdateRequest;
 import br.gov.quixada.sports.security.users.exception.OperationNotAllowedException;
@@ -37,11 +38,14 @@ class UserServiceTest {
     @Mock
     private UserAuditService auditService;
 
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
     private UserService service;
 
     @BeforeEach
     void setUp() {
-        service = new UserService(repository, passwordEncoder, auditService);
+        service = new UserService(repository, passwordEncoder, auditService, refreshTokenService);
     }
 
     private User user(Long id, UserRole role, UserStatus status) {
@@ -120,7 +124,40 @@ class UserServiceTest {
             var saved = service.update(actor, 2L, request);
 
             assertThat(saved.getUsername()).isEqualTo("user");
+            assertThat(saved.getTokenVersion()).isZero();
+            verify(refreshTokenService, never()).revokeAllForUser(any());
             verify(auditService).record(actor, saved, UserAuditAction.UPDATE, "username: user2 -> user");
+        }
+
+        @Test
+        @DisplayName("should increment tokenVersion and revoke refresh tokens when password changes")
+        void shouldRevokeSessionsWhenPasswordChanges() {
+            var actor = user(1L, UserRole.SUPERADMIN, UserStatus.ACTIVE);
+            var target = user(2L, UserRole.ADMIN, UserStatus.ACTIVE);
+            when(repository.findById(2L)).thenReturn(Optional.of(target));
+            when(passwordEncoder.encode("newPass123")).thenReturn("new-hash");
+            when(repository.saveAndFlush(target)).thenReturn(target);
+
+            var request = updateRequest(target.getEmail(), "newPass123", UserRole.ADMIN);
+            var saved = service.update(actor, 2L, request);
+
+            assertThat(saved.getTokenVersion()).isEqualTo(1);
+            verify(refreshTokenService).revokeAllForUser(saved);
+        }
+
+        @Test
+        @DisplayName("should increment tokenVersion and revoke refresh tokens when role changes")
+        void shouldRevokeSessionsWhenRoleChanges() {
+            var actor = user(1L, UserRole.SUPERADMIN, UserStatus.ACTIVE);
+            var target = user(2L, UserRole.USER, UserStatus.ACTIVE);
+            when(repository.findById(2L)).thenReturn(Optional.of(target));
+            when(repository.saveAndFlush(target)).thenReturn(target);
+
+            var request = updateRequest(target.getEmail(), null, UserRole.ADMIN);
+            var saved = service.update(actor, 2L, request);
+
+            assertThat(saved.getTokenVersion()).isEqualTo(1);
+            verify(refreshTokenService).revokeAllForUser(saved);
         }
 
         @Test
@@ -208,8 +245,25 @@ class UserServiceTest {
             var saved = service.changeStatus(actor, 2L, UserStatus.INACTIVE);
 
             assertThat(saved.getStatus()).isEqualTo(UserStatus.INACTIVE);
+            assertThat(saved.getTokenVersion()).isEqualTo(1);
+            verify(repository).saveAndFlush(target);
+            verify(refreshTokenService).revokeAllForUser(target);
             verify(auditService).record(actor, target, UserAuditAction.STATUS_CHANGE,
                     "status: ACTIVE -> INACTIVE");
+        }
+
+        @Test
+        @DisplayName("should not revoke refresh tokens when reactivating an inactive user")
+        void shouldNotRevokeOnReactivate() {
+            var actor = user(1L, UserRole.SUPERADMIN, UserStatus.ACTIVE);
+            var target = user(2L, UserRole.USER, UserStatus.INACTIVE);
+            when(repository.findById(2L)).thenReturn(Optional.of(target));
+
+            var saved = service.changeStatus(actor, 2L, UserStatus.ACTIVE);
+
+            assertThat(saved.getStatus()).isEqualTo(UserStatus.ACTIVE);
+            assertThat(saved.getTokenVersion()).isZero();
+            verify(refreshTokenService, never()).revokeAllForUser(any());
         }
 
         @Test

@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -22,15 +23,19 @@ import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Optional;
 
 import br.gov.quixada.sports.security.auth.exception.EmailAlreadyRegisteredException;
+import br.gov.quixada.sports.security.auth.exception.InvalidRefreshTokenException;
 import br.gov.quixada.sports.security.jwt.JwtService;
+import br.gov.quixada.sports.security.jwt.RefreshTokenService;
 import br.gov.quixada.sports.security.users.User;
 import br.gov.quixada.sports.security.users.UserDetailsAdapter;
 import br.gov.quixada.sports.security.users.UserRole;
+import br.gov.quixada.sports.security.users.UserStatus;
 import br.gov.quixada.sports.security.users.dto.RegisterRequest;
 import br.gov.quixada.sports.support.ControllerTestSupport;
 
@@ -56,15 +61,23 @@ class AuthControllerTest {
     private JwtService jwtService;
 
     @Mock
+    private RefreshTokenService refreshTokenService;
+
+    @Mock
     private LoginRateLimiter loginRateLimiter;
 
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        var controller = new AuthController(authService, authenticationManager, jwtService, loginRateLimiter);
+        var controller = new AuthController(authService, authenticationManager, jwtService, refreshTokenService, loginRateLimiter);
         mockMvc = ControllerTestSupport.mockMvc(controller);
         lenient().when(loginRateLimiter.attempt(any(), any())).thenReturn(Optional.empty());
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Nested
@@ -72,19 +85,21 @@ class AuthControllerTest {
     class Login {
 
         @Test
-        @DisplayName("should authenticate using the email and return the token")
+        @DisplayName("should authenticate using the email and return access and refresh tokens")
         void shouldAuthenticateWithEmail() throws Exception {
             var user = new User("john", "john@example.com", "hash", UserRole.USER);
             var userDetails = new UserDetailsAdapter(user);
             var authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
             when(authenticationManager.authenticate(any())).thenReturn(authentication);
             when(jwtService.generateToken(user)).thenReturn("token");
+            when(refreshTokenService.issue(user)).thenReturn("refresh-token");
 
             mockMvc.perform(post("/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(LOGIN_JSON))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.token").value("token"));
+                    .andExpect(jsonPath("$.token").value("token"))
+                    .andExpect(jsonPath("$.refreshToken").value("refresh-token"));
 
             var captor = ArgumentCaptor.forClass(UsernamePasswordAuthenticationToken.class);
             verify(authenticationManager).authenticate(captor.capture());
@@ -143,6 +158,75 @@ class AuthControllerTest {
                             .content(REGISTER_JSON))
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.message").value("Email already registered"));
+        }
+    }
+
+    @Nested
+    @DisplayName("refresh")
+    class Refresh {
+
+        @Test
+        @DisplayName("should rotate refresh token and return new access and refresh tokens")
+        void shouldRotateRefreshToken() throws Exception {
+            var user = new User(1L, "john", "john@example.com", "hash", UserRole.USER, UserStatus.ACTIVE);
+            when(refreshTokenService.rotate("old-refresh"))
+                    .thenReturn(new RefreshTokenService.RotatedTokens(user, "new-refresh"));
+            when(jwtService.generateToken(user)).thenReturn("new-access");
+
+            mockMvc.perform(post("/v1/auth/refresh")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"refreshToken":"old-refresh"}
+                                    """))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.token").value("new-access"))
+                    .andExpect(jsonPath("$.refreshToken").value("new-refresh"));
+        }
+
+        @Test
+        @DisplayName("should return 401 when refresh token is invalid or revoked")
+        void shouldReturn401WhenRefreshTokenInvalid() throws Exception {
+            when(refreshTokenService.rotate("bad-refresh"))
+                    .thenThrow(new InvalidRefreshTokenException("Refresh token has been revoked"));
+
+            mockMvc.perform(post("/v1/auth/refresh")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"refreshToken":"bad-refresh"}
+                                    """))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.message").value("Refresh token has been revoked"));
+        }
+
+        @Test
+        @DisplayName("should return 400 when refresh token is blank")
+        void shouldReturn400WhenRefreshTokenBlank() throws Exception {
+            mockMvc.perform(post("/v1/auth/refresh")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"refreshToken":"   "}
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.errors[0].field").value("refreshToken"));
+        }
+    }
+
+    @Nested
+    @DisplayName("logout")
+    class Logout {
+
+        @Test
+        @DisplayName("should delegate logout to AuthService and return 204")
+        void shouldLogoutAndReturn204() throws Exception {
+            var user = new User(7L, "john", "john@example.com", "hash", UserRole.USER, UserStatus.ACTIVE);
+            var principal = new UserDetailsAdapter(user);
+            SecurityContextHolder.getContext().setAuthentication(
+                    new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
+
+            mockMvc.perform(post("/v1/auth/logout"))
+                    .andExpect(status().isNoContent());
+
+            verify(authService).logout(7L);
         }
     }
 

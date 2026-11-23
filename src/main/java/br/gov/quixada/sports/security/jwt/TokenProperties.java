@@ -13,6 +13,7 @@ import java.time.Duration;
 public record TokenProperties(
         @NotBlank @Size(min = 32) String secret,
         @NotBlank String issuer,
-        @NotNull Duration expiration
+        @NotNull Duration expiration,
+        @NotNull Duration refreshExpiration
 ) {
 }

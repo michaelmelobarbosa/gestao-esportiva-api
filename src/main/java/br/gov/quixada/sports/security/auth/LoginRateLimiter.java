@@ -22,7 +22,7 @@ import java.util.Optional;
 public class LoginRateLimiter {
 
     private static final String IP_PREFIX = "ip:";
-    private static final String PAIR_PREFIX = "par:";
+    private static final String PAIR_PREFIX = "pair:";
 
     private final LoginRateLimitProperties properties;
     private final TimeMeter timeMeter;
@@ -80,7 +80,7 @@ public class LoginRateLimiter {
     private Bucket bucket(String key, long capacity) {
         return buckets.get(key, k -> Bucket.builder()
                 .withCustomTimePrecision(timeMeter)
-                .addLimit(limite -> limite.capacity(capacity).refillGreedy(capacity, properties.window()))
+                .addLimit(limit -> limit.capacity(capacity).refillGreedy(capacity, properties.window()))
                 .build());
     }
 

@@ -19,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import br.gov.quixada.sports.security.auth.UserRepository;
+import br.gov.quixada.sports.security.jwt.RefreshTokenService;
 import br.gov.quixada.sports.security.users.exception.OperationNotAllowedException;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,11 +35,14 @@ class SuperadminPasswordResetServiceTest {
     @Mock
     private UserAuditService auditService;
 
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
     private SuperadminPasswordResetService service;
 
     @BeforeEach
     void setUp() {
-        service = new SuperadminPasswordResetService(repository, passwordEncoder, auditService);
+        service = new SuperadminPasswordResetService(repository, passwordEncoder, auditService, refreshTokenService);
     }
 
     private User user(UserRole role, UserStatus status) {
@@ -59,7 +63,9 @@ class SuperadminPasswordResetServiceTest {
 
         assertThat(superadmin.getPassword()).isEqualTo("hash-novo");
         assertThat(superadmin.getStatus()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(superadmin.getTokenVersion()).isEqualTo(1);
         verify(repository).saveAndFlush(superadmin);
+        verify(refreshTokenService).revokeAllForUser(superadmin);
         verify(auditService).recordSystem(superadmin, UserAuditAction.PASSWORD_RESET,
                 "password reset via recovery CLI");
     }

@@ -1,12 +1,12 @@
 package br.gov.quixada.sports.security.config;
 
 import br.gov.quixada.sports.security.jwt.TokenProperties;
+import br.gov.quixada.sports.security.users.UserAuditRetentionProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -24,7 +24,12 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@EnableConfigurationProperties({TokenProperties.class, CorsProperties.class, LoginRateLimitProperties.class})
+@EnableConfigurationProperties({
+        TokenProperties.class,
+        CorsProperties.class,
+        LoginRateLimitProperties.class,
+        UserAuditRetentionProperties.class
+})
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -49,8 +54,10 @@ public class SecurityConfig {
                         .authenticationEntryPoint(restAuthenticationEntryPoint)
                         .accessDeniedHandler(restAccessDeniedHandler))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/v1/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/v1/users/audit").hasRole("SUPERADMIN")
+                        .requestMatchers(HttpMethod.POST, "/v1/auth/login", "/v1/auth/register", "/v1/auth/refresh").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/v1/auth/logout").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/v1/users/audit", "/v1/users/audit/**").hasRole("SUPERADMIN")
                         .requestMatchers(HttpMethod.GET, "/v1/users", "/v1/users/**")
                         .hasAnyRole("ADMIN", "SUPERADMIN")
                         .requestMatchers("/v1/users", "/v1/users/**").hasRole("SUPERADMIN")

@@ -2,6 +2,7 @@ package br.gov.quixada.sports.security.auth;
 
 import br.gov.quixada.sports.security.config.LoginRateLimitProperties;
 import br.gov.quixada.sports.security.jwt.JwtService;
+import br.gov.quixada.sports.security.jwt.RefreshTokenService;
 import br.gov.quixada.sports.security.users.User;
 import br.gov.quixada.sports.security.users.UserDetailsAdapter;
 import br.gov.quixada.sports.security.users.UserRole;
@@ -48,6 +49,9 @@ class AuthControllerLoginRateLimitTest {
 
     @Mock
     private JwtService jwtService;
+
+    @Mock
+    private RefreshTokenService refreshTokenService;
 
     private MutableClock clock;
     private MockMvc mockMvc;
@@ -106,11 +110,13 @@ class AuthControllerLoginRateLimitTest {
                 .thenReturn(authentication)
                 .thenThrow(new BadCredentialsException("Invalid credentials"));
         when(jwtService.generateToken(user)).thenReturn("token");
+        when(refreshTokenService.issue(user)).thenReturn("refresh-token");
 
         mockMvc.perform(loginFrom(IP)).andExpect(status().isUnauthorized());
         mockMvc.perform(loginFrom(IP))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").value("token"));
+                .andExpect(jsonPath("$.token").value("token"))
+                .andExpect(jsonPath("$.refreshToken").value("refresh-token"));
         mockMvc.perform(loginFrom(IP)).andExpect(status().isUnauthorized());
     }
 
@@ -164,7 +170,7 @@ class AuthControllerLoginRateLimitTest {
     private void configure(long maxPerIp, long maxPerIpEmail) {
         var properties = new LoginRateLimitProperties(maxPerIp, maxPerIpEmail, WINDOW, 1000);
         var limiter = new LoginRateLimiter(properties, new ClockTimeMeter(clock));
-        var controller = new AuthController(authService, authenticationManager, jwtService, limiter);
+        var controller = new AuthController(authService, authenticationManager, jwtService, refreshTokenService, limiter);
         mockMvc = ControllerTestSupport.mockMvc(controller);
     }
 

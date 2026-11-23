@@ -1,6 +1,7 @@
 package br.gov.quixada.sports.security.auth;
 
 import br.gov.quixada.sports.security.auth.exception.EmailAlreadyRegisteredException;
+import br.gov.quixada.sports.security.jwt.RefreshTokenService;
 import br.gov.quixada.sports.security.users.User;
 import br.gov.quixada.sports.security.users.UserRole;
 import br.gov.quixada.sports.security.users.UserStatus;
@@ -17,6 +18,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenService refreshTokenService;
 
     @Transactional
     public void register(RegisterRequest request) {
@@ -31,11 +33,20 @@ public class AuthService {
         try {
             userRepository.save(user);
         } catch (DataIntegrityViolationException e) {
-            throw traduzirViolacaoDeUnicity(e);
+            throw translateUniquenessViolation(e);
         }
     }
 
-    private RuntimeException traduzirViolacaoDeUnicity(DataIntegrityViolationException e) {
+    @Transactional
+    public void logout(Long userId) {
+        userRepository.findById(userId).ifPresent(user -> {
+            user.incrementTokenVersion();
+            userRepository.saveAndFlush(user);
+            refreshTokenService.revokeAllForUser(user);
+        });
+    }
+
+    private RuntimeException translateUniquenessViolation(DataIntegrityViolationException e) {
         String message = e.getMostSpecificCause().getMessage();
 
         if (message != null && message.contains("uk_db_users_email")) {

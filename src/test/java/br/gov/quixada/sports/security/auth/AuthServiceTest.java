@@ -20,9 +20,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.Optional;
+
 import br.gov.quixada.sports.security.auth.exception.EmailAlreadyRegisteredException;
+import br.gov.quixada.sports.security.jwt.RefreshTokenService;
 import br.gov.quixada.sports.security.users.User;
 import br.gov.quixada.sports.security.users.UserRole;
+import br.gov.quixada.sports.security.users.UserStatus;
 import br.gov.quixada.sports.security.users.dto.RegisterRequest;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,11 +39,14 @@ class AuthServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
     private AuthService service;
 
     @BeforeEach
     void setUp() {
-        service = new AuthService(userRepository, passwordEncoder);
+        service = new AuthService(userRepository, passwordEncoder, refreshTokenService);
     }
 
     private RegisterRequest aRequest() {
@@ -118,6 +125,35 @@ class AuthServiceTest {
             assertThatThrownBy(() -> service.register(aRequest()))
                     .isInstanceOf(DataIntegrityViolationException.class)
                     .hasMessage("another violation");
+        }
+    }
+
+    @Nested
+    @DisplayName("logout")
+    class Logout {
+
+        @Test
+        @DisplayName("should increment tokenVersion, save user and revoke all refresh tokens")
+        void shouldLogoutExistingUser() {
+            var user = new User(5L, "john", "john@example.com", "hash", UserRole.USER, UserStatus.ACTIVE);
+            when(userRepository.findById(5L)).thenReturn(Optional.of(user));
+
+            service.logout(5L);
+
+            assertThat(user.getTokenVersion()).isEqualTo(1);
+            verify(userRepository).saveAndFlush(user);
+            verify(refreshTokenService).revokeAllForUser(user);
+        }
+
+        @Test
+        @DisplayName("should do nothing when user does not exist")
+        void shouldIgnoreMissingUser() {
+            when(userRepository.findById(99L)).thenReturn(Optional.empty());
+
+            service.logout(99L);
+
+            verify(userRepository, never()).saveAndFlush(any(User.class));
+            verify(refreshTokenService, never()).revokeAllForUser(any(User.class));
         }
     }
 }

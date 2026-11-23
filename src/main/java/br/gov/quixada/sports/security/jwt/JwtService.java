@@ -19,6 +19,9 @@ public class JwtService {
     private final TokenProperties properties;
     private final Clock clock;
 
+    public record TokenClaims(String email, int tokenVersion) {
+    }
+
     public String generateToken(User user) {
 
         try {
@@ -27,6 +30,8 @@ public class JwtService {
 
             return JWT.create().withIssuer(properties.issuer())
                     .withSubject(user.getEmail())
+                    .withClaim("ver", user.getTokenVersion())
+                    .withClaim("role", user.getRole().name())
                     .withExpiresAt(expirationDate())
                     .sign(algorithm);
         } catch (JWTCreationException exception) {
@@ -34,20 +39,30 @@ public class JwtService {
         }
     }
 
-    public String extractEmail(String token) {
+    public TokenClaims extractClaims(String token) {
 
         try {
 
             var algorithm = Algorithm.HMAC256(properties.secret());
 
-            return JWT.require(algorithm)
+            var decoded = JWT.require(algorithm)
                     .withIssuer(properties.issuer())
                     .build()
-                    .verify(token)
-                    .getSubject();
+                    .verify(token);
+
+            String subject = decoded.getSubject();
+            Integer ver = decoded.getClaim("ver").asInt();
+            if (subject == null || ver == null) {
+                throw new InvalidTokenException("Invalid or expired token");
+            }
+            return new TokenClaims(subject, ver);
         } catch (JWTVerificationException exception) {
             throw new InvalidTokenException("Invalid or expired token");
         }
+    }
+
+    public String extractEmail(String token) {
+        return extractClaims(token).email();
     }
 
 
