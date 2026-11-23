@@ -2,6 +2,8 @@ package br.gov.quixada.sports.athlete;
 
 
 import br.gov.quixada.sports.athlete.dto.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
@@ -20,12 +22,14 @@ import java.time.Clock;
 @RequestMapping(path = "/v{version}/athletes", version = "1.0")
 @RequiredArgsConstructor
 @Validated
+@Tag(name = "Athletes", description = "Athlete registration and lookup")
 public class AthleteController {
 
     private final AthleteService service;
     private final AthleteMapper mapper;
     private final Clock clock;
 
+    @Operation(summary = "List athletes with optional name and status filter")
     @GetMapping
     public ResponseEntity<Page<AthleteSummaryResponse>> findAll(@RequestParam(required = false) String name,
                                                               @RequestParam(required = false) AthleteStatus status,
@@ -34,6 +38,7 @@ public class AthleteController {
         return ResponseEntity.ok(service.findAll(name, status, pageable).map(athlete -> mapper.toSummary(athlete, clock)));
     }
 
+    @Operation(summary = "Find athlete by ID")
     @GetMapping("/{id}")
     public ResponseEntity<AthleteResponse> findById(@PathVariable @Positive Long id) {
         Athlete athlete = service.findByIdOrThrowNotFound(id);
@@ -42,6 +47,7 @@ public class AthleteController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Find athlete by CPF")
     @GetMapping("/cpf/{cpf}")
     public ResponseEntity<AthleteResponse> findByCpf(@PathVariable
                                                     @Pattern(regexp = "\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}|\\d{11}",
@@ -51,6 +57,7 @@ public class AthleteController {
         return ResponseEntity.ok(mapper.toGetResponse(athlete, clock));
     }
 
+    @Operation(summary = "Create a new athlete")
     @PostMapping
     public ResponseEntity<AthleteResponse> save(@RequestBody @Valid AthleteCreateRequest request) {
         Athlete athlete = mapper.toEntity(request);
@@ -62,6 +69,7 @@ public class AthleteController {
         return ResponseEntity.created(location).body(mapper.toGetResponse(saved, clock));
     }
 
+    @Operation(summary = "Change athlete status (activate / deactivate)")
     @PatchMapping("/{id}/status")
     public ResponseEntity<AthleteResponse> changeStatus(@PathVariable @Positive Long id,
                                                         @RequestBody @Valid AthleteStatusRequest request) {
@@ -71,6 +79,7 @@ public class AthleteController {
         return ResponseEntity.ok(mapper.toGetResponse(athlete, clock));
     }
 
+    @Operation(summary = "Update athlete by ID")
     @PutMapping("/{id}")
     public ResponseEntity<AthleteResponse> update(@PathVariable @Positive Long id,
                                                  @RequestBody @Valid AthleteUpdateRequest request) {
@@ -86,6 +95,7 @@ public class AthleteController {
      * Physical deletion: requires an INACTIVE athlete with no registrations occupying a slot.
      * CANCELED/REJECTED registrations are removed as well.
      */
+    @Operation(summary = "Hard delete inactive athlete without slot-occupying registrations")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> hardDelete(@PathVariable @Positive Long id) {
         service.hardDelete(id);

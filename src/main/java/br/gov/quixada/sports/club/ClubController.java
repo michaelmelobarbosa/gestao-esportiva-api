@@ -5,6 +5,8 @@ import br.gov.quixada.sports.club.dto.ClubResponse;
 import br.gov.quixada.sports.club.dto.ClubSummaryResponse;
 import br.gov.quixada.sports.club.dto.ClubStatusRequest;
 import br.gov.quixada.sports.club.dto.ClubUpdateRequest;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -21,11 +23,13 @@ import java.net.URI;
 @RequestMapping(path = "/v{version}/clubs", version = "1.0")
 @RequiredArgsConstructor
 @Validated
+@Tag(name = "Clubs", description = "Sports clubs management")
 public class ClubController {
 
     private final ClubService service;
     private final ClubMapper mapper;
 
+    @Operation(summary = "List clubs with optional name and status filter")
     @GetMapping
     public ResponseEntity<Page<ClubSummaryResponse>> findAll(@RequestParam(required = false) String name,
                                                              @RequestParam(required = false) ClubStatus status,
@@ -33,12 +37,14 @@ public class ClubController {
         return ResponseEntity.ok(service.findAll(name, status, pageable).map(mapper::toSummary));
     }
 
+    @Operation(summary = "Find club by ID")
     @GetMapping("/{id}")
     public ResponseEntity<ClubResponse> findById(@PathVariable @Positive Long id) {
         Club club = service.findByIdOrThrowNotFound(id);
         return ResponseEntity.ok(mapper.toResponse(club));
     }
 
+    @Operation(summary = "Create a new club")
     @PostMapping
     public ResponseEntity<ClubResponse> save(@RequestBody @Valid ClubCreateRequest request) {
         Club club = mapper.toEntity(request);
@@ -50,6 +56,7 @@ public class ClubController {
         return ResponseEntity.created(location).body(mapper.toResponse(saved));
     }
 
+    @Operation(summary = "Change club status (activate / deactivate)")
     @PatchMapping("/{id}/status")
     public ResponseEntity<ClubResponse> changeStatus(@PathVariable @Positive Long id,
                                                        @RequestBody @Valid ClubStatusRequest request) {
@@ -57,6 +64,7 @@ public class ClubController {
         return ResponseEntity.ok(mapper.toResponse(club));
     }
 
+    @Operation(summary = "Update club by ID")
     @PutMapping("/{id}")
     public ResponseEntity<ClubResponse> update(@PathVariable @Positive Long id,
                                                 @RequestBody @Valid ClubUpdateRequest request) {
